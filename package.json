@@ -1,0 +1,20 @@
+{
+  "name": "mkt-crm",
+  "version": "2.0.0",
+  "description": "MKT-CRM 市场部 AI-Native 工作台",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.0.0",
+    "express": "^4.21.0",
+    "multer": "^1.4.5-lts.1",
+    "xlsx": "^0.18.5"
+  },
+  "allowScripts": {
+    "better-sqlite3@11.10.0": true
+  }
+}
