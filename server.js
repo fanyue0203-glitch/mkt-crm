@@ -209,23 +209,31 @@ app.get('/api/speeches/stats/overview', (req, res) => {
 
 // ===== Accounts CRUD =====
 app.get('/api/accounts', (req, res) => {
-  const { tier, search, page = 1, limit = 50 } = req.query;
+  const { tier, customer_stage, industry, search, page = 1, limit = 50 } = req.query;
   let sql = 'SELECT * FROM accounts WHERE 1=1';
   const params = {};
   if (tier) { sql += ' AND tier = @tier'; params.tier = tier; }
-  if (search) { sql += ' AND (company_name LIKE @s OR industry LIKE @s OR region LIKE @s)'; params.s = `%${search}%`; }
-  sql += ' ORDER BY tier ASC, updated_at DESC';
+  if (customer_stage) { sql += ' AND customer_stage = @customer_stage'; params.customer_stage = customer_stage; }
+  if (industry) { sql += ' AND industry LIKE @industry'; params.industry = `%${industry}%`; }
+  if (search) { sql += ' AND (company_name LIKE @s OR industry LIKE @s OR assigned_to LIKE @s)'; params.s = `%${search}%`; }
+  sql += ' ORDER BY CASE tier WHEN "S" THEN 1 WHEN "A" THEN 2 WHEN "B" THEN 3 WHEN "C" THEN 4 WHEN "D" THEN 5 END, deal_amount DESC, updated_at DESC';
   const total = db.prepare(sql.replace('SELECT *', 'SELECT COUNT(*) as c')).get(params).c;
   sql += ` LIMIT @limit OFFSET @offset`;
   params.limit = +limit;
   params.offset = (+page - 1) * +limit;
   const rows = db.prepare(sql).all(params);
+  // Parse key_events JSON for each row
+  rows.forEach(r => {
+    try { r.key_events_parsed = JSON.parse(r.key_events || '[]'); } catch { r.key_events_parsed = []; }
+  });
   res.json({ data: rows, total, page: +page, limit: +limit });
 });
 
 app.get('/api/accounts/:id', (req, res) => {
   const row = db.prepare('SELECT * FROM accounts WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: '客户不存在' });
+  // Parse key_events
+  try { row.key_events = JSON.parse(row.key_events || '[]'); } catch { row.key_events = []; }
   const events = db.prepare(`
     SELECT e.id, e.name, e.date, e.status, ea.attendance_status, ea.feedback
     FROM event_accounts ea JOIN events e ON ea.event_id = e.id
@@ -237,23 +245,27 @@ app.get('/api/accounts/:id', (req, res) => {
     WHERE st.account_id = ? ORDER BY s.date DESC
   `).all(req.params.id);
   const leads = db.prepare('SELECT * FROM leads WHERE account_id = ? ORDER BY created_at DESC').all(req.params.id);
-  res.json({ ...row, events, speeches, leads });
+  const contacts = db.prepare('SELECT * FROM account_contacts WHERE account_id = ? ORDER BY is_champion DESC, id ASC').all(req.params.id);
+  const reports = db.prepare('SELECT * FROM account_reports WHERE account_id = ? ORDER BY report_period DESC, created_at DESC').all(req.params.id);
+  res.json({ ...row, events, speeches, leads, contacts, reports });
 });
 
 app.post('/api/accounts', (req, res) => {
-  const { company_name, industry, scale, region, source, tier, first_touch_date,
-    needs_summary, estimated_budget, octo_status, assigned_to, notes } = req.body;
-  if (!company_name) return res.status(400).json({ error: '公司名称不能为空' });
-  const stmt = db.prepare(`INSERT INTO accounts (company_name, industry, scale, region, source, tier,
-    first_touch_date, needs_summary, estimated_budget, octo_status, assigned_to, notes)
-    VALUES (@company_name, @industry, @scale, @region, @source, @tier,
-    @first_touch_date, @needs_summary, @estimated_budget, @octo_status, @assigned_to, @notes)`);
-  const r = stmt.run({
-    company_name, industry: industry || '', scale: scale || '', region: region || '',
-    source: source || '', tier: tier || 'C', first_touch_date: first_touch_date || '',
-    needs_summary: needs_summary || '', estimated_budget: estimated_budget || '',
-    octo_status: octo_status || '', assigned_to: assigned_to || '', notes: notes || ''
-  });
+  const fields = ['company_name','industry','scale','region','source','tier','first_touch_date','last_touch_date',
+    'needs_summary','estimated_budget','octo_status','assigned_to','follow_up_status','notes',
+    'customer_stage','deal_amount','deal_stage','lead_source','key_contacts_count','key_departments',
+    'competitors','customer_recognition','deployment_type','product_solutions_detail','core_painpoint',
+    'blockers','next_step','next_deadline','ceo_involvement','ecosystem_lock','lessons_learned'];
+  const body = { ...req.body };
+  body.deal_amount = +body.deal_amount || 0;
+  body.key_contacts_count = +body.key_contacts_count || 0;
+  body.ceo_involvement = body.ceo_involvement ? 1 : 0;
+  body.tier = body.tier || 'C';
+  if (!body.company_name) return res.status(400).json({ error: '公司名称不能为空' });
+  const cols = fields.filter(f => body[f] !== undefined && body[f] !== null);
+  const placeholders = cols.map(f => `@${f}`).join(', ');
+  const stmt = db.prepare(`INSERT INTO accounts (${cols.join(', ')}) VALUES (${placeholders})`);
+  const r = stmt.run(body);
   res.json({ id: r.lastInsertRowid, message: '创建成功' });
 });
 
@@ -333,46 +345,128 @@ app.delete('/api/accounts/contacts/:contactId', (req, res) => {
   res.json({ message: '删除成功' });
 });
 
-// ===== Octo Summary (大客户汇总看板) =====
+// ===== Octo Summary (大客户复盘看板) =====
 app.get('/api/octo/summary', (req, res) => {
   const totalAccounts = db.prepare('SELECT COUNT(*) as c FROM accounts').get().c;
-  const byTier = db.prepare("SELECT tier, COUNT(*) as c FROM accounts GROUP BY tier ORDER BY tier").all();
-  const byStatus = db.prepare("SELECT follow_up_status as status, COUNT(*) as c FROM accounts GROUP BY follow_up_status").all();
-  const byIndustry = db.prepare("SELECT industry, COUNT(*) as c FROM accounts WHERE industry != '' GROUP BY industry ORDER BY c DESC").all();
-  const recentReports = db.prepare(`
-    SELECT r.id, r.account_id, r.report_type, r.report_period, r.most_important, r.created_at, a.company_name, a.tier
-    FROM account_reports r JOIN accounts a ON r.account_id = a.id
-    ORDER BY r.created_at DESC LIMIT 10
+
+  // KPI counts by stage
+  const signedCount = db.prepare("SELECT COUNT(*) as c FROM accounts WHERE customer_stage IN ('已签约','交付中')").get().c;
+  const biddingCount = db.prepare("SELECT COUNT(*) as c FROM accounts WHERE customer_stage = '投标中'").get().c;
+  const bClassCount = db.prepare("SELECT COUNT(*) as c FROM accounts WHERE tier = 'B' AND customer_stage IN ('重点推进','POC中')").get().c;
+  const deadCount = db.prepare("SELECT COUNT(*) as c FROM accounts WHERE customer_stage IN ('战败','放弃')").get().c;
+
+  // Pipeline amounts
+  const pipelineResult = db.prepare(`
+    SELECT COALESCE(SUM(deal_amount),0) as total FROM accounts
+    WHERE customer_stage NOT IN ('战败','放弃','') AND customer_stage IS NOT NULL
+  `).get();
+  const pipeline = Math.round(pipelineResult.total * 10) / 10;
+
+  const wonResult = db.prepare(`
+    SELECT COALESCE(SUM(deal_amount),0) as total FROM accounts
+    WHERE customer_stage IN ('已签约','交付中')
+  `).get();
+  const wonAmount = Math.round(wonResult.total * 10) / 10;
+
+  // By stage distribution
+  const byStage = db.prepare(`
+    SELECT customer_stage as stage, COUNT(*) as count, COALESCE(SUM(deal_amount),0) as amount
+    FROM accounts WHERE customer_stage != '' GROUP BY customer_stage
+    ORDER BY CASE customer_stage
+      WHEN '已签约' THEN 1 WHEN '交付中' THEN 2 WHEN '投标中' THEN 3
+      WHEN 'POC中' THEN 4 WHEN '重点推进' THEN 5 WHEN '跟进中' THEN 6
+      WHEN '观察' THEN 7 WHEN '战败' THEN 8 WHEN '放弃' THEN 9 ELSE 10 END
   `).all();
+
+  // By industry
+  const byIndustry = db.prepare("SELECT industry, COUNT(*) as c FROM accounts WHERE industry != '' GROUP BY industry ORDER BY c DESC").all();
+
+  // Competitor frequency (rough parse from comma/slash separated text)
+  const allCompetitors = db.prepare("SELECT competitors FROM accounts WHERE competitors != ''").all();
+  const compMap = {};
+  allCompetitors.forEach(r => {
+    const comps = r.competitors.split(/[/、,，]/).map(s => s.trim()).filter(Boolean);
+    comps.forEach(c => { compMap[c] = (compMap[c] || 0) + 1; });
+  });
+  const byCompetitor = Object.entries(compMap).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+
+  // Active pipeline (sorted by deal_amount desc, not dead)
+  const pipelineList = db.prepare(`
+    SELECT id, company_name, tier, industry, deal_amount, customer_stage, assigned_to, next_step, next_deadline, blockers
+    FROM accounts WHERE customer_stage NOT IN ('战败','放弃','') AND customer_stage IS NOT NULL
+    ORDER BY deal_amount DESC
+  `).all();
+
+  // Recent updates
+  const recentUpdates = db.prepare(`
+    SELECT id, company_name, tier, customer_stage, deal_amount, assigned_to, updated_at
+    FROM accounts ORDER BY updated_at DESC LIMIT 10
+  `).all();
+
+  // Upcoming deadlines
+  const upcomingDeadlines = db.prepare(`
+    SELECT id, company_name, tier, next_step, next_deadline, customer_stage
+    FROM accounts WHERE next_deadline != '' AND next_deadline IS NOT NULL
+      AND customer_stage NOT IN ('战败','放弃','已签约')
+    ORDER BY next_deadline ASC
+  `).all();
+
+  // Blockers
+  const blockersList = db.prepare(`
+    SELECT id, company_name, tier, blockers, customer_stage, assigned_to
+    FROM accounts WHERE blockers != '' AND blockers IS NOT NULL
+    ORDER BY tier ASC
+  `).all();
+
+  // CEO referrals
+  const ceoReferrals = db.prepare(`
+    SELECT id, company_name, tier, customer_stage, deal_amount, assigned_to
+    FROM accounts WHERE ceo_involvement = 1
+    ORDER BY deal_amount DESC
+  `).all();
+
+  // Lessons from dead accounts
+  const lessons = db.prepare(`
+    SELECT id, company_name, lessons_learned, customer_stage
+    FROM accounts WHERE customer_stage IN ('战败','放弃') AND lessons_learned != ''
+  `).all();
+
+  // Pending decisions from reports
   const pendingDecisions = db.prepare(`
     SELECT r.id, r.account_id, r.report_type, r.report_period, r.need_decision, r.created_at, a.company_name, a.tier
     FROM account_reports r JOIN accounts a ON r.account_id = a.id
     WHERE r.need_decision != '' AND r.need_decision IS NOT NULL
     ORDER BY r.created_at DESC
   `).all();
-  const activeOpps = db.prepare(`
-    SELECT id, company_name, tier, industry, needs_summary, estimated_budget, follow_up_status
-    FROM accounts WHERE estimated_budget != '' AND follow_up_status != '已完成'
-    ORDER BY tier ASC
-  `).all();
-
-  // 本周活跃客户数（本周有报告更新的去重客户）
-  const weekActive = db.prepare(`
-    SELECT COUNT(DISTINCT account_id) as c FROM account_reports
-    WHERE created_at >= datetime('now','localtime','-7 days')
-  `).get().c;
-
-  const saCount = db.prepare("SELECT COUNT(*) as c FROM accounts WHERE tier IN ('S','A')").get().c;
 
   res.json({
-    totalAccounts,
-    byTier,
-    byStatus,
+    kpi: { totalAccounts, signedCount, biddingCount, bClassCount, pipeline, wonAmount, deadCount, pendingDecisions: pendingDecisions.length, blockers: blockersList.length, ceoReferrals: ceoReferrals.length },
+    byStage,
     byIndustry,
-    recentReports,
-    pendingDecisions,
-    activeOpps,
-    kpi: { totalAccounts, saCount, pendingDecisions: pendingDecisions.length, weekActive }
+    byCompetitor,
+    pipeline: pipelineList,
+    recentUpdates,
+    upcomingDeadlines,
+    blockers: blockersList,
+    ceoReferrals,
+    lessons,
+    pendingDecisions
+  });
+});
+
+// ===== Octo Pipeline (管线金额汇总) =====
+app.get('/api/octo/pipeline', (req, res) => {
+  const stages = ['跟进中','POC中','重点推进','投标中','交付中','已签约'];
+  const byStage = stages.map(stage => {
+    const row = db.prepare(`SELECT COUNT(*) as count, COALESCE(SUM(deal_amount),0) as amount FROM accounts WHERE customer_stage = ?`).get(stage);
+    return { stage, count: row.count, amount: Math.round(row.amount * 10) / 10 };
+  });
+  const total = db.prepare(`SELECT COALESCE(SUM(deal_amount),0) as t FROM accounts WHERE customer_stage NOT IN ('战败','放弃','')`).get().t;
+  const won = db.prepare(`SELECT COALESCE(SUM(deal_amount),0) as t FROM accounts WHERE customer_stage IN ('已签约','交付中')`).get().t;
+  res.json({
+    byStage,
+    totalPipeline: Math.round(total * 10) / 10,
+    wonAmount: Math.round(won * 10) / 10
   });
 });
 
