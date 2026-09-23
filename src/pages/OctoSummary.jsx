@@ -8,7 +8,7 @@ import { TierBadge, CustomerStageTag } from '../components/Tags.jsx';
 const short = (s, n = 90) => { s = String(s || ''); return s.length > n ? s.slice(0, n) + '…' : s; };
 const money = a => a.deal_amount ? `${a.deal_amount}万` : ((a.estimated_budget || '').replace('¥', '') || '—');
 
-const SECTION_TITLES = ['大盘概览', '39家客户现状', '行业洞察', '需求共性', '阻碍卡点', '竞品分析', 'CEO获客', '成功/失败模式'];
+const SECTION_TITLES = ['大盘概览', '39家客户现状', '行业洞察', '需求共性', '阻碍卡点', '竞品分析', '成功/失败模式'];
 const CN_NUMS = ['一', '二', '三', '四', '五', '六', '七', '八'];
 
 export default function OctoSummary() {
@@ -199,15 +199,6 @@ function OctoDashboard({ d }) {
     ['Dify/开源自建', '企业内部技术团队低成本替代方案，三一等制造客户会对比。'],
   ].map(([t, desc]) => <div className="highlight-box" key={t}><strong>{t}</strong><br />{desc}</div>);
 
-  const ceo = d.ceoFunnel || {};
-  const ceoFunnel = [['8场活动', ceo.events || 8, 394], ['加微', ceo.wechat || 394, 394], ['申请', ceo.applied || 122, 394], ['开通', ceo.activated || 102, 394], ['转出销售', ceo.converted || 5, 394]].map(([l, v, max]) => (
-    <div className="funnel-row" key={l}>
-      <span className="fl-label">{l}</span>
-      <div className="fl-bar"><div className="fl-fill" style={{ width: Math.max(v / max * 100, 2) + '%' }}></div></div>
-      <span className="fl-val">{v}</span>
-    </div>
-  ));
-
   const successPatterns = [
     '高管直推/CEO关系：卓正「必须发生」、南孚CEO+CMO辉哥直通，关系质量决定成交概率。',
     '明确付费意愿+刚需场景：卓正医疗私有化、南孚替代钉飞企微、宇通CIO线招标。',
@@ -280,7 +271,7 @@ function OctoDashboard({ d }) {
             <div><h4>🔵 C类跟进（{cClass.length}家）</h4><div className="compact-list">{compact(cClass)}</div></div>
             <div><h4>⚪ D类观察（{dClass.length}家）</h4><div className="compact-list">{compact(dClass)}</div></div>
           </div>
-          <div className="highlight-box danger" style={{ marginTop: 14 }}>❌ 战败/放弃 {deadAll.length} 家，核心原因见第八板块。</div>
+          <div className="highlight-box danger" style={{ marginTop: 14 }}>❌ 战败/放弃 {deadAll.length} 家，核心原因见第七板块。</div>
         </div>
       </div>
 
@@ -329,20 +320,7 @@ function OctoDashboard({ d }) {
       </div>
 
       <div className="section-card" id="pano-7">
-        <div className="section-header"><h3>七、CEO获客</h3><span className="section-count">高管信任链路</span></div>
-        <div className="section-body">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            <div className="card"><div className="card-header"><h3>CEO活动获客漏斗</h3></div><div className="card-body">{ceoFunnel}</div></div>
-            <div>
-              <div className="highlight-box success"><strong>核心事实：</strong>8场活动→394加微→122申请→102开通→5转出销售（1%）；但39家中25家(64%)来自高管直推，贡献100%签约+90%+管线。</div>
-              <div className="highlight-box"><strong>结论：</strong>大客户靠CEO信任+高管直推，活动获客不是直接成交漏斗，而是品牌势能和信任入口。</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="section-card" id="pano-8">
-        <div className="section-header"><h3>八、成功/失败模式</h3><span className="section-count">可复制经验与避坑机制</span></div>
+        <div className="section-header"><h3>七、成功/失败模式</h3><span className="section-count">可复制经验与避坑机制</span></div>
         <div className="section-body">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div><h4>✅ 成功模式</h4><div className="lessons-summary">{successPatterns}</div></div>

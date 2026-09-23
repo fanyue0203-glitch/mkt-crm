@@ -422,12 +422,6 @@ app.get('/api/octo/summary', (req, res) => {
     ORDER BY CASE tier WHEN 'S' THEN 1 WHEN 'A' THEN 2 WHEN 'B' THEN 3 ELSE 4 END
   `).all();
 
-  const ceoReferrals = db.prepare(`
-    SELECT id, company_name, tier, customer_stage, deal_amount, assigned_to
-    FROM accounts WHERE ceo_involvement = 1
-    ORDER BY CASE tier WHEN 'S' THEN 1 WHEN 'A' THEN 2 WHEN 'B' THEN 3 ELSE 5 END, deal_amount DESC
-  `).all();
-
   const lessons = db.prepare(`
     SELECT id, company_name, lessons_learned, customer_stage, ecosystem_lock
     FROM accounts WHERE customer_stage IN ('战败','放弃') AND lessons_learned != ''
@@ -530,13 +524,6 @@ app.get('/api/octo/summary', (req, res) => {
   const pOrder = { red: 0, yellow: 1, blue: 2 };
   actionItems.sort((a, b) => pOrder[a.priority] - pOrder[b.priority]);
 
-  // CEO funnel data (static, from report)
-  const ceoFunnel = {
-    events: 8, wechat: 394, applied: 122, activated: 102, converted: 5,
-    execReferralCount: ceoReferrals.length, execReferralPct: totalAccounts > 0 ? Math.round(ceoReferrals.length / totalAccounts * 100) : 0,
-    note: '8场活动→394加微→122申请→102开通→5转出(1%)；但39家中' + ceoReferrals.length + '家来自高管直推，贡献100%签约+90%+管线'
-  };
-
   // Strategic quotes
   const quotes = [
     { who: '姜平', text: '不能付费的客户不再投入时间', date: '9/7' },
@@ -546,14 +533,14 @@ app.get('/api/octo/summary', (req, res) => {
   ];
 
   res.json({
-    kpi: { totalAccounts, signedCount, biddingCount, bClassCount, cClassCount, dClassCount, pipeline, wonAmount, deadCount, deadRate, pendingDecisions: pendingDecisions.length, blockers: blockersList.length, ceoReferrals: ceoReferrals.length },
+    kpi: { totalAccounts, signedCount, biddingCount, bClassCount, cClassCount, dClassCount, pipeline, wonAmount, deadCount, deadRate, pendingDecisions: pendingDecisions.length, blockers: blockersList.length },
     byStage, byIndustry, byCompetitor,
     pipeline: pipelineList, recentUpdates, upcomingDeadlines,
-    blockers: blockersList, ceoReferrals, lessons, pendingDecisions,
+    blockers: blockersList, lessons, pendingDecisions,
     // New panoramic groups
     signed, bidding, bClass, cClass, dClass,
     deadGrouped, deadAll,
-    coreLessons, topConcerns, actionItems, ceoFunnel, quotes
+    coreLessons, topConcerns, actionItems, quotes
   });
 });
 

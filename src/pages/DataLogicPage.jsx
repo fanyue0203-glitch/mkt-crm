@@ -43,13 +43,6 @@ const LIMITS = [
   ['微伴↔SDR 数量不对齐', '394 vs 124，SDR 无昵称字段无法 1:1 匹配', '需 SDR 团队补充对应字段'],
 ];
 
-const CEO_SOURCES = [
-  ['A', '微伴客户导出 × 8', '7 场活动加微数据（晚点199/AI峰会88/国企EMP56/产品发布26/CAIO17/中欧8/外滩1）+ 总表', '微伴-客户列表数据导出*.xlsx × 8'],
-  ['B', 'OCTO 内测申请表', '226 行 × 20 列，申请→审核→开通转化', 'Octo内测组织申请表0918.xlsx'],
-  ['C', 'SDR 周报', '12 个 sheet，Octo 体验 124 行 + 转出线索 763 行', '明略科技SDR周报0915.xlsx'],
-  ['D', '渠道活码列表', '各渠道来源标记 & 活码配置', '渠道活码列表.xlsx'],
-];
-
 export default function DataLogicPage() {
   const navigate = useNavigate();
   useEffect(() => {
@@ -136,29 +129,7 @@ export default function DataLogicPage() {
       </div>
 
       <div className="section-card" id="dl-5">
-        <div className="section-header"><h3>五、CEO 获客板块额外取数</h3><span className="section-count">漏斗 = A×B 交叉匹配 + C 补充转出</span></div>
-        <div className="section-body">
-          <div className="card"><div className="table-wrap"><table>
-            <tr><th>源</th><th>数据源</th><th>内容</th><th>打包文件</th></tr>
-            <tbody>
-              {CEO_SOURCES.map((s, i) => (
-                <tr key={i}>
-                  <td><span className="tag tag-purple" style={{ fontWeight: 700 }}>{s[0]}</span></td>
-                  <td><strong>{s[1]}</strong></td>
-                  <td style={{ fontSize: 12 }}>{s[2]}</td>
-                  <td style={{ fontSize: 11, color: 'var(--text-muted)' }}>{s[3]}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table></div></div>
-          <div className="highlight-box" style={{ marginTop: 12 }}>
-            <strong>漏斗计算逻辑：</strong>A 微伴加微 394+ 人 → B 提交 OCTO 申请 122 人 → B 审核开通 102 人 → C 转出销售 5 人 → 匹配 39 家 7 家。漏斗数据通过 A×B 交叉匹配（微伴昵称↔申请表组织名）+ C 补充转出线索。
-          </div>
-        </div>
-      </div>
-
-      <div className="section-card" id="dl-6">
-        <div className="section-header"><h3>六、已知局限 & 数据缺口</h3><span className="section-count">5 项已知局限 · 补救方案</span></div>
+        <div className="section-header"><h3>五、已知局限 & 数据缺口</h3><span className="section-count">5 项已知局限 · 补救方案</span></div>
         <div className="section-body">
           <div className="card"><div className="table-wrap"><table>
             <tr><th>局限</th><th>影响</th><th>补救方案</th></tr>
