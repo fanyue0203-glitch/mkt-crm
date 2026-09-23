@@ -1653,4 +1653,15 @@ insCEOEvent2.run('AI赋能跨境电商与海外达人合作展览会','展会','
 // 下午茶活码全局备注（媒介力学·广州场等下午茶活动的企微入口）
 db.prepare(`UPDATE ceo_events SET notes = notes || ? WHERE name LIKE ?`).run('\n【渠道活码】名称:下午茶二维码 | 扫码添加次数:23 | 使用成员:赵玉平 | 分组:品牌与市场部 | 创建时间:2026-04-29 17:59 | 创建人:赵玉平 | 标签:周三营销下午茶','%下午茶%');
 
+
+// ===== 活码补充：对应的活动主题（2026-09-23玉平提供）=====
+const updQRTheme = db.prepare(`UPDATE ceo_events SET notes = notes || ? WHERE name = ?`);
+updQRTheme.run('\n【活动主题（微伴）】小金商户','《晚点》头条');
+updQRTheme.run('\n【活动主题（微伴）】AI4S','AI生态峰会');
+updQRTheme.run('\n【活动主题（微伴）】国有企业领导人员经营管理培训班（EMP）','国企EMP');
+updQRTheme.run('\n【活动主题（微伴）】2026市场活动','Octo产品发布');
+updQRTheme.run('\n【活动主题（微伴）】辉哥主题演讲@2025 AiCon','CAIO峰会');
+updQRTheme.run('\n【活动主题（微伴）】北大演讲','中欧商学院');
+updQRTheme.run('\n【活动主题（微伴）】辉哥活动','外滩大会');
+
 export default db;
