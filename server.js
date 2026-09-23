@@ -524,6 +524,37 @@ app.get('/api/octo/summary', (req, res) => {
   const pOrder = { red: 0, yellow: 1, blue: 2 };
   actionItems.sort((a, b) => pOrder[a.priority] - pOrder[b.priority]);
 
+  // ===== 全景维度聚合（按取数逻辑从标注字段真实计算）=====
+  const P39 = "company_name NOT IN ('吴师/黄江华','Leo~JXQ金总')"; // 39家口径
+  const byHealth = db.prepare(`SELECT health_tier as tier, COUNT(*) as count FROM accounts WHERE health_tier != '' AND ${P39} GROUP BY health_tier`).all();
+  const byIndustryGroup = db.prepare(`SELECT industry_group as grp, COUNT(*) as count, SUM(CASE WHEN customer_stage IN ('已签约','交付中') THEN 1 ELSE 0 END) as signed FROM accounts WHERE industry_group != '' AND ${P39} GROUP BY industry_group ORDER BY count DESC`).all();
+  // 需求5类/卡点6类/失败模式是逗号分隔多值，用JS聚合
+  const allTags = db.prepare(`SELECT company_name, demand_type, blocker_type, failure_mode, customer_stage, deal_amount, health_tier, industry_group FROM accounts WHERE ${P39}`).all();
+  const demandCount = {}, blockerCount = {}, failureCount = {};
+  const demandClients = {}, blockerClients = {}, failureClients = {};
+  allTags.forEach(a => {
+    (a.demand_type || '').split(',').filter(Boolean).forEach(t => {
+      demandCount[t] = (demandCount[t] || 0) + 1;
+      (demandClients[t] = demandClients[t] || []).push(a.company_name);
+    });
+    (a.blocker_type || '').split(',').filter(Boolean).forEach(t => {
+      blockerCount[t] = (blockerCount[t] || 0) + 1;
+      (blockerClients[t] = blockerClients[t] || []).push(a.company_name);
+    });
+    if (a.failure_mode) {
+      failureCount[a.failure_mode] = (failureCount[a.failure_mode] || 0) + 1;
+      (failureClients[a.failure_mode] = failureClients[a.failure_mode] || []).push(a.company_name);
+    }
+  });
+  const byDemand = Object.entries(demandCount).map(([name, count]) => ({ name, count, clients: demandClients[name] })).sort((a, b) => b.count - a.count);
+  const byBlocker = Object.entries(blockerCount).map(([name, count]) => ({ name, count, clients: blockerClients[name] })).sort((a, b) => b.count - a.count);
+  const byFailure = Object.entries(failureCount).map(([mode, count]) => ({ mode, count, clients: failureClients[mode] }));
+  // 健康度分组客户列表（板块二用）
+  const healthGroups = ['健康推进中', '有风险', '静默', '战败冻结'].map(t => ({
+    tier: t,
+    items: db.prepare(`SELECT ${accountCols} FROM accounts WHERE health_tier = ? ORDER BY deal_amount DESC`).all(t)
+  }));
+
   // Strategic quotes
   const quotes = [
     { who: '姜平', text: '不能付费的客户不再投入时间', date: '9/7' },
@@ -540,7 +571,9 @@ app.get('/api/octo/summary', (req, res) => {
     // New panoramic groups
     signed, bidding, bClass, cClass, dClass,
     deadGrouped, deadAll,
-    coreLessons, topConcerns, actionItems, quotes
+    coreLessons, topConcerns, actionItems, quotes,
+    // 全景维度
+    byHealth, byIndustryGroup, byDemand, byBlocker, byFailure, healthGroups
   });
 });
 

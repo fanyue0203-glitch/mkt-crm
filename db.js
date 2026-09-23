@@ -56,7 +56,12 @@ db.exec(`
     ceo_involvement INTEGER DEFAULT 0,
     ecosystem_lock TEXT DEFAULT '',
     lessons_learned TEXT DEFAULT '',
-    source_coverage TEXT DEFAULT '{}' -- 数据源覆盖JSON：{graph_v3,onboarding,org_chart,chat_scan,weekly_meeting,ceo_funnel}
+    source_coverage TEXT DEFAULT '{}', -- 数据源覆盖JSON：{graph_v3,onboarding,org_chart,chat_scan,weekly_meeting,ceo_funnel}
+    health_tier TEXT DEFAULT '', -- 健康度4档（全景板块二）：健康推进/有风险/静默极早期/战败冻结
+    industry_group TEXT DEFAULT '', -- 行业6组（全景板块三）：制造业/医疗健康/金融投资/科技互联网/教育/央国企
+    demand_type TEXT DEFAULT '', -- 需求5类（全景板块四）：AI原生组织变革/私有化部署/特定场景AI化/生态渠道合作/试用探索（可多值逗号分隔）
+    blocker_type TEXT DEFAULT '', -- 卡点6类（全景板块五）：部署≠使用/竞品锁定/决策链长/产品技术卡点/合规硬门槛/关系线索衰减（可多值）
+    failure_mode TEXT DEFAULT '' -- 失败模式（全景板块八）：A部署后沉默/B竞品锁定/C合规硬门槛/D需求未建立
   );
 
   -- CEO活动/演讲(辉哥获客活动)
@@ -204,10 +209,18 @@ db.exec(`
   );
 `);
 
-// ===== 安全迁移：为已存在的库补列（source_coverage，取数逻辑数据源标注）=====
+// ===== 安全迁移：为已存在的库补列（取数逻辑相关字段）=====
 const acctCols = db.prepare("PRAGMA table_info(accounts)").all().map(c=>c.name);
-if (!acctCols.includes('source_coverage')) {
-  db.exec("ALTER TABLE accounts ADD COLUMN source_coverage TEXT DEFAULT '{}'");
+const needCols = {
+  source_coverage: "TEXT DEFAULT '{}'",
+  health_tier: "TEXT DEFAULT ''",
+  industry_group: "TEXT DEFAULT ''",
+  demand_type: "TEXT DEFAULT ''",
+  blocker_type: "TEXT DEFAULT ''",
+  failure_mode: "TEXT DEFAULT ''"
+};
+for (const [col, def] of Object.entries(needCols)) {
+  if (!acctCols.includes(col)) db.exec(`ALTER TABLE accounts ADD COLUMN ${col} ${def}`);
 }
 
 
@@ -1733,5 +1746,64 @@ const covCount = db.transaction(() => {
   return n;
 })();
 console.log(`[seed] 数据源覆盖标注已更新 ${covCount} 家客户`);
+
+
+// ===== 全景报告维度标注（39家：健康度4档/行业6组/需求5类/卡点6类/失败模式）=====
+// 依据：全景报告取数逻辑.html 板块二/三/四/五/八的归类，数值与报告原文一致
+const panoramaTags = {
+  // [健康度, 行业组, 需求类, 卡点类, 失败模式] —— 严格按全景报告终版v2归类（板块二三四五八）
+  // 🟢健康推进中9 | 🟡有风险6 | 🔵静默12 | 🔴战败12
+  // 需求：AI变革8/私有化12/场景化10/生态3/试用16 | 卡点：部署6/竞品4/决策5/产品5/合规3/关系3 | 失败：A4/B2/C2/D4
+  '卓正医疗':   ['健康推进中', '医疗健康', 'AI原生组织变革,私有化部署,特定场景AI化', '', ''],
+  '南孚电池':   ['健康推进中', '制造业', 'AI原生组织变革,私有化部署,特定场景AI化', '竞品锁定,产品技术卡点', ''],
+  'HKIC':       ['健康推进中', '金融投资', '私有化部署,特定场景AI化', '产品技术卡点,合规硬门槛', ''],
+  '宇通客车':   ['健康推进中', '制造业', 'AI原生组织变革,私有化部署', '决策链长', ''],
+  '吉利汽车':   ['健康推进中', '制造业', 'AI原生组织变革,私有化部署,特定场景AI化', '决策链长', ''],
+  '三一重工':   ['健康推进中', '制造业', 'AI原生组织变革,私有化部署', '决策链长', ''],
+  '极光湾科技': ['健康推进中', '制造业', 'AI原生组织变革,私有化部署', '', ''],
+  '墨迹天气':   ['健康推进中', '科技互联网', '私有化部署,特定场景AI化', '', ''],
+  '普联香港':   ['健康推进中', '央国企', 'AI原生组织变革,生态渠道合作,私有化部署', '决策链长', ''],
+  '金智教育':   ['有风险', '教育', '特定场景AI化,生态渠道合作', '产品技术卡点', ''],
+  '致远互联':   ['有风险', '央国企', '生态渠道合作', '', ''],
+  '鹏扬基金':   ['有风险', '金融投资', '特定场景AI化', '产品技术卡点', ''],
+  '联合影像':   ['有风险', '医疗健康', '', '竞品锁定', ''],
+  '欢瑞世纪':   ['有风险', '教育', '私有化部署', '部署≠使用', ''],
+  '卓望':       ['有风险', '央国企', '', '决策链长', ''],
+  '中信资本':   ['静默', '金融投资', '特定场景AI化', '', ''],
+  '混沌学园':   ['静默', '教育', '试用探索', '', ''],
+  '曼伦':       ['静默', '科技互联网', '试用探索', '', ''],
+  'PPIO':       ['静默', '科技互联网', '试用探索', '', ''],
+  '中金公司':   ['静默', '金融投资', '特定场景AI化', '', ''],
+  '华泰研究所': ['静默', '金融投资', '特定场景AI化', '', ''],
+  '健主任':     ['静默', '医疗健康', 'AI原生组织变革', '', ''],
+  '刀法咨询':   ['静默', '科技互联网', '试用探索', '', ''],
+  '祥承':       ['静默', '科技互联网', '试用探索', '', ''],
+  '青钜科技':   ['静默', '科技互联网', '私有化部署', '部署≠使用', ''],
+  '卓越教育':   ['静默', '教育', '试用探索', '', ''],
+  '新世纪医疗集团': ['静默', '医疗健康', '试用探索', '合规硬门槛', ''],
+  'Hysan希慎':  ['战败冻结', '', '', '合规硬门槛', 'C'],
+  '得到':       ['战败冻结', '教育', '试用探索', '竞品锁定', 'B'],
+  '方里':       ['战败冻结', '制造业', '试用探索', '竞品锁定', 'B'],
+  '流利说':     ['战败冻结', '教育', '试用探索', '产品技术卡点', 'C'],
+  '香港中企':   ['战败冻结', '金融投资', '试用探索', '', 'D'],
+  '海归爸爸':   ['战败冻结', '教育', '试用探索', '关系线索衰减', 'D'],
+  '云迹':       ['战败冻结', '科技互联网', '试用探索', '部署≠使用', 'A'],
+  '51World':    ['战败冻结', '科技互联网', '试用探索', '', 'D'],
+  '我思科技':   ['战败冻结', '科技互联网', '私有化部署', '部署≠使用', 'A'],
+  '元梦灵境':   ['战败冻结', '科技互联网', '试用探索', '部署≠使用', 'A'],
+  '北京破圈':   ['战败冻结', '科技互联网', '试用探索', '部署≠使用,关系线索衰减', 'A'],
+  '西门子':     ['战败冻结', '制造业', '', '关系线索衰减', 'D'],
+  '吴师/黄江华': ['静默', '科技互联网', '试用探索', '', ''],
+  'Leo~JXQ金总': ['静默', '科技互联网', '试用探索', '', ''],
+};
+const updTag = db.prepare("UPDATE accounts SET health_tier=?, industry_group=?, demand_type=?, blocker_type=?, failure_mode=? WHERE company_name=?");
+const tagCount = db.transaction(() => {
+  let n = 0;
+  for (const [name, t] of Object.entries(panoramaTags)) {
+    if (updTag.run(t[0], t[1], t[2], t[3], t[4], name).changes > 0) n++;
+  }
+  return n;
+})();
+console.log(`[seed] 全景维度标注已更新 ${tagCount} 家客户`);
 
 export default db;
