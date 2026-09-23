@@ -89,7 +89,7 @@ select option{background:var(--bg-card);color:var(--text)}
 .hero::after{content:'';position:absolute;bottom:-30%;left:10%;width:300px;height:300px;background:radial-gradient(circle,rgba(139,92,246,.06) 0%,transparent 70%);pointer-events:none}
 .hero-title{font-size:20px;font-weight:700;color:var(--text-bright);margin-bottom:4px;position:relative}
 .hero-sub{font-size:12px;color:var(--text-muted);margin-bottom:24px;position:relative}
-.hero-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;position:relative}
+.hero-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;position:relative}
 .hero-stat{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius-lg);padding:20px;text-align:center;cursor:pointer;transition:all .2s}
 .hero-stat:hover{background:rgba(255,255,255,.07);transform:translateY(-2px);box-shadow:var(--shadow-glow)}
 .hero-stat .icon{font-size:28px;margin-bottom:8px;display:block}
@@ -532,11 +532,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
       </div>
       <div class="nav-section">
         <div class="nav-section-title">业务板块</div>
-        <div class="nav-item" data-page="events" onclick="navigate('events')">
-          <span class="icon">🎪</span>Event 活动<span class="badge" id="badge-events">0</span>
-        </div>
-        <div class="nav-item" data-page="speeches" onclick="navigate('speeches')">
-          <span class="icon">🎤</span>辉哥演讲<span class="badge" id="badge-speeches">0</span>
+        <div class="nav-item" data-page="ceo-events" onclick="navigate('ceo-events')">
+          <span class="icon">🎤</span>活动和CEO获客<span class="badge" id="badge-speeches">0</span>
         </div>
         <div class="nav-item" data-page="octo-summary" onclick="navigate('octo-summary')">
           <span class="icon">🐙</span>Octo 大客户复盘<span class="badge" id="badge-blockers" style="display:none">0</span>
@@ -589,9 +586,9 @@ function navigate(page,params={}){
   const content=document.getElementById('content');
   const ha=document.getElementById('header-actions');
   ha.innerHTML='';destroyCharts();
-  const titles={dashboard:'Dashboard',events:'🎪 Event 活动工作台','event-detail':'🎪 活动详情','event-form':'🎪 新建/编辑活动',speeches:'🎤 辉哥演讲获客','speech-detail':'🎤 演讲详情','speech-form':'🎤 新建/编辑演讲','octo-summary':'🐙 Octo 大客户复盘','octo-pipeline':'🐙 Account Pipeline','account-report':'🐙 客户全景档案',accounts:'🏢 客户列表','account-detail':'🐙 客户 360° 视图','account-form':'🐙 新建/编辑客户',funnel:'🔄 SDR 漏斗',import:'📥 数据导入',pipeline:'📋 Account Pipeline'};
+  const titles={dashboard:'Dashboard','ceo-events':'🎤 活动和CEO获客','ceo-event-detail':'🎤 活动详情','ceo-event-form':'🎤 新建/编辑活动','octo-summary':'🐙 Octo 大客户复盘','octo-pipeline':'🐙 Account Pipeline','account-report':'🐙 客户全景档案',accounts:'🏢 客户列表','account-detail':'🐙 客户 360° 视图','account-form':'🐙 新建/编辑客户',funnel:'🔄 SDR 漏斗',import:'📥 数据导入',pipeline:'📋 Account Pipeline'};
   document.getElementById('page-title').textContent=titles[page]||page;
-  const r={dashboard:renderDashboard,events:renderEvents,'event-detail':()=>renderEventDetail(params.id),'event-form':()=>renderEventForm(params.id),speeches:renderSpeeches,'speech-detail':()=>renderSpeechDetail(params.id),'speech-form':()=>renderSpeechForm(params.id),'octo-summary':()=>renderOctoSummary(params.tab),'octo-pipeline':()=>renderOctoPipeline(params.stage),'account-report':()=>renderAccountReport(params.id),accounts:renderAccounts,'account-detail':()=>renderAccountDetail(params.id),'account-form':()=>renderAccountForm(params.id),funnel:renderFunnel,import:renderImport,pipeline:()=>renderOctoPipeline(params.stage)};
+  const r={dashboard:renderDashboard,'ceo-events':renderCeoEvents,'ceo-event-detail':()=>renderCeoEventDetail(params.id),'ceo-event-form':()=>renderCeoEventForm(params.id),'octo-summary':()=>renderOctoSummary(params.tab),'octo-pipeline':()=>renderOctoPipeline(params.stage),'account-report':()=>renderAccountReport(params.id),accounts:renderAccounts,'account-detail':()=>renderAccountDetail(params.id),'account-form':()=>renderAccountForm(params.id),funnel:renderFunnel,import:renderImport,pipeline:()=>renderOctoPipeline(params.stage)};
   (r[page]||renderDashboard)();
 }
 function destroyCharts(){Object.values(charts).forEach(c=>c.destroy());charts={}}
@@ -603,34 +600,24 @@ async function renderDashboard(){
   try{stats=await api('/api/stats')}catch(e){content.innerHTML=err(e);return}
   updateBadges();
 
-  const preparing=(stats.events.byStatus.find(s=>s.status==='筹备中')||{c:0}).c;
-  const ongoing=(stats.events.byStatus.find(s=>s.status==='进行中')||{c:0}).c;
-  const finished=(stats.events.byStatus.find(s=>s.status==='已结束')||{c:0}).c;
-
   content.innerHTML=`
     <div class="hero">
       <div class="hero-title">MKT-CRM · 市场部数据指挥中心</div>
       <div class="hero-sub">明略科技 · 品牌与市场部 AI-Native 工作台 · 实时数据概览</div>
       <div class="hero-stats">
-        <div class="hero-stat animate-in" onclick="navigate('events')" style="animation-delay:.1s">
-          <span class="icon">🎪</span>
-          <div class="value">${stats.events.total}</div>
-          <div class="label">Event 活动</div>
-          <div class="sub">${preparing} 筹备中 · ${ongoing} 进行中 · ${finished} 已结束</div>
-        </div>
-        <div class="hero-stat animate-in" onclick="navigate('speeches')" style="animation-delay:.2s">
+        <div class="hero-stat animate-in" onclick="navigate('ceo-events')" style="animation-delay:.1s">
           <span class="icon">🎤</span>
           <div class="value pink">${stats.speeches.total}</div>
-          <div class="label">辉哥演讲</div>
+          <div class="label">活动和CEO获客</div>
           <div class="sub">累计触达 ${fmtNum(stats.speeches.totalAudience)} 人</div>
         </div>
-        <div class="hero-stat animate-in" onclick="navigate('octo-summary')" style="animation-delay:.3s">
+        <div class="hero-stat animate-in" onclick="navigate('octo-summary')" style="animation-delay:.2s">
           <span class="icon">🐙</span>
           <div class="value green">${stats.accounts.total}</div>
           <div class="label">Octo 大客户</div>
           <div class="sub">${stats.accounts.byTier.map(t=>t.tier+': '+t.c).join(' · ')||'等待导入'}</div>
         </div>
-        <div class="hero-stat animate-in" onclick="navigate('funnel')" style="animation-delay:.4s">
+        <div class="hero-stat animate-in" onclick="navigate('funnel')" style="animation-delay:.3s">
           <span class="icon">🔄</span>
           <div class="value orange">${stats.leads.total}</div>
           <div class="label">SDR 线索</div>
@@ -652,17 +639,13 @@ async function renderDashboard(){
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
       <div class="card">
-        <div class="card-header"><h3>🎪 最近活动</h3><button class="btn btn-sm btn-primary" onclick="navigate('event-form')">+ 新建</button></div>
-        <div class="card-body" style="padding:0">
-          ${stats.recentEvents.length?`<table>
-            <tr><th>活动名称</th><th>日期</th><th>报名</th><th>到场</th><th>留资</th><th>状态</th></tr>
-            ${stats.recentEvents.map(e=>`<tr class="clickable-row" onclick="navigate('event-detail',{id:${e.id}})">
-              <td><strong>${esc(e.name)}</strong></td><td>${e.date||'—'}</td>
-              <td>${e.registration_count||'—'}</td><td>${e.attendance_count||'—'}</td>
-              <td style="font-weight:700;color:var(--accent-light)">${e.leads_count||0}</td>
-              <td>${statusTag(e.status)}</td>
-            </tr>`).join('')}
-          </table>`:'<div class="empty-state" style="padding:32px"><div class="icon">🎪</div><p>暂无活动</p><button class="btn btn-primary" onclick="navigate(\'event-form\')">+ 创建第一个活动</button></div>'}
+        <div class="card-header"><h3>🎤 活动和CEO获客</h3><button class="btn btn-sm btn-primary" onclick="navigate('ceo-event-form')">+ 新建</button></div>
+        <div class="card-body">
+          <div style="text-align:center;padding:16px">
+            <div style="font-size:36px;font-weight:800;background:var(--gradient-pink);-webkit-background-clip:text;-webkit-text-fill-color:transparent">${stats.speeches.total}</div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">累计场次 · 触达 ${fmtNum(stats.speeches.totalAudience)} 人</div>
+            <button class="btn btn-secondary" style="margin-top:16px" onclick="navigate('ceo-events')">查看全部 →</button>
+          </div>
         </div>
       </div>
       <div class="card">
@@ -690,7 +673,6 @@ async function renderDashboard(){
   }
 }
 function updateBadges(){
-  document.getElementById('badge-events').textContent=stats.events?.total??0;
   document.getElementById('badge-speeches').textContent=stats.speeches?.total??0;
   document.getElementById('badge-leads').textContent=stats.leads?.total??0;
   // Load octo badges async
@@ -974,29 +956,29 @@ async function saveEvent(ev,id){
   try{if(id){await api(`/api/events/${id}`,{method:'PUT',body});toast('活动更新成功')}else{const r=await api('/api/events',{method:'POST',body});id=r.id;toast('活动创建成功')}navigate('event-detail',{id})}catch(e){toast(e.message,'error')}
 }
 
-// ===== SPEECHES =====
-async function renderSpeeches(){
+// ===== CEO-EVENTS (活动和CEO获客) =====
+async function renderCeoEvents(){
   const content=document.getElementById('content'),ha=document.getElementById('header-actions');
-  ha.innerHTML='<button class="btn btn-primary" onclick="navigate(\'speech-form\')">+ 新建演讲</button>';
+  ha.innerHTML='<button class="btn btn-primary" onclick="navigate(\'ceo-event-form\')">+ 新建活动</button>';
   let data,ov;try{[data,ov]=await Promise.all([api('/api/speeches'),api('/api/speeches/stats/overview')])}catch(e){content.innerHTML=err(e);return}
   content.innerHTML=`
     <div class="stats-grid">
       ${[{i:'🎤',v:ov.total,l:'累计场次',c:'var(--pink)'},{i:'👥',v:fmtNum(ov.totalAudience),l:'累计触达',c:'var(--accent)'},{i:'🏢',v:ov.uniqueAccounts,l:'触达客户',c:'var(--success)'},{i:'📊',v:ov.totalLeads,l:'累计获客',c:'var(--warning)'}].map(s=>`<div class="stat-card"><div class="accent-bar" style="background:${s.c}"></div><div class="stat-value" style="color:${s.c}">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('')}
     </div>
     <div class="card"><div class="table-wrap"><table>
-      <tr><th>演讲主题</th><th>日期</th><th>活动</th><th>听众</th><th>获客</th><th>操作</th></tr>
-      <tbody>${data.data.length?data.data.map(s=>`<tr class="clickable-row" onclick="navigate('speech-detail',{id:${s.id}})">
+      <tr><th>活动主题</th><th>日期</th><th>活动</th><th>听众</th><th>获客</th><th>操作</th></tr>
+      <tbody>${data.data.length?data.data.map(s=>`<tr class="clickable-row" onclick="navigate('ceo-event-detail',{id:${s.id}})">
         <td><strong>${esc(s.topic)}</strong></td><td>${s.date||'—'}</td><td>${esc(s.event_name)||'—'}</td>
         <td>${fmtNum(s.audience_count)}</td><td style="font-weight:700">${s.leads_count||0}</td>
-        <td><button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();navigate('speech-form',{id:${s.id}})">编辑</button></td>
-      </tr>`).join(''):'<tr><td colspan="6"><div class="empty-state"><p>暂无演讲记录</p></div></td></tr>'}</tbody>
+        <td><button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();navigate('ceo-event-form',{id:${s.id}})">编辑</button></td>
+      </tr>`).join(''):'<tr><td colspan="6"><div class="empty-state"><p>暂无活动记录</p></div></td></tr>'}</tbody>
     </table></div></div>`;
 }
 
-async function renderSpeechDetail(id){
+async function renderCeoEventDetail(id){
   const content=document.getElementById('content'),ha=document.getElementById('header-actions');
   try{const s=await api(`/api/speeches/${id}`);
-    ha.innerHTML=`<button class="btn btn-secondary" onclick="navigate('speeches')">← 返回</button><button class="btn btn-primary" onclick="navigate('speech-form',{id:${id}})">编辑</button>`;
+    ha.innerHTML=`<button class="btn btn-secondary" onclick="navigate('ceo-events')">← 返回</button><button class="btn btn-primary" onclick="navigate('ceo-event-form',{id:${id}})">编辑</button><button class="btn btn-danger" onclick="if(confirm('确定删除这条活动记录？'))deleteCeoEvent(${id})">删除</button>`;
     content.innerHTML=`
       <div class="card" style="margin-bottom:16px"><div class="card-header"><h3>${esc(s.topic)}</h3></div><div class="card-body"><div class="detail-grid">
         ${[['日期',s.date],['活动',s.event_name],['地点',s.location],['听众',fmtNum(s.audience_count)+'人'],['听众画像',s.audience_profile],['获客数',s.leads_count]].map(([l,v])=>`<div><div class="detail-field"><div class="label">${l}</div><div class="value">${esc(v)}</div></div></div>`).join('')}
@@ -1006,12 +988,12 @@ async function renderSpeechDetail(id){
   }catch(e){content.innerHTML=err(e)}
 }
 
-async function renderSpeechForm(id){
+async function renderCeoEventForm(id){
   const content=document.getElementById('content'),ha=document.getElementById('header-actions');
-  ha.innerHTML=`<button class="btn btn-secondary" onclick="navigate('speeches')">← 返回</button>`;
+  ha.innerHTML=`<button class="btn btn-secondary" onclick="navigate('ceo-events')">← 返回</button>`;
   let s={};if(id){try{s=await api(`/api/speeches/${id}`)}catch(e){content.innerHTML=err(e);return}}
   content.innerHTML=`<div class="card"><div class="card-body"><form id="sp-form" onsubmit="saveSpeech(event,${id||'null'})">
-    <div class="form-group"><label>演讲主题 *</label><input name="topic" required value="${esc(s.topic||'')}"></div>
+    <div class="form-group"><label>活动主题 *</label><input name="topic" required value="${esc(s.topic||'')}"></div>
     <div class="form-row-3"><div class="form-group"><label>日期</label><input type="date" name="date" value="${s.date||''}"></div><div class="form-group"><label>地点</label><input name="location" value="${esc(s.location||'')}"></div><div class="form-group"><label>所属活动</label><input name="event_name" value="${esc(s.event_name||'')}"></div></div>
     <div class="form-row"><div class="form-group"><label>听众人数</label><input type="number" name="audience_count" value="${s.audience_count||''}"></div><div class="form-group"><label>听众画像</label><input name="audience_profile" value="${esc(s.audience_profile||'')}"></div></div>
     <div class="form-group"><label>⭐ 业务设计</label><textarea name="business_design" rows="3">${esc(s.business_design||'')}</textarea></div>
@@ -1019,12 +1001,15 @@ async function renderSpeechForm(id){
     <div class="form-row"><div class="form-group"><label>反馈</label><textarea name="feedback">${esc(s.feedback||'')}</textarea></div><div class="form-group"><label>跟进计划</label><textarea name="follow_up_plan">${esc(s.follow_up_plan||'')}</textarea></div></div>
     <div class="form-group"><label>获客数</label><input type="number" name="leads_count" value="${s.leads_count||0}"></div>
     <div class="form-group"><label>备注</label><textarea name="notes">${esc(s.notes||'')}</textarea></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn btn-secondary" onclick="navigate('speeches')">取消</button><button type="submit" class="btn btn-primary">💾 保存</button></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn btn-secondary" onclick="navigate('ceo-events')">取消</button><button type="submit" class="btn btn-primary">💾 保存</button></div>
   </form></div></div>`;
 }
 async function saveSpeech(ev,id){
   ev.preventDefault();const form=new FormData(document.getElementById('sp-form'));const body=Object.fromEntries(form);body.audience_count=+body.audience_count||0;body.leads_count=+body.leads_count||0;
-  try{if(id){await api(`/api/speeches/${id}`,{method:'PUT',body});toast('更新成功')}else{const r=await api('/api/speeches',{method:'POST',body});id=r.id;toast('创建成功')}navigate('speech-detail',{id})}catch(e){toast(e.message,'error')}
+  try{if(id){await api(`/api/speeches/${id}`,{method:'PUT',body});toast('更新成功')}else{const r=await api('/api/speeches',{method:'POST',body});id=r.id;toast('创建成功')}navigate('ceo-event-detail',{id})}catch(e){toast(e.message,'error')}
+}
+async function deleteCeoEvent(id){
+  try{await api(`/api/speeches/${id}`,{method:'DELETE'});toast('删除成功');navigate('ceo-events')}catch(e){toast(e.message,'error')}
 }
 
 // ===== ACCOUNTS =====
@@ -1061,7 +1046,7 @@ async function searchAccounts(){
 async function renderAccountDetail(id){
   const content=document.getElementById('content'),ha=document.getElementById('header-actions');
   try{const a=await api(`/api/accounts/${id}`);
-    ha.innerHTML=`<button class="btn btn-secondary" onclick="navigate('accounts')">← 返回</button><button class="btn btn-primary" onclick="navigate('account-form',{id:${id}})">编辑</button>`;
+    ha.innerHTML=`<button class="btn btn-secondary" onclick="navigate('accounts')">← 返回</button><button class="btn btn-primary" onclick="navigate('account-form',{id:${id}})">编辑</button><button class="btn btn-danger" onclick="if(confirm('确定删除该客户？'))deleteItem('accounts',${id},'${esc(a.company_name).replace(/'/g,"\\'")}')">删除</button>`;
     content.innerHTML=`
       <div class="card" style="margin-bottom:16px"><div class="card-header"><h3><span class="tier-badge tier-${a.tier}">${a.tier}</span> ${esc(a.company_name)}</h3></div><div class="card-body"><div class="detail-grid">
         ${[['行业',a.industry],['规模',a.scale],['地区',a.region],['来源',a.source],['首次触达',a.first_touch_date],['触达次数',a.touch_count],['Octo状态',a.octo_status],['负责人',a.assigned_to]].map(([l,v])=>`<div><div class="detail-field"><div class="label">${l}</div><div class="value">${esc(v)}</div></div></div>`).join('')}
@@ -1445,7 +1430,7 @@ function renderImport(){
   content.innerHTML=`
     <div class="tabs"><div class="tab active" onclick="switchImportTab(this,'upload')">上传导入</div><div class="tab" onclick="switchImportTab(this,'history')">导入历史</div><div class="tab" onclick="switchImportTab(this,'guide')">字段说明</div></div>
     <div id="import-content">
-      <div class="form-group" style="max-width:300px;margin-bottom:20px"><label>选择导入目标</label><select id="import-target" onchange="showImportFields()"><option value="events">🎪 活动数据</option><option value="speeches">🎤 演讲数据</option><option value="accounts">🐙 客户数据</option><option value="leads">🔄 SDR线索</option></select></div>
+      <div class="form-group" style="max-width:300px;margin-bottom:20px"><label>选择导入目标</label><select id="import-target" onchange="showImportFields()"><option value="speeches">🎤 活动和CEO获客</option><option value="accounts">🐙 客户数据</option><option value="leads">🔄 SDR线索</option></select></div>
       <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="event.preventDefault();this.classList.remove('dragover');handleDrop(event)">
         <div class="icon">📁</div><p><strong>点击或拖拽文件到这里</strong></p><p>支持 .xlsx / .xls / .csv，最大20MB</p>
         <input type="file" id="file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFileSelect(this)">
@@ -1471,7 +1456,7 @@ async function switchImportTab(el,tab){
   document.querySelectorAll('.tabs .tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
   const c=document.getElementById('import-content');
   if(tab==='history'){try{const logs=await api('/api/import/logs');c.innerHTML=logs.length?`<div class="card"><div class="table-wrap"><table><tr><th>文件</th><th>目标</th><th>总行</th><th>成功</th><th>失败</th><th>时间</th></tr>${logs.map(l=>`<tr><td>${esc(l.filename)}</td><td>${l.target_table}</td><td>${l.total_rows}</td><td style="color:var(--success)">${l.success_rows}</td><td style="color:${l.error_rows?'var(--danger)':'inherit'}">${l.error_rows}</td><td>${l.imported_at}</td></tr>`).join('')}</table></div></div>`:'<div class="empty-state"><p>暂无导入记录</p></div>'}catch(e){c.innerHTML=err(e)}}
-  else if(tab==='guide'){c.innerHTML=`<div class="card"><div class="card-body" style="line-height:2"><h3 style="margin-bottom:12px">数据导入指南</h3><p>1. 准备Excel文件，第一行为表头（中文或英文均可）</p><p>2. 选择导入目标：活动/演讲/客户/线索</p><p>3. 上传文件，系统自动识别列名匹配字段</p><hr style="border:none;border-top:1px solid var(--border);margin:12px 0"><p><strong>SDR线索字段说明：</strong></p><p>日期格式YYYY-MM-DD · 客户等级S/A/B/C</p><p>线索状态：new(新进线)/contacted(已联系)/qualified(已转出)/opportunity(商机)/closed_won(成单)/closed_lost(无效)</p><p>来源渠道：直接传中文原值（400电话/官方微信/Octo体验等）</p><p>成单金额：单位万元</p></div></div>`}
+  else if(tab==='guide'){c.innerHTML=`<div class="card"><div class="card-body" style="line-height:2"><h3 style="margin-bottom:12px">数据导入指南</h3><p>1. 准备Excel文件，第一行为表头（中文或英文均可）</p><p>2. 选择导入目标：活动和CEO获客/客户/线索</p><p>3. 上传文件，系统自动识别列名匹配字段</p><hr style="border:none;border-top:1px solid var(--border);margin:12px 0"><p><strong>SDR线索字段说明：</strong></p><p>日期格式YYYY-MM-DD · 客户等级S/A/B/C</p><p>线索状态：new(新进线)/contacted(已联系)/qualified(已转出)/opportunity(商机)/closed_won(成单)/closed_lost(无效)</p><p>来源渠道：直接传中文原值（400电话/官方微信/Octo体验等）</p><p>成单金额：单位万元</p></div></div>`}
   else renderImport();
 }
 
@@ -1985,7 +1970,7 @@ function fmtNum(n){if(!n||n===0)return'0';if(n>=10000)return(n/10000).toFixed(1)
 function tryParse(s){try{return JSON.parse(s)||[]}catch{return[]}}
 function openModal(h){document.getElementById('modal').innerHTML=h;document.getElementById('modal-overlay').classList.add('active')}
 function closeModal(){document.getElementById('modal-overlay').classList.remove('active')}
-async function deleteItem(t,id,name){if(!confirm(`确定删除「${name}」？`))return;try{await api(`/api/${t}/${id}`,{method:'DELETE'});toast('删除成功');navigate(t==='leads'?'funnel':t)}catch(e){toast(e.message,'error')}}
+async function deleteItem(t,id,name){if(!confirm(`确定删除「${name}」？`))return;try{await api(`/api/${t}/${id}`,{method:'DELETE'});toast('删除成功');navigate(t==='leads'?'funnel':t==='accounts'?'octo-summary':t)}catch(e){toast(e.message,'error')}}
 
 // ===== INIT =====
 navigate('dashboard');

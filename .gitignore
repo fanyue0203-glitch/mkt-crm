@@ -4,3 +4,4 @@ mkt-crm.db-shm
 mkt-crm.db-wal
 uploads/*
 !uploads/.gitkeep
+data/
