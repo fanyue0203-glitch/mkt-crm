@@ -58,8 +58,22 @@ function OctoDashboard({ d }) {
   const bidPipe = bidding.reduce((s, a) => s + (a.deal_amount || 0), 0);
   const totalPlus = wonAmt + bPipe + bidPipe;
 
+  const [activeSec, setActiveSec] = useState(1);
+  React.useEffect(() => {
+    const obs = () => {
+      for (let i = 1; i <= SECTION_TITLES.length; i++) {
+        const el = document.getElementById(`pano-${i}`);
+        if (el) {
+          const r = el.getBoundingClientRect();
+          if (r.top <= 140 && r.bottom > 140) { setActiveSec(i); break; }
+        }
+      }
+    };
+    window.addEventListener('scroll', obs, { passive: true });
+    return () => window.removeEventListener('scroll', obs);
+  }, []);
   const sectionNav = SECTION_TITLES.map((t, i) => (
-    <a key={t} className="tag tag-blue" style={{ cursor: 'pointer', margin: 3 }}
+    <a key={t} className={'tag ' + (activeSec === i + 1 ? 'tag-green' : 'tag-blue')} style={{ cursor: 'pointer', margin: 3, fontWeight: activeSec === i + 1 ? 700 : 400 }}
       onClick={() => document.getElementById(`pano-${i + 1}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
       {CN_NUMS[i]} {t}
     </a>
@@ -235,7 +249,7 @@ function OctoDashboard({ d }) {
 
   return (
     <div className="panorama">
-      <div className="card" style={{ marginBottom: 16 }}>
+      <div className="card panorama-nav">
         <div className="card-body">
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
             <span style={{ fontSize: 12, color: 'var(--text-muted)', marginRight: 6 }}>快速导航</span>
