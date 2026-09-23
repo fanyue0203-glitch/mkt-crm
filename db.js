@@ -61,7 +61,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS ceo_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
-    event_type TEXT DEFAULT '演讲' CHECK(event_type IN ('演讲','峰会','论坛','私享会','闭门会','其他')),
+    event_type TEXT DEFAULT '演讲' CHECK(event_type IN ('演讲','峰会','论坛','私享会','闭门会','发布会','沙龙','展会','其他')),
     date TEXT DEFAULT '',
     end_date TEXT DEFAULT '',
     location TEXT DEFAULT '',
@@ -204,56 +204,8 @@ db.exec(`
 
 // ===== 插入示例数据 =====
 db.exec(`
-  -- Events
-  INSERT INTO events (name, event_type, date, end_date, location, status, theme, scale,
-    registration_count, attendance_count, attendance_rate, vip_count, vip_attendance_rate,
-    leads_count, mql_count, sql_count, estimated_ppl,
-    industry_distribution, job_level_distribution, dept_distribution, channel_sources,
-    product_signals, industry_signals, region_highlights,
-    key_opportunities, customer_feedback, feedback_summary, structural_insights,
-    business_design, host, target_audience)
-  VALUES (
-    '第七届媒介力学论坛·广州场', '论坛', '2026-09-03', '2026-09-03', '广州', '已结束',
-    'AI驱动营销变革', 259,
-    259, 146, 56.4, 19, 100.0,
-    48, 10, 1, '45万',
-    '[{"name":"服务代理商","count":54,"pct":20.8},{"name":"互联网与技术","count":48,"pct":18.5},{"name":"快消-个人护理","count":32,"pct":12.4},{"name":"制药和医疗保健","count":24,"pct":9.3},{"name":"快消-食饮","count":22,"pct":8.5},{"name":"快消-美妆日化","count":14,"pct":5.4},{"name":"汽车","count":9,"pct":3.5},{"name":"零售","count":8,"pct":3.1},{"name":"消费电子","count":7,"pct":2.7}]',
-    '[{"name":"经理/主管级","count":83,"pct":32.0},{"name":"总监级","count":47,"pct":18.1},{"name":"C-Suite/VP/总经理","count":30,"pct":11.6},{"name":"专员/执行级","count":24,"pct":9.3},{"name":"其他","count":75,"pct":29.0}]',
-    '[{"name":"市场/品牌/公关","count":84,"pct":32.4},{"name":"产品/技术/运营","count":29,"pct":11.2},{"name":"销售/商务","count":26,"pct":10.0},{"name":"采购/资源","count":25,"pct":9.7},{"name":"管理层","count":11,"pct":4.2}]',
-    '[{"name":"市场部","count":136},{"name":"华南","count":59},{"name":"宝洁","count":27},{"name":"营销生态","count":15}]',
-    '[{"name":"AIGC相关","count":4,"note":"最热产品方向"},{"name":"GEO优化","count":2,"note":"新兴增长点"},{"name":"DOMO","count":2},{"name":"AdEff","count":2},{"name":"CBP/CDP","count":1},{"name":"Social运营","count":1}]',
-    '[{"name":"快消","count":8,"pct":62,"note":"绝对主力行业"},{"name":"医药","count":1},{"name":"媒体","count":1},{"name":"旅游","count":1}]',
-    '广州场医药行业参会24人（9.3%），华南医药产业集聚效应显著。宝洁华南总部效应：渠道码报名27人+4条线索覆盖4个产品线。快消行业合计68人占报名总量26.3%',
-    '[{"level":"商机","company":"嘉顿食品","industry":"饮料","need":"DOMO+微伴","ppl":"10万","notes":"本周约产品会议"},{"level":"高潜","company":"莲藕健康","industry":"医药","need":"GEO优化","ppl":"20万"},{"level":"高潜","company":"维他奶","industry":"快消","need":"AIGC","ppl":"10万"},{"level":"战略","company":"宝洁","industry":"快消","need":"CBP/AIGC/GEO/Social","notes":"4条线索，全面评估产品矩阵"},{"level":"关注","company":"徕芬","industry":"日护","need":"DOMO+妙啊","ppl":"5万"},{"level":"关注","company":"分众传媒","industry":"媒体","need":"AdEff"}]',
-    '品牌客户190人占73.4%，服务代理商54人占20.8%。参会者以经理/主管级和总监级为主力，市场/品牌/公关部门占比最高，决策层合计占29.7%',
-    '品牌方到场意愿显著高于代理商。签到品牌客户占79.4%，总监及以上决策层占26.8%。AIGC是线索中出现频率最高的产品方向（31%），与报名需求热点高度吻合',
-    '快消行业全线覆盖（68人报名+8条线索），AIGC和GEO是核心需求。医药赛道潜力初显（24人+1条GEO线索），宝洁深度合作窗口打开',
-    '面对CMO/VP/市场总监为主的品牌客户群，讲AI驱动营销变革的故事。品牌客户占73.4%，是核心TA',
-    '明略科技', 'CMO/VP Marketing，互联网+快消+医药+汽车'
-  );
-
-  INSERT INTO events (name, event_type, date, end_date, location, status, theme, scale,
-    registration_count, attendance_count, booth_visitors, wechat_followers_new,
-    leads_count, sql_count,
-    customer_feedback, investor_feedback,
-    business_design, product_solutions, target_market,
-    feedback_summary, structural_insights, action_items, host, partners)
-  VALUES (
-    '2026世界机器人大会(WRC)', '展会', '2026-08-19', '2026-08-23', '北京', '已结束',
-    '明略×海康联合参展 · Agent+具身智能', 557000,
-    0, 0, 5000, 523,
-    552, 3,
-    '到访展位客户问最多的是两家公司的关系以及明略主业务',
-    '投资人肯定了联合展位规模和具身智能方向',
-    '软件与模型归明略，硬件本体归海康——让机器人像agent一样参与协作',
-    'VLM/VLA多模态感知+智能推理规划+多智能体协同；MY线下门店智能运营；海康AGV硬件本体',
-    '策划预期是工业+餐饮TOB国内，实际来访以海外客户为主',
-    '5000接待证明联合参展的流量价值',
-    '暴露最大结构性问题：品牌认知模糊',
-    '[{"action":"品牌话术修复","owner":"PR+市场","deadline":"最紧急","detail":"产出3秒/30秒/3分钟版明略AI定位话术"}]',
-    '明略科技×海康机器人',
-    '["海康机器人"]'
-  );
+  -- 旧events种子已移除(通用Event板块已删除)
+  -- 媒介力学+WRC数据后续迁移到ceo_events
 
   -- ===== Octo大客户真实数据 =====
 
@@ -1097,15 +1049,7 @@ db.exec(`
     '杨三角(杨国安教授)关系线索，孙方超引入。沙龙邀请函层面非销售驱动，2周未建商务接触即流失。教训：关系型线索2周窗口期。复活条件：西门子中国区有明确AI协作需求通过杨三角重新搭线。'
   );
 
-  -- Speeches
-  INSERT INTO speeches (date, location, event_name, topic, speech_type, audience_count, leads_count,
-    business_design, story_line, audience_profile, follow_up_plan) VALUES
-    ('2026-08-20', '北京·WRC主论坛', '2026世界机器人大会', 'Agent协同网络：两个大脑×HAO×L1-L5具身演化',
-     '主论坛演讲', 3000, 0,
-     '面向机器人+AI行业决策者，讲明略在具身智能的技术叙事',
-     '从Octo到具身智能的叙事延伸：Agent网络连接物理世界',
-     '机器人行业从业者+投资人+媒体+政府官员',
-     '技术社区内容二次分发');
+  -- Speeches种子已移除(speeches表已删除，数据迁移到ceo_events)
 
   -- Leads
   INSERT INTO leads (company_name, contact_name, source_channel, source_detail, status, product, industry, inbound_date, requirement) VALUES
@@ -1638,7 +1582,7 @@ fixName.run('联合影像','%联合影像%');
 // 严格按原文数值录入，不做任何改动
 
 // --- 一、CEO获客8场活动（events表）---
-const insCEOEvent = db.prepare(`INSERT INTO events (name, event_type, date, location, status, theme, registration_count, attendance_count, leads_count, mql_count, sql_count, host, business_design, target_audience, notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+const insCEOEvent = db.prepare(`INSERT INTO ceo_events (name, event_type, date, location, status, topic, wechat_followers, audience_count, registrations, activations, sql_count, key_messages, business_design, audience_profile, notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
 
 insCEOEvent.run('《晚点》头条','其他','2026-05-20','','已结束','CEO获客·吴明辉出席',198,0,80,65,4,'吴明辉(CEO)','CEO出席活动获客，配合企微活码/开通链接沉淀线索','活动受众/Octo目标客群','获客方式：企微活码扫码。指标口径：报名REG=活码加微198，留资LEADS=OCTO申请80，MQL=审核开通65，SQL=转出销售4。加微→开通33%，加微→转出2.0%。39家客户匹配：4家（卓望、宇通客车）。自报来源TOP：混沌8人/官网3人/网络3人/微信公众号3人/播客3人。转出明细：①朱江(北京仁达企业管理咨询有限公司)→李金龙(灵听工牌)②马先生(南京新街口百货商店股份有限公司)→卢悦(CDP+MA)③李端(成都爱游智学科技有限公司)→刘智行(AI短剧)④史女士(杭州海康威视数字技术股份有限公司)→赵莹。特点：流量最大（占全部活码的50%），但加微→开通转化33%，说明60%+加微后无后续动作；晚点是入口渠道而非认知来源（自报来源中「晚点」仅6人）。');
 insCEOEvent.run('AI生态峰会','峰会','2026-06-19','','已结束','CEO获客·吴明辉出席',88,0,4,3,0,'吴明辉(CEO)','CEO出席活动获客，配合企微活码/开通链接沉淀线索','活动受众/Octo目标客群','获客方式：企微活码扫码。指标口径：REG=加微88，LEADS=OCTO申请4，MQL=开通3，SQL=转出0。申请率5%，加微→开通3%。39家客户匹配：0家。特点：转化率3%。');

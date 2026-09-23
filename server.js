@@ -57,32 +57,31 @@ function logEdit(table, recordId, oldRow, newRow, editedBy = '') {
 
 // ===== Dashboard Stats =====
 app.get('/api/stats', (req, res) => {
-  const eventCount = db.prepare('SELECT COUNT(*) as c FROM events').get().c;
-  const eventsByStatus = db.prepare("SELECT status, COUNT(*) as c FROM events GROUP BY status").all();
-  const speechCount = db.prepare('SELECT COUNT(*) as c FROM speeches').get().c;
-  const totalAudience = db.prepare('SELECT COALESCE(SUM(audience_count),0) as c FROM speeches').get().c;
+  const ceoEventCount = db.prepare('SELECT COUNT(*) as c FROM ceo_events').get().c;
+  const ceoEventsByStatus = db.prepare("SELECT status, COUNT(*) as c FROM ceo_events GROUP BY status").all();
+  const totalAudience = db.prepare('SELECT COALESCE(SUM(audience_count),0) as c FROM ceo_events').get().c;
   const accountCount = db.prepare('SELECT COUNT(*) as c FROM accounts').get().c;
   const accountsByTier = db.prepare("SELECT tier, COUNT(*) as c FROM accounts GROUP BY tier").all();
   const leadCount = db.prepare('SELECT COUNT(*) as c FROM leads').get().c;
   const leadsByStatus = db.prepare("SELECT status, COUNT(*) as c FROM leads GROUP BY status").all();
-  const recentEvents = db.prepare("SELECT id, name, date, status, leads_count FROM events ORDER BY date DESC LIMIT 5").all();
+  const recentEvents = db.prepare("SELECT id, name, date, status, sql_count as leads_count FROM ceo_events ORDER BY date DESC LIMIT 5").all();
   const recentLeads = db.prepare("SELECT id, contact_name, company_name, status, source_channel, created_at FROM leads ORDER BY created_at DESC LIMIT 10").all();
   res.json({
-    events: { total: eventCount, byStatus: eventsByStatus },
-    speeches: { total: speechCount, totalAudience },
+    events: { total: ceoEventCount, byStatus: ceoEventsByStatus },
+    speeches: { total: ceoEventCount, totalAudience },
     accounts: { total: accountCount, byTier: accountsByTier },
     leads: { total: leadCount, byStatus: leadsByStatus },
     recentEvents, recentLeads
   });
 });
 
-// ===== Events CRUD =====
+// ===== Events CRUD (now using ceo_events) =====
 app.get('/api/events', (req, res) => {
   const { status, search, page = 1, limit = 50 } = req.query;
-  let sql = 'SELECT * FROM events WHERE 1=1';
+  let sql = 'SELECT * FROM ceo_events WHERE 1=1';
   const params = {};
   if (status) { sql += ' AND status = @status'; params.status = status; }
-  if (search) { sql += ' AND (name LIKE @s OR theme LIKE @s OR location LIKE @s)'; params.s = `%${search}%`; }
+  if (search) { sql += ' AND (name LIKE @s OR topic LIKE @s OR location LIKE @s)'; params.s = `%${search}%`; }
   sql += ' ORDER BY date DESC';
   const total = db.prepare(sql.replace('SELECT *', 'SELECT COUNT(*) as c')).get(params).c;
   sql += ` LIMIT @limit OFFSET @offset`;
@@ -93,54 +92,58 @@ app.get('/api/events', (req, res) => {
 });
 
 app.get('/api/events/:id', (req, res) => {
-  const row = db.prepare('SELECT * FROM events WHERE id = ?').get(req.params.id);
+  const row = db.prepare('SELECT * FROM ceo_events WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: '活动不存在' });
   const linkedAccounts = db.prepare(`
     SELECT ea.*, a.company_name, a.industry, a.tier
-    FROM event_accounts ea JOIN accounts a ON ea.account_id = a.id
+    FROM ceo_event_attendees ea JOIN accounts a ON ea.account_id = a.id
     WHERE ea.event_id = ?
   `).all(req.params.id);
   res.json({ ...row, linkedAccounts });
 });
 
 app.post('/api/events', (req, res) => {
-  const { name, date, end_date, location, scale, budget, status, theme, target_audience,
-    story_lines, agenda, host, organizer, partners, business_design, notes } = req.body;
+  const { name, date, end_date, location, status, topic, audience_count, audience_profile,
+    business_design, story_line, key_messages, wechat_followers, registrations, activations,
+    mql_count, sql_count, notes } = req.body;
   if (!name) return res.status(400).json({ error: '活动名称不能为空' });
-  const stmt = db.prepare(`INSERT INTO events (name, date, end_date, location, scale, budget, status, theme, target_audience,
-    story_lines, agenda, host, organizer, partners, business_design, notes)
-    VALUES (@name, @date, @end_date, @location, @scale, @budget, @status, @theme, @target_audience,
-    @story_lines, @agenda, @host, @organizer, @partners, @business_design, @notes)`);
+  const stmt = db.prepare(`INSERT INTO ceo_events (name, date, end_date, location, status, topic, audience_count, audience_profile,
+    business_design, story_line, key_messages, wechat_followers, registrations, activations,
+    mql_count, sql_count, notes)
+    VALUES (@name, @date, @end_date, @location, @status, @topic, @audience_count, @audience_profile,
+    @business_design, @story_line, @key_messages, @wechat_followers, @registrations, @activations,
+    @mql_count, @sql_count, @notes)`);
   const r = stmt.run({
     name, date: date || '', end_date: end_date || '', location: location || '',
-    scale: scale || 0, budget: budget || '', status: status || '筹备中',
-    theme: theme || '', target_audience: target_audience || '',
-    story_lines: JSON.stringify(story_lines || []), agenda: JSON.stringify(agenda || []),
-    host: host || '', organizer: organizer || '', partners: JSON.stringify(partners || []),
-    business_design: business_design || '', notes: notes || ''
+    status: status || '筹备中', topic: topic || '', audience_count: audience_count || 0,
+    audience_profile: audience_profile || '', business_design: business_design || '',
+    story_line: story_line || '', key_messages: key_messages || '',
+    wechat_followers: wechat_followers || 0, registrations: registrations || 0,
+    activations: activations || 0, mql_count: mql_count || 0, sql_count: sql_count || 0,
+    notes: notes || ''
   });
   res.json({ id: r.lastInsertRowid, message: '创建成功' });
 });
 
 app.put('/api/events/:id', (req, res) => {
-  const old = db.prepare('SELECT * FROM events WHERE id = ?').get(req.params.id);
+  const old = db.prepare('SELECT * FROM ceo_events WHERE id = ?').get(req.params.id);
   if (!old) return res.status(404).json({ error: '活动不存在' });
-  logEdit('events', +req.params.id, old, req.body, req.body._editedBy || '');
-  buildUpdate('events', +req.params.id, req.body);
+  logEdit('ceo_events', +req.params.id, old, req.body, req.body._editedBy || '');
+  buildUpdate('ceo_events', +req.params.id, req.body);
   res.json({ message: '更新成功' });
 });
 
 app.delete('/api/events/:id', (req, res) => {
-  db.prepare('DELETE FROM events WHERE id = ?').run(req.params.id);
+  db.prepare('DELETE FROM ceo_events WHERE id = ?').run(req.params.id);
   res.json({ message: '删除成功' });
 });
 
-// ===== Speeches CRUD =====
+// ===== Speeches/CEO获客 CRUD (now using ceo_events) =====
 app.get('/api/speeches', (req, res) => {
   const { search, page = 1, limit = 50 } = req.query;
-  let sql = 'SELECT * FROM speeches WHERE 1=1';
+  let sql = 'SELECT * FROM ceo_events WHERE 1=1';
   const params = {};
-  if (search) { sql += ' AND (topic LIKE @s OR event_name LIKE @s OR location LIKE @s)'; params.s = `%${search}%`; }
+  if (search) { sql += ' AND (topic LIKE @s OR name LIKE @s OR location LIKE @s)'; params.s = `%${search}%`; }
   sql += ' ORDER BY date DESC';
   const total = db.prepare(sql.replace('SELECT *', 'SELECT COUNT(*) as c')).get(params).c;
   sql += ` LIMIT @limit OFFSET @offset`;
@@ -151,56 +154,61 @@ app.get('/api/speeches', (req, res) => {
 });
 
 app.get('/api/speeches/:id', (req, res) => {
-  const row = db.prepare('SELECT * FROM speeches WHERE id = ?').get(req.params.id);
-  if (!row) return res.status(404).json({ error: '演讲不存在' });
+  const row = db.prepare('SELECT * FROM ceo_events WHERE id = ?').get(req.params.id);
+  if (!row) return res.status(404).json({ error: '活动不存在' });
   const touches = db.prepare(`
-    SELECT st.*, a.company_name, a.industry, a.tier
-    FROM speech_touches st JOIN accounts a ON st.account_id = a.id
-    WHERE st.speech_id = ?
+    SELECT ea.*, a.company_name, a.industry, a.tier
+    FROM ceo_event_attendees ea JOIN accounts a ON ea.account_id = a.id
+    WHERE ea.event_id = ?
   `).all(req.params.id);
   res.json({ ...row, touches });
 });
 
 app.post('/api/speeches', (req, res) => {
-  const { date, location, event_name, topic, audience_count, audience_profile,
-    story_line, key_messages, business_design, feedback, follow_up_plan, notes } = req.body;
-  if (!topic) return res.status(400).json({ error: '演讲主题不能为空' });
-  const stmt = db.prepare(`INSERT INTO speeches (date, location, event_name, topic, audience_count, audience_profile,
-    story_line, key_messages, business_design, feedback, follow_up_plan, notes)
-    VALUES (@date, @location, @event_name, @topic, @audience_count, @audience_profile,
-    @story_line, @key_messages, @business_design, @feedback, @follow_up_plan, @notes)`);
+  const { name, date, location, topic, event_type, audience_count, audience_profile,
+    story_line, key_messages, business_design, wechat_followers, registrations, activations,
+    mql_count, sql_count, notes } = req.body;
+  if (!name && !topic) return res.status(400).json({ error: '活动名称或主题不能为空' });
+  const stmt = db.prepare(`INSERT INTO ceo_events (name, date, location, topic, event_type, audience_count, audience_profile,
+    story_line, key_messages, business_design, wechat_followers, registrations, activations,
+    mql_count, sql_count, notes)
+    VALUES (@name, @date, @location, @topic, @event_type, @audience_count, @audience_profile,
+    @story_line, @key_messages, @business_design, @wechat_followers, @registrations, @activations,
+    @mql_count, @sql_count, @notes)`);
   const r = stmt.run({
-    date: date || '', location: location || '', event_name: event_name || '',
-    topic, audience_count: audience_count || 0, audience_profile: audience_profile || '',
-    story_line: story_line || '', key_messages: JSON.stringify(key_messages || []),
-    business_design: business_design || '', feedback: feedback || '',
-    follow_up_plan: follow_up_plan || '', notes: notes || ''
+    name: name || topic || '', date: date || '', location: location || '',
+    topic: topic || '', event_type: event_type || '演讲',
+    audience_count: audience_count || 0, audience_profile: audience_profile || '',
+    story_line: story_line || '', key_messages: key_messages || '',
+    business_design: business_design || '', wechat_followers: wechat_followers || 0,
+    registrations: registrations || 0, activations: activations || 0,
+    mql_count: mql_count || 0, sql_count: sql_count || 0, notes: notes || ''
   });
   res.json({ id: r.lastInsertRowid, message: '创建成功' });
 });
 
 app.put('/api/speeches/:id', (req, res) => {
-  const old = db.prepare('SELECT * FROM speeches WHERE id = ?').get(req.params.id);
-  if (!old) return res.status(404).json({ error: '演讲不存在' });
-  logEdit('speeches', +req.params.id, old, req.body, req.body._editedBy || '');
-  buildUpdate('speeches', +req.params.id, req.body);
+  const old = db.prepare('SELECT * FROM ceo_events WHERE id = ?').get(req.params.id);
+  if (!old) return res.status(404).json({ error: '活动不存在' });
+  logEdit('ceo_events', +req.params.id, old, req.body, req.body._editedBy || '');
+  buildUpdate('ceo_events', +req.params.id, req.body);
   res.json({ message: '更新成功' });
 });
 
 app.delete('/api/speeches/:id', (req, res) => {
-  db.prepare('DELETE FROM speeches WHERE id = ?').run(req.params.id);
+  db.prepare('DELETE FROM ceo_events WHERE id = ?').run(req.params.id);
   res.json({ message: '删除成功' });
 });
 
-// Speech stats
+// Speech/CEO获客 stats
 app.get('/api/speeches/stats/overview', (req, res) => {
-  const total = db.prepare('SELECT COUNT(*) as c FROM speeches').get().c;
-  const totalAudience = db.prepare('SELECT COALESCE(SUM(audience_count),0) as c FROM speeches').get().c;
-  const totalLeads = db.prepare('SELECT COALESCE(SUM(leads_count),0) as c FROM speeches').get().c;
-  const uniqueAccounts = db.prepare('SELECT COUNT(DISTINCT account_id) as c FROM speech_touches').get().c;
+  const total = db.prepare('SELECT COUNT(*) as c FROM ceo_events').get().c;
+  const totalAudience = db.prepare('SELECT COALESCE(SUM(audience_count),0) as c FROM ceo_events').get().c;
+  const totalLeads = db.prepare('SELECT COALESCE(SUM(registrations),0) as c FROM ceo_events').get().c;
+  const uniqueAccounts = db.prepare('SELECT COUNT(DISTINCT account_id) as c FROM ceo_event_attendees').get().c;
   const byIndustry = db.prepare(`
     SELECT a.industry, COUNT(*) as c
-    FROM speech_touches st JOIN accounts a ON st.account_id = a.id
+    FROM ceo_event_attendees ea JOIN accounts a ON ea.account_id = a.id
     WHERE a.industry != ''
     GROUP BY a.industry ORDER BY c DESC
   `).all();
@@ -235,14 +243,14 @@ app.get('/api/accounts/:id', (req, res) => {
   // Parse key_events
   try { row.key_events = JSON.parse(row.key_events || '[]'); } catch { row.key_events = []; }
   const events = db.prepare(`
-    SELECT e.id, e.name, e.date, e.status, ea.attendance_status, ea.feedback
-    FROM event_accounts ea JOIN events e ON ea.event_id = e.id
+    SELECT e.id, e.name, e.date, e.status, ea.follow_up_status, ea.notes as feedback
+    FROM ceo_event_attendees ea JOIN ceo_events e ON ea.event_id = e.id
     WHERE ea.account_id = ? ORDER BY e.date DESC
   `).all(req.params.id);
   const speeches = db.prepare(`
-    SELECT s.id, s.topic, s.date, s.event_name, st.response_level, st.follow_up_status
-    FROM speech_touches st JOIN speeches s ON st.speech_id = s.id
-    WHERE st.account_id = ? ORDER BY s.date DESC
+    SELECT e.id, e.topic, e.date, e.name as event_name, ea.response_level, ea.follow_up_status
+    FROM ceo_event_attendees ea JOIN ceo_events e ON ea.event_id = e.id
+    WHERE ea.account_id = ? ORDER BY e.date DESC
   `).all(req.params.id);
   const leads = db.prepare('SELECT * FROM leads WHERE account_id = ? ORDER BY created_at DESC').all(req.params.id);
   const contacts = db.prepare('SELECT * FROM account_contacts WHERE account_id = ? ORDER BY is_champion DESC, id ASC').all(req.params.id);
@@ -669,8 +677,10 @@ app.delete('/api/leads/:id', (req, res) => {
 app.post('/api/import/:table', upload.single('file'), async (req, res) => {
   try {
     const { table } = req.params;
-    const validTables = ['events', 'speeches', 'accounts', 'leads'];
-    if (!validTables.includes(table)) return res.status(400).json({ error: '不支持的导入目标' });
+    const validTables = ['ceo_events', 'speeches', 'accounts', 'leads'];
+    const tableAlias = { 'events': 'ceo_events', 'speeches': 'ceo_events' };
+    const actualTable = tableAlias[table] || table;
+    if (!validTables.includes(actualTable)) return res.status(400).json({ error: '不支持的导入目标' });
     if (!req.file) return res.status(400).json({ error: '请上传文件' });
 
     const XLSX = await import('xlsx');
@@ -681,13 +691,13 @@ app.post('/api/import/:table', upload.single('file'), async (req, res) => {
 
     // Column mapping config
     const columnMaps = {
-      events: { '活动名称': 'name', '日期': 'date', '截止日期': 'end_date', '地点': 'location', '规模': 'scale', '预算': 'budget', '状态': 'status', '主题': 'theme', '目标客户群': 'target_audience', '业务设计': 'business_design', '主办方': 'host', '承办方': 'organizer', '备注': 'notes' },
-      speeches: { '日期': 'date', '地点': 'location', '活动名称': 'event_name', '演讲主题': 'topic', '听众人数': 'audience_count', '听众画像': 'audience_profile', '故事线': 'story_line', '业务设计': 'business_design', '反馈': 'feedback', '跟进计划': 'follow_up_plan', '备注': 'notes' },
+      ceo_events: { '活动名称': 'name', '日期': 'date', '截止日期': 'end_date', '地点': 'location', '主题': 'topic', '类型': 'event_type', '状态': 'status', '听众人数': 'audience_count', '听众画像': 'audience_profile', '业务设计': 'business_design', '故事线': 'story_line', '加微数': 'wechat_followers', '申请数': 'registrations', '开通数': 'activations', 'MQL': 'mql_count', 'SQL': 'sql_count', '备注': 'notes' },
+      speeches: { '活动名称': 'name', '日期': 'date', '地点': 'location', '演讲主题': 'topic', '听众人数': 'audience_count', '听众画像': 'audience_profile', '故事线': 'story_line', '业务设计': 'business_design', '备注': 'notes' },
       accounts: { '公司名称': 'company_name', '行业': 'industry', '规模': 'scale', '地区': 'region', '来源': 'source', '等级': 'tier', '首次触达日期': 'first_touch_date', '需求摘要': 'needs_summary', '预估预算': 'estimated_budget', 'Octo状态': 'octo_status', '负责人': 'assigned_to', '备注': 'notes' },
       leads: { '客户名称': 'company_name', '联系人': 'contact_name', '职位': 'contact_title', '电话': 'phone', '来源渠道': 'source_channel', '来源子渠道': 'source_detail', '线索状态': 'status', '需求产品': 'product', '行业': 'industry', '分配区域/团队': 'team', '团队': 'team', '分配销售': 'assigned_to', '进线日期': 'inbound_date', '转出日期': 'transfer_date', '商机号': 'opportunity_id', '商机阶段': 'opportunity_stage', '成单金额': 'deal_amount', '丢单原因': 'lost_reason', '需求描述/跟进记录': 'requirement', '需求描述': 'requirement', '跟进记录': 'requirement', '备注': 'requirement' }
     };
 
-    const cmap = columnMaps[table];
+    const cmap = columnMaps[actualTable] || columnMaps[table];
     let successCount = 0;
     const errors = [];
 
@@ -705,13 +715,13 @@ app.post('/api/import/:table', upload.single('file'), async (req, res) => {
       }
 
       // Validate required field
-      const requiredField = { events: 'name', speeches: 'topic', accounts: 'company_name', leads: 'company_name' }[table];
+      const requiredField = { ceo_events: 'name', speeches: 'name', accounts: 'company_name', leads: 'company_name' }[actualTable];
       if (!mapped[requiredField]) throw new Error(`缺少必填字段: ${requiredField}`);
 
       // Build INSERT
       const fields = Object.keys(mapped).filter(k => mapped[k] !== '' && mapped[k] !== undefined);
       const placeholders = fields.map(f => `@${f}`).join(', ');
-      const sql = `INSERT INTO ${table} (${fields.join(', ')}) VALUES (${placeholders})`;
+      const sql = `INSERT INTO ${actualTable} (${fields.join(', ')}) VALUES (${placeholders})`;
       db.prepare(sql).run(mapped);
     });
 
