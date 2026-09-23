@@ -800,141 +800,142 @@ async function saveAccount(ev,id){
   try{if(id){await api(`/api/accounts/${id}`,{method:'PUT',body});toast('更新成功')}else{const r=await api('/api/accounts',{method:'POST',body});id=r.id;toast('创建成功')}navigate('account-detail',{id})}catch(e){toast(e.message,'error')}
 }
 
-// ===== FUNNEL =====
-let funnelSubTab='overview';
+// ===== FUNNEL (SDR数据工作台) =====
+let _leadsSearch='',_leadsStatus='',_leadsSource='',_leadsPage=1,_funnelData=null;
 async function renderFunnel(){
   const content=document.getElementById('content');
   const ha=document.getElementById('header-actions');
   ha.innerHTML=`<button class="btn btn-secondary" onclick="if(confirm('确定清空所有线索数据？清空后需重新导入。'))clearAllLeads()">🗑️ 清空线索</button><button class="btn btn-sm btn-primary" onclick="openLeadForm()">+ 新建线索</button><button class="btn btn-primary" onclick="navigate('import')">📥 导入数据</button>`;
-  content.innerHTML='<div class="tabs" id="funnel-tabs"><div class="tab '+(funnelSubTab==='overview'?'active':'')+' " onclick="switchFunnelTab(this,\'overview\')">📊 漏斗概览</div><div class="tab '+(funnelSubTab==='leads'?'active':'')+' " onclick="switchFunnelTab(this,\'leads\')">📋 Leads 明细</div></div><div id="funnel-content"></div>';
-  if(funnelSubTab==='leads'){renderLeadsDetail();return}
-  const fc=document.getElementById('funnel-content');
-  let data;try{data=await api('/api/leads/funnel')}catch(e){fc.innerHTML=err(e);return}
+  content.innerHTML='<div style="text-align:center;padding:60px;color:var(--text-muted)">⏳ 加载数据...</div>';
+  let data;try{data=await api('/api/leads/funnel');_funnelData=data}catch(e){content.innerHTML=err(e);return}
   const k=data.kpi||{};
-  const maxC=Math.max(...data.funnel.map(s=>s.count),1);
-  const mainFunnel=data.funnel.filter(s=>s.status!=='closed_lost');
-  const lostCount=(data.funnel.find(s=>s.status==='closed_lost')||{count:0}).count;
-  const colors={new:'#475569',contacted:'#3b82f6',qualified:'#8b5cf6',opportunity:'#f59e0b',closed_won:'#10b981',closed_lost:'#ef4444'};
-  const srcColors=['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ec4899','#ef4444','#06b6d4','#84cc16','#f97316','#6366f1'];
+  const mainFunnel=(data.funnel||[]).filter(s=>s.status!=='closed_lost');
+  const lostCount=((data.funnel||[]).find(s=>s.status==='closed_lost')||{count:0}).count;
+  const stageColors={new:'#475569',contacted:'#3b82f6',qualified:'#8b5cf6',opportunity:'#f59e0b',closed_won:'#10b981',closed_lost:'#ef4444'};
 
-  fc.innerHTML=`
-    <div class="stats-grid" style="margin-bottom:20px;grid-template-columns:repeat(6,1fr)">
-      ${[{v:fmtNum(k.total),l:'总进线量',c:'var(--accent)'},{v:fmtNum(k.qualifiedCount),l:'转出线索数',c:'var(--info)'},{v:k.transferRate+'%',l:'转出率',c:'#8b5cf6'},{v:fmtNum(k.total-(lostCount||0)),l:'有效线索数',c:'var(--success)'},{v:fmtNum(k.opportunityCount),l:'商机数',c:'var(--warning)'},{v:k.totalDeal?k.totalDeal+'万':'0',l:'成单金额',c:'#ec4899'}].map(s=>`<div class="stat-card"><div class="accent-bar" style="background:${s.c}"></div><div class="stat-value" style="color:${s.c}">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('')}
+  // 计算逐阶段转化率
+  const funnelRows=mainFunnel.map((s,i)=>{
+    const prev=i>0?mainFunnel[i-1].count:s.count;
+    const stageRate=prev>0?((s.count/prev)*100).toFixed(1):'100.0';
+    return { ...s, stageRate, totalRate:k.total>0?((s.count/k.total)*100).toFixed(1):'0.0' };
+  });
+
+  content.innerHTML=`
+    <div class="stats-grid" style="margin-bottom:20px;grid-template-columns:repeat(5,1fr)">
+      ${[
+        {v:fmtNum(k.total),l:'线索总量',c:'var(--accent)',icon:'📥'},
+        {v:fmtNum(k.qualifiedCount),l:'转出线索数',c:'var(--info)',icon:'✅'},
+        {v:(k.transferRate||'0.0')+'%',l:'转出率',c:'#8b5cf6',icon:'📊'},
+        {v:fmtNum(k.opportunityCount),l:'商机数',c:'var(--warning)',icon:'💼'},
+        {v:(k.totalDeal?fmtNum(k.totalDeal):'0')+'万',l:'成单金额',c:'var(--success)',icon:'💰'},
+      ].map(s=>`<div class="stat-card animate-in"><div class="accent-bar" style="background:${s.c}"></div><div style="font-size:20px;margin-bottom:4px">${s.icon}</div><div class="stat-value" style="color:${s.c}">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('')}
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-      <div class="card"><div class="card-header"><h3>🔄 漏斗视图</h3></div><div class="card-body">
-        <div class="funnel">${mainFunnel.map(s=>{
-          const pct=Math.max(s.count/maxC*100,4);
-          const convRate=k.total>0?(s.count/k.total*100).toFixed(1)+'%':'—';
-          return `<div class="funnel-stage"><div class="funnel-label">${s.name}</div><div style="flex:1"><div class="funnel-bar" style="width:${pct}%;background:${colors[s.status]}"></div></div><div class="funnel-count" style="color:${colors[s.status]}">${s.count}</div><div class="funnel-pct">${convRate}</div></div>`;
-        }).join('')}</div>
-        ${lostCount?`<div style="margin-top:16px;padding:12px;background:var(--danger-bg,rgba(239,68,68,.08));border:1px solid rgba(239,68,68,.2);border-radius:var(--radius);font-size:13px;color:var(--danger,#ef4444)">❌ 无效/丢单: ${lostCount} 条</div>`:''}
+
+    <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="card"><div class="card-header"><h3>🔄 转化漏斗</h3></div><div class="card-body">
+        ${mainFunnel.length?buildFunnelHTML(funnelRows,stageColors,k.total):'<div class="empty-state" style="padding:24px"><p>暂无线索数据</p></div>'}
+        ${lostCount?`<div style="margin-top:12px;padding:10px 14px;background:var(--danger-bg);border:1px solid rgba(239,68,68,.2);border-radius:var(--radius);font-size:12px;color:var(--danger)">❌ 无效/丢单: <strong>${lostCount}</strong> 条</div>`:''}
       </div></div>
-      <div class="card"><div class="card-header"><h3>📊 来源渠道分布</h3></div><div class="card-body">
-        ${data.bySource&&data.bySource.length?'<div class="chart-container"><canvas id="chart-source"></canvas></div>':'<div class="empty-state" style="padding:24px"><p>暂无来源数据</p></div>'}
+      <div class="card"><div class="card-header"><h3>📡 来源渠道分布</h3></div><div class="card-body">
+        ${data.bySource&&data.bySource.length?renderHBars(data.bySource,'#3b82f6'):'<div class="empty-state" style="padding:24px"><p>暂无来源数据</p></div>'}
       </div></div>
     </div>
-    <div class="card" style="margin-top:16px"><div class="card-header"><h3>📈 月度趋势（进线 vs 转出）</h3></div><div class="card-body">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="card"><div class="card-header"><h3>🏷️ 产品分布</h3></div><div class="card-body">
+        ${data.byProduct&&data.byProduct.length?renderHBars(data.byProduct,'#10b981'):'<div class="empty-state" style="padding:24px"><p>暂无产品数据</p></div>'}
+      </div></div>
+      <div class="card"><div class="card-header"><h3>👥 团队分配分布</h3></div><div class="card-body">
+        ${data.byTeam&&data.byTeam.length?renderHBars(data.byTeam,'#8b5cf6'):'<div class="empty-state" style="padding:24px"><p>暂无团队数据</p></div>'}
+      </div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px"><div class="card-header"><h3>📈 月度趋势（进线量 vs 转出量）</h3></div><div class="card-body">
       ${data.monthlyTrend&&data.monthlyTrend.length?'<div class="chart-container" style="height:280px"><canvas id="chart-monthly"></canvas></div>':'<div class="empty-state" style="padding:24px"><p>暂无月度数据（需要 inbound_date 字段）</p></div>'}
     </div></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
-      <div class="card"><div class="card-header"><h3>🏷️ 需求产品 Top10</h3></div><div class="card-body">
-        ${data.byProduct&&data.byProduct.length?renderHBars(data.byProduct,'#3b82f6'):'<div class="empty-state" style="padding:24px"><p>暂无产品数据</p></div>'}
-      </div></div>
-      <div class="card"><div class="card-header"><h3>🗺️ 区域/团队分布</h3></div><div class="card-body">
-        ${data.byTeam&&data.byTeam.length?renderHBars(data.byTeam,'#8b5cf6'):'<div class="empty-state" style="padding:24px"><p>暂无区域数据</p></div>'}
-      </div></div>
-    </div>
-    <div class="card" style="margin-top:16px"><div class="card-header"><h3>📋 最近线索</h3></div><div class="card-body" style="padding:0">
-      ${data.recentLeads&&data.recentLeads.length?`<div class="table-wrap"><table><tr><th>公司</th><th>联系人</th><th>来源渠道</th><th>需求产品</th><th>分配人</th><th>进线日期</th><th>状态</th></tr>
-        ${data.recentLeads.map(l=>`<tr><td>${esc(l.company_name)||'—'}</td><td>${esc(l.contact_name)||'—'}</td><td>${sourceTag(l.source_channel)}</td><td>${esc(l.product)||'—'}</td><td>${esc(l.assigned_to)||'—'}</td><td>${l.inbound_date||'—'}</td><td>${leadStatusTag(l.status)}</td></tr>`).join('')}
-      </table></div>`:'<div class="empty-state" style="padding:32px"><div class="icon">🔄</div><p>暂无线索数据</p><button class="btn btn-primary" onclick="navigate(\'import\')">📥 导入数据</button></div>'}
-    </div></div>`;
 
-  // Source channel doughnut chart
-  if(data.bySource&&data.bySource.length){
-    charts.source=new Chart(document.getElementById('chart-source'),{type:'doughnut',data:{labels:data.bySource.map(s=>s.name),datasets:[{data:data.bySource.map(s=>s.count),backgroundColor:srcColors.slice(0,data.bySource.length),borderWidth:0,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#94a3b8',padding:12}}}}});
-  }
-  // Monthly trend line chart
+    <div class="card"><div class="card-header"><h3>📋 线索池</h3><button class="btn btn-sm btn-primary" onclick="openLeadForm()">+ 新建线索</button></div><div class="card-body" style="padding:16px">
+      <div id="leads-table-container"><div style="text-align:center;padding:20px;color:var(--text-muted)">⏳ 加载线索...</div></div>
+    </div></div>
+  `;
+
   if(data.monthlyTrend&&data.monthlyTrend.length){
     const months=data.monthlyTrend.map(m=>m.month);
     const totals=data.monthlyTrend.map(m=>m.total);
     const transferred=data.monthlyTrend.map(m=>m.transferred);
     const rates=data.monthlyTrend.map(m=>m.total>0?(m.transferred/m.total*100).toFixed(1):0);
-    charts.monthly=new Chart(document.getElementById('chart-monthly'),{type:'bar',data:{labels:months,datasets:[{type:'bar',label:'进线量',data:totals,backgroundColor:'rgba(59,130,246,.6)',borderRadius:4,order:2},{type:'bar',label:'转出量',data:transferred,backgroundColor:'rgba(139,92,246,.6)',borderRadius:4,order:2},{type:'line',label:'转出率%',data:rates,borderColor:'#10b981',backgroundColor:'rgba(16,185,129,.1)',tension:.3,yAxisID:'y1',pointRadius:4,pointBackgroundColor:'#10b981',order:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#94a3b8'}}},scales:{y:{beginAtZero:true,ticks:{color:'#64748b',precision:0},grid:{color:'rgba(51,65,85,.3)'}},y1:{position:'right',beginAtZero:true,max:100,ticks:{color:'#10b981',callback:v=>v+'%'},grid:{display:false}},x:{ticks:{color:'#64748b'},grid:{display:false}}}}});
+    charts.monthly=new Chart(document.getElementById('chart-monthly'),{
+      type:'line',
+      data:{labels:months,datasets:[
+        {label:'进线量',data:totals,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.15)',tension:.3,fill:true,pointRadius:4,pointBackgroundColor:'#3b82f6'},
+        {label:'转出量',data:transferred,borderColor:'#8b5cf6',backgroundColor:'rgba(139,92,246,.15)',tension:.3,fill:true,pointRadius:4,pointBackgroundColor:'#8b5cf6'},
+        {label:'转出率%',data:rates,borderColor:'#10b981',backgroundColor:'transparent',borderDash:[5,5],tension:.3,pointRadius:3,pointBackgroundColor:'#10b981',yAxisID:'y1'}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#94a3b8',usePointStyle:true,padding:16}}},scales:{
+        y:{beginAtZero:true,ticks:{color:'#64748b',precision:0},grid:{color:'rgba(51,65,85,.3)'},title:{display:true,text:'数量',color:'#64748b'}},
+        y1:{position:'right',beginAtZero:true,max:100,ticks:{color:'#10b981',callback:v=>v+'%'},grid:{display:false},title:{display:true,text:'转出率',color:'#10b981'}},
+        x:{ticks:{color:'#64748b'},grid:{display:false}}
+      }}
+    });
   }
-}
-function renderHBars(items,color){
-  const max=Math.max(...items.map(i=>i.count),1);
-  return `<div style="display:flex;flex-direction:column;gap:8px">${items.map(i=>{
-    const pct=(i.count/max*100).toFixed(0);
-    return `<div style="display:flex;align-items:center;gap:10px"><div style="min-width:90px;font-size:13px;font-weight:500;text-align:right;color:var(--text-secondary)">${esc(i.name)}</div><div style="flex:1;background:var(--bg-surface,rgba(51,65,85,.3));border-radius:4px;height:22px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${color};border-radius:4px;transition:width .6s"></div></div><div style="min-width:40px;font-size:13px;font-weight:700;color:${color}">${i.count}</div></div>`;
-  }).join('')}</div>`;
-}
-async function clearAllLeads(){
-  try{const r=await api('/api/leads/all',{method:'DELETE'});toast(r.message);renderFunnel()}catch(e){toast(e.message,'error')}
-}
-function switchFunnelTab(el,tab){
-  funnelSubTab=tab;
-  document.querySelectorAll('#funnel-tabs .tab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
-  destroyCharts();
-  if(tab==='leads')renderLeadsDetail();
-  else{const fc=document.getElementById('funnel-content');fc.innerHTML='<div style="text-align:center;padding:40px;color:var(--text-muted)">⏳ 加载...</div>';renderFunnelOverview()}
-}
-async function renderFunnelOverview(){
-  const fc=document.getElementById('funnel-content');
-  let data;try{data=await api('/api/leads/funnel')}catch(e){fc.innerHTML=err(e);return}
-  const k=data.kpi||{};
-  const maxC=Math.max(...data.funnel.map(s=>s.count),1);
-  const mainFunnel=data.funnel.filter(s=>s.status!=='closed_lost');
-  const lostCount=(data.funnel.find(s=>s.status==='closed_lost')||{count:0}).count;
-  const colors={new:'#475569',contacted:'#3b82f6',qualified:'#8b5cf6',opportunity:'#f59e0b',closed_won:'#10b981',closed_lost:'#ef4444'};
-  const srcColors=['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ec4899','#ef4444','#06b6d4','#84cc16','#f97316','#6366f1'];
-  fc.innerHTML=`
-    <div class="stats-grid" style="margin-bottom:20px;grid-template-columns:repeat(6,1fr)">
-      ${[{v:fmtNum(k.total),l:'总进线量',c:'var(--accent)'},{v:fmtNum(k.qualifiedCount),l:'转出线索数',c:'var(--info)'},{v:k.transferRate+'%',l:'转出率',c:'#8b5cf6'},{v:fmtNum(k.total-(lostCount||0)),l:'有效线索数',c:'var(--success)'},{v:fmtNum(k.opportunityCount),l:'商机数',c:'var(--warning)'},{v:k.totalDeal?k.totalDeal+'万':'0',l:'成单金额',c:'#ec4899'}].map(s=>`<div class="stat-card"><div class="accent-bar" style="background:${s.c}"></div><div class="stat-value" style="color:${s.c}">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('')}
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-      <div class="card"><div class="card-header"><h3>🔄 漏斗视图</h3></div><div class="card-body">
-        <div class="funnel">${mainFunnel.map(s=>{const pct=Math.max(s.count/maxC*100,4);const convRate=k.total>0?(s.count/k.total*100).toFixed(1)+'%':'—';return '<div class="funnel-stage"><div class="funnel-label">'+s.name+'</div><div style="flex:1"><div class="funnel-bar" style="width:'+pct+'%;background:'+colors[s.status]+'"></div></div><div class="funnel-count" style="color:'+colors[s.status]+'">'+s.count+'</div><div class="funnel-pct">'+convRate+'</div></div>';}).join('')}</div>
-        ${lostCount?'<div style="margin-top:16px;padding:12px;background:var(--danger-bg,rgba(239,68,68,.08));border:1px solid rgba(239,68,68,.2);border-radius:var(--radius);font-size:13px;color:var(--danger,#ef4444)">❌ 无效/丢单: '+lostCount+' 条</div>':''}
-      </div></div>
-      <div class="card"><div class="card-header"><h3>📊 来源渠道分布</h3></div><div class="card-body">
-        ${data.bySource&&data.bySource.length?'<div class="chart-container"><canvas id="chart-source"></canvas></div>':'<div class="empty-state" style="padding:24px"><p>暂无来源数据</p></div>'}
-      </div></div>
-    </div>
-    <div class="card" style="margin-top:16px"><div class="card-header"><h3>📈 月度趋势（进线 vs 转出）</h3></div><div class="card-body">
-      ${data.monthlyTrend&&data.monthlyTrend.length?'<div class="chart-container" style="height:280px"><canvas id="chart-monthly"></canvas></div>':'<div class="empty-state" style="padding:24px"><p>暂无月度数据</p></div>'}
-    </div></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
-      <div class="card"><div class="card-header"><h3>🏷️ 需求产品 Top10</h3></div><div class="card-body">
-        ${data.byProduct&&data.byProduct.length?renderHBars(data.byProduct,'#3b82f6'):'<div class="empty-state" style="padding:24px"><p>暂无产品数据</p></div>'}
-      </div></div>
-      <div class="card"><div class="card-header"><h3>🗺️ 区域/团队分布</h3></div><div class="card-body">
-        ${data.byTeam&&data.byTeam.length?renderHBars(data.byTeam,'#8b5cf6'):'<div class="empty-state" style="padding:24px"><p>暂无区域数据</p></div>'}
-      </div></div>
-    </div>`;
-  if(data.bySource&&data.bySource.length){charts.source=new Chart(document.getElementById('chart-source'),{type:'doughnut',data:{labels:data.bySource.map(s=>s.name),datasets:[{data:data.bySource.map(s=>s.count),backgroundColor:srcColors.slice(0,data.bySource.length),borderWidth:0,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#94a3b8',padding:12}}}}})}
-  if(data.monthlyTrend&&data.monthlyTrend.length){const months=data.monthlyTrend.map(m=>m.month);const totals=data.monthlyTrend.map(m=>m.total);const transferred=data.monthlyTrend.map(m=>m.transferred);const rates=data.monthlyTrend.map(m=>m.total>0?(m.transferred/m.total*100).toFixed(1):0);charts.monthly=new Chart(document.getElementById('chart-monthly'),{type:'bar',data:{labels:months,datasets:[{type:'bar',label:'进线量',data:totals,backgroundColor:'rgba(59,130,246,.6)',borderRadius:4,order:2},{type:'bar',label:'转出量',data:transferred,backgroundColor:'rgba(139,92,246,.6)',borderRadius:4,order:2},{type:'line',label:'转出率%',data:rates,borderColor:'#10b981',backgroundColor:'rgba(16,185,129,.1)',tension:.3,yAxisID:'y1',pointRadius:4,pointBackgroundColor:'#10b981',order:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#94a3b8'}}},scales:{y:{beginAtZero:true,ticks:{color:'#64748b',precision:0},grid:{color:'rgba(51,65,85,.3)'}},y1:{position:'right',beginAtZero:true,max:100,ticks:{color:'#10b981',callback:v=>v+'%'},grid:{display:false}},x:{ticks:{color:'#64748b'},grid:{display:false}}}}})}
+
+  loadLeadsTable();
 }
 
-// ===== LEADS DETAIL (二级分类) =====
-let _leadsSearch='',_leadsStatus='',_leadsSource='',_leadsPage=1;
-async function renderLeadsDetail(){
-  const fc=document.getElementById('funnel-content');
-  fc.innerHTML='<div style="text-align:center;padding:40px;color:var(--text-muted)">⏳ 加载明细...</div>';
+function buildFunnelHTML(rows,colors,total){
+  if(!rows.length)return'';
+  const topCount=rows[0].count||1;
+  return `<div style="display:flex;flex-direction:column;gap:8px">
+    ${rows.map((s,i)=>{
+      const wPct=Math.max((s.count/topCount)*100,8);
+      const isFirst=i===0;
+      return `<div style="display:flex;align-items:center;gap:12px">
+        <div style="min-width:72px;font-size:13px;font-weight:500;color:var(--text-secondary);text-align:right">${esc(s.name)}</div>
+        <div style="flex:1;position:relative;height:36px;background:var(--bg-surface);border-radius:6px;overflow:hidden">
+          <div style="width:${wPct}%;height:100%;background:linear-gradient(90deg,${colors[s.status]},${colors[s.status]}cc);border-radius:6px;display:flex;align-items:center;justify-content:flex-end;padding-right:12px;transition:width .8s cubic-bezier(.4,0,.2,1);min-width:40px">
+            <span style="font-size:16px;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.4)">${s.count}</span>
+          </div>
+        </div>
+        <div style="min-width:80px;font-size:11px;color:var(--text-muted);text-align:left">
+          ${isFirst?`<span style="color:${colors[s.status]}">起点</span>`:`<span style="color:${colors[s.status]};font-weight:600">↘ ${s.stageRate}%</span><br><span style="font-size:10px">总占比 ${s.totalRate}%</span>`}
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function renderHBars(items,color){
+  if(!items||!items.length)return'';
+  const max=Math.max(...items.map(i=>i.count),1);
+  const palette=[color,'#8b5cf6','#10b981','#f59e0b','#ec4899','#06b6d4','#f97316','#6366f1','#84cc16','#ef4444'];
+  return `<div class="data-bars">${items.slice(0,12).map((i,idx)=>{
+    const pct=Math.max((i.count/max)*100,3);
+    const c=palette[idx%palette.length];
+    return `<div class="data-bar-row"><div class="data-bar-label" title="${esc(i.name)}">${esc(i.name)}</div><div class="data-bar"><div class="data-bar-fill" style="width:${pct}%;background:${c}"></div></div><div class="data-bar-value" style="color:${c}">${i.count}</div></div>`;
+  }).join('')}</div>`;
+}
+
+// ===== 线索池表格 =====
+async function loadLeadsTable(){
+  const container=document.getElementById('leads-table-container');
+  if(!container)return;
+  container.innerHTML='<div style="text-align:center;padding:20px;color:var(--text-muted)">⏳ 加载...</div>';
   const params=new URLSearchParams();
   if(_leadsSearch)params.set('search',_leadsSearch);
   if(_leadsStatus)params.set('status',_leadsStatus);
   if(_leadsSource)params.set('source_channel',_leadsSource);
-  params.set('page',_leadsPage);params.set('limit',50);
-  let data;try{data=await api('/api/leads?'+params)}catch(e){fc.innerHTML=err(e);return}
+  params.set('page',_leadsPage);params.set('limit',20);
+
+  let sourceOptions=[];
+  if(_funnelData&&_funnelData.bySource)sourceOptions=_funnelData.bySource.map(s=>s.name);
+
+  let data;try{data=await api('/api/leads?'+params)}catch(e){container.innerHTML=`<div style="color:var(--danger);padding:16px">❌ ${esc(e.message)}</div>`;return}
   const totalPages=Math.ceil(data.total/data.limit)||1;
-  fc.innerHTML=`
-    <div class="search-bar" style="margin-bottom:16px;flex-wrap:wrap">
-      <input type="text" placeholder="搜索公司/联系人/产品..." id="leads-search" value="${esc(_leadsSearch)}" onkeyup="if(event.key==='Enter'){_leadsSearch=this.value;_leadsPage=1;renderLeadsDetail()}">
-      <select id="leads-status" onchange="_leadsStatus=this.value;_leadsPage=1;renderLeadsDetail()">
+
+  container.innerHTML=`
+    <div class="search-bar" style="margin-bottom:12px;flex-wrap:wrap">
+      <input type="text" placeholder="🔍 搜索公司/联系人/产品..." id="leads-search" value="${esc(_leadsSearch)}" onkeyup="if(event.key==='Enter'){_leadsSearch=this.value;_leadsPage=1;loadLeadsTable()}" style="max-width:280px">
+      <select id="leads-status" onchange="_leadsStatus=this.value;_leadsPage=1;loadLeadsTable()">
         <option value="">全部状态</option>
         <option value="new" ${_leadsStatus==='new'?'selected':''}>新进线</option>
         <option value="contacted" ${_leadsStatus==='contacted'?'selected':''}>已联系</option>
@@ -943,40 +944,90 @@ async function renderLeadsDetail(){
         <option value="closed_won" ${_leadsStatus==='closed_won'?'selected':''}>成单</option>
         <option value="closed_lost" ${_leadsStatus==='closed_lost'?'selected':''}>无效/丢单</option>
       </select>
-      <button class="btn btn-sm btn-secondary" onclick="_leadsSearch=document.getElementById('leads-search').value;_leadsPage=1;renderLeadsDetail()">🔍 搜索</button>
-      <button class="btn btn-sm btn-primary" onclick="openLeadForm()">+ 新建</button>
-      <span style="margin-left:auto;font-size:12px;color:var(--text-muted)">共 ${data.total} 条 · 第 ${_leadsPage}/${totalPages} 页</span>
+      <select id="leads-source" onchange="_leadsSource=this.value;_leadsPage=1;loadLeadsTable()">
+        <option value="">全部来源</option>
+        ${sourceOptions.map(s=>`<option value="${esc(s)}" ${_leadsSource===s?'selected':''}>${esc(s)}</option>`).join('')}
+      </select>
+      <button class="btn btn-sm btn-secondary" onclick="_leadsSearch=document.getElementById('leads-search').value;_leadsPage=1;loadLeadsTable()">🔍 搜索</button>
+      <span style="margin-left:auto;font-size:12px;color:var(--text-muted)">共 ${data.total} 条 · ${_leadsPage}/${totalPages} 页</span>
     </div>
-    <div class="card"><div class="table-wrap"><table>
-      <tr><th>ID</th><th>公司名称</th><th>联系人</th><th>来源渠道</th><th>需求产品</th><th>状态</th><th>进线日期</th><th>团队</th><th>分配人</th><th>操作</th></tr>
-      <tbody>${data.data.length?data.data.map(leadDetailRow).join(''):'<tr><td colspan="10"><div class="empty-state" style="padding:24px"><p>暂无数据</p></div></td></tr>'}</tbody>
-    </table></div></div>
-    ${totalPages>1?'<div style="display:flex;justify-content:center;gap:8px;margin-top:16px;align-items:center"><button class="btn btn-sm btn-secondary" '+(+_leadsPage<=1?'disabled':'')+' onclick="_leadsPage='+(_leadsPage-1)+';renderLeadsDetail()">← 上页</button><span style="font-size:13px;color:var(--text-secondary)">第 '+_leadsPage+'/'+totalPages+' 页</span><button class="btn btn-sm btn-secondary" '+(+_leadsPage>=totalPages?'disabled':'')+' onclick="_leadsPage='+(_leadsPage+1)+';renderLeadsDetail()">下页 →</button></div>':''}
-    <div class="highlight-box" style="margin-top:16px">
-      <strong>🤖 CLI 编辑指南</strong>（Bot可通过curl命令直接增删改查）<br><br>
-      <code style="font-size:11px;color:var(--accent-light);line-height:2">
-      查询列表: curl HOST/api/leads?search=大疆&amp;status=qualified&amp;page=1&amp;limit=50<br>
-      单条详情: curl HOST/api/leads/ID<br>
-      新增线索: curl -X POST HOST/api/leads -H "Content-Type: application/json" -d '{"company_name":"xxx","status":"new"}'<br>
-      编辑线索: curl -X PUT HOST/api/leads/ID -H "Content-Type: application/json" -d '{"status":"qualified"}'<br>
-      删除单条: curl -X DELETE HOST/api/leads/ID<br>
-      清空全部: curl -X DELETE HOST/api/leads/all
-      </code>
-    </div>`;
+    <div class="table-wrap"><table>
+      <tr><th>公司名称</th><th>联系人</th><th>职位</th><th>电话</th><th>来源渠道</th><th>产品</th><th>行业</th><th>团队</th><th>分配给</th><th>状态</th><th>进线日期</th><th>操作</th></tr>
+      <tbody id="leads-tbody">${data.data.length?data.data.map(leadRow).join(''):'<tr><td colspan="12"><div class="empty-state" style="padding:24px"><p>暂无匹配数据</p></div></td></tr>'}</tbody>
+    </table></div>
+    ${totalPages>1?`<div style="display:flex;justify-content:center;gap:6px;margin-top:14px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-sm btn-secondary" ${+_leadsPage<=1?'disabled style="opacity:.4;cursor:not-allowed"':''} onclick="_leadsPage=${_leadsPage-1};loadLeadsTable()">← 上页</button>
+      ${renderPageNums(_leadsPage,totalPages)}
+      <button class="btn btn-sm btn-secondary" ${+_leadsPage>=totalPages?'disabled style="opacity:.4;cursor:not-allowed"':''} onclick="_leadsPage=${_leadsPage+1};loadLeadsTable()">下页 →</button>
+    </div>`:''}
+  `;
 }
-function leadDetailRow(l){
-  return '<tr>'+
-    '<td style="font-size:11px;color:var(--text-muted)">'+l.id+'</td>'+
-    '<td><strong>'+esc(l.company_name||'—')+'</strong></td>'+
-    '<td>'+esc(l.contact_name||'—')+'</td>'+
-    '<td>'+sourceTag(l.source_channel)+'</td>'+
-    '<td>'+esc(l.product||'—')+'</td>'+
-    '<td>'+leadStatusTag(l.status)+'</td>'+
-    '<td>'+(l.inbound_date||'—')+'</td>'+
-    '<td>'+esc(l.team||'—')+'</td>'+
-    '<td>'+esc(l.assigned_to||'—')+'</td>'+
-    '<td style="white-space:nowrap"><button class="btn btn-sm btn-secondary" onclick="openLeadForm('+l.id+')">编辑</button> <button class="btn btn-sm btn-danger" onclick="if(confirm(\'确定删除？\'))deleteLead('+l.id+')">删除</button></td>'+
-  '</tr>';
+
+function renderPageNums(cur,total){
+  cur=+cur;total=+total;
+  let pages=[];
+  const add=p=>{if(p>=1&&p<=total&&!pages.includes(p))pages.push(p)};
+  add(1);add(total);
+  for(let i=cur-2;i<=cur+2;i++)add(i);
+  pages.sort((a,b)=>a-b);
+  let html='';let prev=0;
+  for(const p of pages){
+    if(p-prev>1)html+='<span style="color:var(--text-muted);padding:0 4px">…</span>';
+    const active=p===cur;
+    html+=`<button class="btn btn-sm ${active?'btn-primary':'btn-secondary'}" onclick="_leadsPage=${p};loadLeadsTable()" style="min-width:30px;padding:4px 8px">${p}</button>`;
+    prev=p;
+  }
+  return html;
+}
+
+function leadRow(l){
+  return `<tr class="clickable-row" onclick="viewLead(${l.id})">
+    <td><strong>${esc(l.company_name)||'—'}</strong></td>
+    <td>${esc(l.contact_name)||'—'}</td>
+    <td style="color:var(--text-secondary);font-size:12px">${esc(l.contact_title)||'—'}</td>
+    <td style="font-size:12px">${esc(l.phone)||'—'}</td>
+    <td>${sourceTag(l.source_channel)}</td>
+    <td>${esc(l.product)||'—'}</td>
+    <td style="color:var(--text-secondary);font-size:12px">${esc(l.industry)||'—'}</td>
+    <td>${esc(l.team)||'—'}</td>
+    <td>${esc(l.assigned_to)||'<span style="color:var(--text-muted)">未分配</span>'}</td>
+    <td>${leadStatusTag(l.status)}</td>
+    <td style="font-size:12px;color:var(--text-secondary)">${l.inbound_date||'—'}</td>
+    <td style="white-space:nowrap" onclick="event.stopPropagation()"><button class="btn btn-sm btn-secondary" onclick="openLeadForm(${l.id})">编辑</button> <button class="btn btn-sm btn-danger" onclick="if(confirm('确定删除？'))deleteLead(${l.id})">删除</button></td>
+  </tr>`;
+}
+
+async function viewLead(id){
+  try{
+    const l=await api('/api/leads/'+id);
+    openModal(`
+      <div class="modal-header"><h3>🔍 ${esc(l.company_name)||'线索详情'}</h3><button onclick="closeModal()" style="font-size:20px">✕</button></div>
+      <div class="modal-body">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px">
+          ${leadStatusTag(l.status)}
+          ${l.source_channel?`<span class="tag tag-cyan">${esc(l.source_channel)}</span>`:''}
+          ${l.product?`<span class="tag tag-blue">${esc(l.product)}</span>`:''}
+        </div>
+        <div class="detail-grid">
+          ${[['公司名称',l.company_name],['联系人',l.contact_name],['职位',l.contact_title],['电话',l.phone],['来源渠道',l.source_channel],['来源明细',l.source_detail],['需求产品',l.product],['行业',l.industry],['所属团队',l.team],['分配给',l.assigned_to],['进线日期',l.inbound_date],['转出日期',l.transfer_date],['成单金额(万)',l.deal_amount?l.deal_amount+'万':'']].map(([lb,v])=>`<div class="detail-field"><div class="label">${lb}</div><div class="value">${esc(v)}</div></div>`).join('')}
+        </div>
+        ${l.requirement?`<div class="detail-field" style="margin-top:12px"><div class="label">需求描述/跟进记录</div><div class="value" style="white-space:pre-wrap;line-height:1.7;background:var(--bg-surface);padding:12px;border-radius:var(--radius);border:1px solid var(--border)">${esc(l.requirement)}</div></div>`:''}
+        ${l.lost_reason?`<div class="detail-field" style="margin-top:8px"><div class="label">丢单原因</div><div class="value" style="color:var(--danger)">${esc(l.lost_reason)}</div></div>`:''}
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-sm btn-danger" onclick="if(confirm('确定删除？')){closeModal();deleteLead(${l.id})}">删除</button>
+        <button class="btn btn-secondary" onclick="closeModal()">关闭</button>
+        <button class="btn btn-primary" onclick="closeModal();openLeadForm(${l.id})">✏️ 编辑</button>
+      </div>
+    `);
+  }catch(e){toast(e.message,'error')}
+}
+
+async function clearAllLeads(){
+  try{const r=await api('/api/leads/all',{method:'DELETE'});toast(r.message);renderFunnel()}catch(e){toast(e.message,'error')}
+}
+async function deleteLead(id){
+  try{await api('/api/leads/'+id,{method:'DELETE'});toast('删除成功');renderFunnel()}catch(e){toast(e.message,'error')}
 }
 async function openLeadForm(id){
   let l={};if(id){try{l=await api('/api/leads/'+id)}catch(e){toast(e.message,'error');return}}
@@ -1026,11 +1077,8 @@ async function saveLead(ev,id){
   try{
     if(id){await api('/api/leads/'+id,{method:'PUT',body});toast('线索更新成功')}
     else{await api('/api/leads',{method:'POST',body});toast('线索创建成功')}
-    closeModal();renderLeadsDetail();
+    closeModal();renderFunnel();
   }catch(e){toast(e.message,'error')}
-}
-async function deleteLead(id){
-  try{await api('/api/leads/'+id,{method:'DELETE'});toast('删除成功');renderLeadsDetail()}catch(e){toast(e.message,'error')}
 }
 
 // ===== IMPORT =====
