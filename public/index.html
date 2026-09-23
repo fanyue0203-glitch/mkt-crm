@@ -1511,221 +1511,108 @@ function renderOctoDashboard(){
   const d=_octoData;if(!d)return;
   const k=d.kpi||{};
   const tc=document.getElementById('octo-tab-content');
+  const clink=(a)=>`<span onclick="navigate('account-report',{id:${a.id}})" style="cursor:pointer;color:var(--accent-light);font-weight:700">${esc(a.company_name)}</span>`;
+  const short=(s,n=90)=>{s=String(s||'');return s.length>n?s.slice(0,n)+'…':s};
+  const money=(a)=>a.deal_amount?`${a.deal_amount}万`:((a.estimated_budget||'').replace('¥','')||'—');
 
-  const clink=(id,name)=>`<a onclick="navigate('account-report',{id:${id}})" style="cursor:pointer">${esc(name)}</a>`;
+  const signed=d.signed||[], bidding=d.bidding||[], bClass=d.bClass||[], cClass=d.cClass||[], dClass=d.dClass||[], deadAll=d.deadAll||[];
+  const wonAmt=signed.reduce((s,a)=>s+(a.deal_amount||0),0);
+  const bPipe=bClass.reduce((s,a)=>s+(a.deal_amount||0),0);
+  const bidPipe=bidding.reduce((s,a)=>s+(a.deal_amount||0),0);
+  const totalPlus=wonAmt+bPipe+bidPipe;
 
-  // Build CEO funnel
-  const cf=d.ceoFunnel||{};
-  const funnelSteps=[
-    {l:'8场活动',v:cf.events||8,max:400},
-    {l:'加微',v:cf.wechat||394,max:400},
-    {l:'申请',v:cf.applied||122,max:400},
-    {l:'开通',v:cf.activated||102,max:400},
-    {l:'活动转出',v:cf.converted||5,max:400}
+  const sectionNav=['大盘概览','39家客户现状','行业洞察','需求共性','阻碍卡点','竞品分析','CEO获客','成功/失败模式']
+    .map((t,i)=>`<a class="tag tag-blue" style="cursor:pointer;margin:3px" onclick="document.getElementById('pano-${i+1}').scrollIntoView({behavior:'smooth',block:'start'})">${['一','二','三','四','五','六','七','八'][i]} ${t}</a>`).join('');
+
+  const statCards=`<div class="strategy-overview">
+    <div class="overview-item"><div class="ov-value" style="color:var(--accent-light)">${k.totalAccounts||39}</div><div class="ov-label">覆盖客户</div></div>
+    <div class="overview-item"><div class="ov-value" style="color:var(--success)">${signed.length||3}</div><div class="ov-label">已签约/交付</div></div>
+    <div class="overview-item"><div class="ov-value" style="color:var(--warning)">${bidding.length||1}</div><div class="ov-label">投标中</div></div>
+    <div class="overview-item"><div class="ov-value" style="color:var(--accent)">${bClass.length||7}</div><div class="ov-label">B类重点</div></div>
+    <div class="overview-item"><div class="ov-value" style="color:var(--pink)">${totalPlus}万+</div><div class="ov-label">签约+管线</div></div>
+    <div class="overview-item"><div class="ov-value" style="color:var(--danger)">${deadAll.length||12}</div><div class="ov-label">战败/放弃</div></div>
+  </div>`;
+
+  const stageFunnel=(d.byStage||[]).map(x=>{
+    const max=Math.max(...(d.byStage||[]).map(v=>v.amount||v.count||0),1);
+    const val=x.amount||x.count||0; const w=Math.max(val/max*100,4);
+    return `<div class="data-bar-row"><div class="data-bar-label">${esc(x.stage)}</div><div class="data-bar"><div class="data-bar-fill" style="width:${w}%;background:${stageColor(x.stage)}"></div></div><div class="data-bar-value">${x.amount?x.amount+'万':x.count+'家'}</div></div>`;
+  }).join('');
+
+  const signedCards=signed.map(a=>`<div class="signed-card" onclick="navigate('account-report',{id:${a.id}})">
+    <div class="sc-top"><span class="tier-badge tier-${a.tier}">${a.tier}</span><span class="sc-name">${esc(a.company_name)}</span></div>
+    <div class="sc-amount">${money(a)}</div><div class="sc-owner">👤 ${esc(a.assigned_to||'')}</div>
+    <div class="sc-status">${esc(short(a.customer_recognition||a.product_solutions_detail||a.next_step||a.needs_summary,120))}</div>
+  </div>`).join('');
+
+  const yutong=bidding[0];
+  const biddingCard=yutong?`<div class="bidding-card" onclick="navigate('account-report',{id:${yutong.id}})">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap"><div><span class="tier-badge tier-${yutong.tier}">${yutong.tier}</span><span class="bc-name" style="margin-left:8px">${esc(yutong.company_name)}</span><div class="bc-amount">≤${yutong.deal_amount||200}万<span style="font-size:13px;color:#fca5a5;font-weight:400"> + 二三期各200万</span></div></div><div class="countdown">⏰ 9/25前出结果</div></div>
+    <div class="bc-meta"><div class="bc-meta-item"><div class="bc-meta-label">负责人</div><div class="bc-meta-value">${esc(yutong.assigned_to||'')}</div></div><div class="bc-meta-item"><div class="bc-meta-label">进展</div><div class="bc-meta-value">9/18郑州述标完成</div></div><div class="bc-meta-item"><div class="bc-meta-label">联系人</div><div class="bc-meta-value">16+联系人 / 10条线</div></div><div class="bc-meta-item"><div class="bc-meta-label">竞品</div><div class="bc-meta-value">酷开/实在/联想/腾讯/阿里</div></div></div>
+    <div class="highlight-box danger" style="margin-top:10px">姜平定调「亏本也拿」；客户认可 Octo 是 AI 原生平台（非 AI 增强工具）；11月需量化提效。</div>
+  </div>`:'';
+
+  const bCards=bClass.map(a=>`<div class="bclass-card" onclick="navigate('account-report',{id:${a.id}})"><div class="bcc-top"><span class="tier-badge tier-${a.tier}" style="width:auto;height:auto;padding:1px 6px;font-size:10px">${a.tier}</span><span class="bcc-name">${esc(a.company_name)}</span><span class="bcc-amount">${money(a)}</span></div><div class="bcc-owner">👤 ${esc(a.assigned_to||'')}</div><div class="bcc-status">${esc(short(a.product_solutions_detail||a.needs_summary||a.next_step,105))}</div>${a.blockers?`<div class="bcc-blocker">⚠️ ${esc(short(a.blockers,70))}</div>`:''}</div>`).join('');
+  const compact=(arr)=>arr.map(a=>`<div class="compact-item" onclick="navigate('account-report',{id:${a.id}})"><span class="tier-badge tier-${a.tier}" style="width:auto;height:auto;padding:2px 6px;font-size:10px">${a.tier}</span><span class="ci-name">${esc(a.company_name)}</span><span class="ci-status">${esc(short(a.needs_summary||a.blockers||a.next_step||a.core_painpoint,100))}</span><span class="ci-owner">${esc(a.assigned_to||'')}</span></div>`).join('');
+
+  const industryBars=(d.byIndustry||[]).slice(0,10).map((x,i)=>{const max=Math.max(...(d.byIndustry||[]).map(v=>v.c||0),1);return `<div class="data-bar-row"><div class="data-bar-label">${esc(x.industry)}</div><div class="data-bar"><div class="data-bar-fill" style="width:${Math.max((x.c||0)/max*100,3)}%;background:${['#3b82f6','#10b981','#8b5cf6','#f59e0b','#06b6d4','#ec4899'][i%6]}"></div></div><div class="data-bar-value">${x.c}家</div></div>`}).join('');
+  const industryInsights=[
+    ['制造业','吉利/三一/宇通/极光湾：私有化部署、大合同、长周期，是核心收入来源和标杆复制主赛道。'],
+    ['医疗','卓正/联合影像/健主任/新世纪：付费意愿强、合规要求高、私有化刚需，卓正已成可复制标杆。'],
+    ['快消','南孚/宝洁系线索：AIGC营销和企业协同替代诉求强，预算中等但决策链清晰。'],
+    ['互联网','墨迹/得到/PPIO/混沌：技术接受度高，但自研/免费生态替代强，必须先判断付费意愿。']
+  ].map(([t,desc])=>`<div class="highlight-box"><strong>${t}</strong><br>${desc}</div>`).join('');
+
+  const concerns=(d.topConcerns||[]).map(c=>`<div class="concern-item"><div class="ci-rank">${c.rank}</div><div><div class="ci-title">${esc(c.title)}</div><div class="ci-desc">${esc(c.desc)}</div></div></div>`).join('');
+  const demandBars=[['私有化部署',30],['AI Coding',8],['会议Agent',7],['HR场景',6],['营销AIGC',6],['数据治理',5],['AtoA协作',5]].map(([n,c],i)=>`<div class="data-bar-row"><div class="data-bar-label">${n}</div><div class="data-bar"><div class="data-bar-fill" style="width:${c/30*100}%;background:${['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ec4899','#06b6d4','#64748b'][i]}"></div></div><div class="data-bar-value">${c}家+</div></div>`).join('');
+
+  const blockers=(d.blockers||[]).slice(0,20);
+  const blockerGroups=[
+    ['资源卡点','跨产品线协调、交付团队、售前资源', blockers.filter(x=>/资源|交付|售前|团队|协调|主R/.test(x.blockers||'')),'red'],
+    ['商务卡点','预算周期、合规审批、定价异议、合同边界', blockers.filter(x=>/预算|合规|价格|费用|合同|商务|Token|保险|SOC/.test(x.blockers||'')),'yellow'],
+    ['技术卡点','集成复杂度、环境搭建、Token显示、私有化部署', blockers.filter(x=>/技术|集成|环境|Token|部署|私有化|Loop/.test(x.blockers||'')),'blue']
   ];
-  const funnelHtml=funnelSteps.map(s=>{
-    const pct=Math.max(2,s.v/s.max*100);
-    return `<div class="funnel-row"><span class="fl-label">${s.l}</span><div class="fl-bar"><div class="fl-fill" style="width:${pct}%"></div></div><span class="fl-val">${s.v}</span></div>`;
-  }).join('');
+  const blockersHtml=blockerGroups.map(([name,desc,items,color])=>`<div class="card" style="margin-bottom:12px"><div class="card-header"><h3>${color==='red'?'🔴':color==='yellow'?'🟡':'🔵'} ${name}</h3><span class="section-count">${items.length}项</span></div><div class="card-body">${items.length?items.map(b=>`<div class="action-item ${color==='red'?'red':color==='yellow'?'yellow':'blue'}" onclick="navigate('account-report',{id:${b.id}})"><span class="ai-company">${esc(b.company_name)}</span><span class="ai-content">${esc(short(b.blockers,130))}</span><span class="ai-owner">${esc(b.assigned_to||'')}</span></div>`).join(''):`<span style="color:var(--text-muted)">暂无</span>`}</div></div>`).join('');
 
-  const quotesHtml=(d.quotes||[]).map(q=>`<div class="strategy-quote"><div class="sq-who">${esc(q.who)} · ${esc(q.date||'')}</div><div class="sq-text">「${esc(q.text)}」</div></div>`).join('');
+  const compBars=(d.byCompetitor||[]).slice(0,12).map((x,i)=>{const max=Math.max(...(d.byCompetitor||[]).map(v=>v.count||0),1);return `<div class="data-bar-row"><div class="data-bar-label">${esc(x.name)}</div><div class="data-bar"><div class="data-bar-fill" style="width:${Math.max(x.count/max*100,3)}%;background:${['#ef4444','#f59e0b','#3b82f6','#8b5cf6','#06b6d4'][i%5]}"></div></div><div class="data-bar-value">${x.count}</div></div>`}).join('');
+  const compInsights=[
+    ['飞书Aily/飞书生态','最大竞争对手；生态锁定一旦建立几乎不可破，得到/方里是典型战败。'],
+    ['腾讯Hermes/WorkBuddy','大企业IM+AI入口竞争，南孚/宇通场景均出现。'],
+    ['阿里QoderWork/MuleRun','AI Coding方向强对手，宇通/墨迹均出现。'],
+    ['Dify/开源自建','企业内部技术团队低成本替代方案，三一等制造客户会对比。']
+  ].map(([t,desc])=>`<div class="highlight-box"><strong>${t}</strong><br>${desc}</div>`).join('');
 
-  // Section 2: Signed
-  const signedHtml=(d.signed||[]).map(a=>{
-    const amtText=a.deal_amount?a.deal_amount+'万':'';
-    const note=a.company_name==='HKIC'?'<small>港币</small>':a.company_name==='卓正医疗'?'<small>+200万后续</small>':'';
-    const statusMap={
-      '卓正医疗':'私有化完成已回款，培训阶段，医疗可复制标杆',
-      '南孚电池':'9/14资源到位部署中，CEO+CMO直通，10场景含AtoA标杆(石墨烯)',
-      'HKIC':'9/18现场安装POC交付，卡点：Token显示缺失+云主机费用异议'
-    };
-    return `<div class="signed-card">
-      <div class="sc-top"><span class="tier-badge tier-${a.tier}">${a.tier}</span><span class="sc-name" onclick="navigate('account-report',{id:${a.id}})">${esc(a.company_name)}</span></div>
-      <div class="sc-amount">${amtText}${note}</div>
-      <div class="sc-owner">👤 ${esc(a.assigned_to||'')}</div>
-      <div class="sc-status">${statusMap[a.company_name]||esc((a.blockers||a.next_step)||'')}</div>
-      ${a.next_step?`<div class="sc-next">▶ ${esc(a.next_step)}</div>`:''}
-    </div>`;
-  }).join('');
+  const ceo=d.ceoFunnel||{};
+  const ceoFunnel=[['8场活动',ceo.events||8,394],['加微',ceo.wechat||394,394],['申请',ceo.applied||122,394],['开通',ceo.activated||102,394],['转出销售',ceo.converted||5,394]].map(([l,v,max])=>`<div class="funnel-row"><span class="fl-label">${l}</span><div class="fl-bar"><div class="fl-fill" style="width:${Math.max(v/max*100,2)}%"></div></div><span class="fl-val">${v}</span></div>`).join('');
 
-  // Section 3: Bidding
-  const biddingHtml=(d.bidding||[]).map(a=>{
-    const deadlineText='9/25 出结果';
-    return `<div class="bidding-card">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">
-        <div>
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-            <span class="tier-badge tier-${a.tier}">${a.tier}</span>
-            <span class="bc-name" onclick="navigate('account-report',{id:${a.id}})">${esc(a.company_name)}</span>
-          </div>
-          <div class="bc-amount">≤${a.deal_amount||200}万<small style="font-size:13px;color:#fca5a5;font-weight:400">+二三期各200万</small></div>
-        </div>
-        <div class="countdown">⏰ ${deadlineText}</div>
-      </div>
-      <div class="bc-meta">
-        <div class="bc-meta-item"><div class="bc-meta-label">负责人</div><div class="bc-meta-value">${esc(a.assigned_to||'')}</div></div>
-        <div class="bc-meta-item"><div class="bc-meta-label">当前进展</div><div class="bc-meta-value">9/18郑州述标完成(纯技术打分)</div></div>
-        <div class="bc-meta-item"><div class="bc-meta-label">联系人覆盖</div><div class="bc-meta-value">16+联系人 / 10条线</div></div>
-        <div class="bc-meta-item"><div class="bc-meta-label">竞品</div><div class="bc-meta-value">酷开/实在/联想/腾讯/阿里 共5家</div></div>
-      </div>
-      <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;margin-top:6px">💡 客户认可Octo是AI原生平台(非AI增强工具)；11月需量化提效；从C类官网进线翻转到IT线CIO招标</div>
-      <div class="bc-quote">📢 姜平定调：「亏本也拿」</div>
-      ${a.next_step?`<div style="margin-top:10px;font-size:12px;color:var(--warning)"><strong>▶ 下一步：</strong>${esc(a.next_step)}</div>`:''}
-    </div>`;
-  }).join('');
+  const successPatterns=[
+    '高管直推/CEO关系：卓正「必须发生」、南孚CEO+CMO辉哥直通，关系质量决定成交概率。',
+    '明确付费意愿+刚需场景：卓正医疗私有化、南孚替代钉飞企微、宇通CIO线招标。',
+    '交付团队快速响应：私有化部署、现场安装、培训和量化提效要跟上销售节奏。'
+  ].map((x,i)=>`<div class="lesson-item"><span class="li-num">${i+1}</span><span>${x}</span></div>`).join('');
+  const failureGroups=(d.deadGrouped||[]).map(g=>`<div class="dead-group"><div class="dead-group-header">${g.icon} ${esc(g.title)}<span class="dg-desc">${esc(g.desc||'')}</span><span style="margin-left:auto;color:var(--danger);font-weight:700;font-size:12px">${g.items.length}家</span></div>${g.items.map(it=>`<div class="dead-item"><span class="di-name">${esc(it.company_name)}</span><span class="di-lesson">${esc(short(it.lessons_learned||it.blockers,100))}</span></div>`).join('')}</div>`).join('');
+  const coreLessons=(d.coreLessons||[]).map((l,i)=>`<div class="lesson-item"><span class="li-num">${i+1}</span><span>${esc(l)}</span></div>`).join('');
 
-  // Section 4: B class
-  const bClassHtml=(d.bClass||[]).map(a=>{
-    const statusMap={
-      '吉利汽车':'私有化完成超100人用；客户已选定飞书私有化，Octo融入工作台；辉哥给淦家阅CEO团队40+人分享',
-      '三一重工':'梁在中(创始人之子)亲自牵头🔥9/17升级；龙瑶通过吉利案例引荐8/26深度交流5.5h；辉哥10月广州几百人峰会主讲',
-      '极光湾科技':'吉利+雷诺合资(雷神动力)；尾随战术copy吉利路径；7场景规划，技术负责人9月驻场',
-      '墨迹天气':'金犁(创始人)发起AI Coding招标；5大需求，POC接近完成付费意愿强',
-      '金智教育':'三重属性(客户/渠道/共创)；郭超(董事长)辉哥直接关系；15Bot/11员工/4群跑通',
-      '致远互联':'吴明辉7/12亲自创建子区，徐总7/14带队来访；互补定位(致远=SOR/Octo=SOA)；覆盖35家一级央企',
-      '普联香港':'姜平亲推；OA+Octo融合共建(系统级集成)；9月底出第一批bot硬时点'
-    };
-    const amountText=a.deal_amount?a.deal_amount+'万':(a.scale||'待定');
-    return `<div class="bclass-card" onclick="navigate('account-report',{id:${a.id}})">
-      <div class="bcc-top"><span class="tier-badge tier-${a.tier}" style="width:auto;height:auto;padding:1px 6px;font-size:10px">${a.tier}</span><span class="bcc-name">${esc(a.company_name)}</span><span class="bcc-amount">${amountText}</span></div>
-      <div class="bcc-owner">👤 ${esc(a.assigned_to||'')}</div>
-      <div class="bcc-status">${statusMap[a.company_name]||esc(a.needs_summary||'')}</div>
-      ${a.blockers?`<div class="bcc-blocker">⚠️ ${esc(a.blockers)}</div>`:''}
-      ${a.next_step?`<div style="font-size:11px;color:var(--accent-light);margin-top:4px">▶ ${esc(a.next_step)}</div>`:''}
-    </div>`;
-  }).join('');
-
-  // Section 5: C class
-  const cStatusMap={
-    '中信资本':'Octopush待装，费用见底','混沌学园':'注册未用，价格敏感对标Coze',
-    '曼伦':'on hold，信息极少','PPIO':'11人2Agent，攻坚后停滞',
-    '联合影像':'飞书主力但新项目用Octo','中金公司':'卉子跟进，资本市场场景',
-    '华泰研究所':'卉子跟进，研报场景','健主任':'已付费10万服务包，医疗连锁',
-    '鹏扬基金':'升温中，合同审核数字化(专家团+webhook方案)'
-  };
-  const cClassHtml=(d.cClass||[]).map(a=>`<div class="compact-item" onclick="navigate('account-report',{id:${a.id}})">
-    <span class="tier-badge tier-${a.tier}" style="width:auto;height:auto;padding:2px 6px;font-size:10px">${a.tier}</span>
-    <span class="ci-name">${esc(a.company_name)}</span>
-    <span class="ci-status">${cStatusMap[a.company_name]||esc((a.blockers||a.next_step||'').slice(0,60))||'跟进中'}</span>
-    <span class="ci-owner">${esc(a.assigned_to||'')}</span>
-  </div>`).join('');
-
-  // Section 6: D class
-  const dStatusMap={
-    '卓望':'中国移动子公司，培训+合作意向后停滞','刀法咨询':'刀姐IP，1人1Agent，评估PR价值',
-    '祥承':'pending，尚未开始','欢瑞世纪':'原C类降级，51虾仅2活跃，预算有限',
-    '青钜科技':'私有化完成Loop未用，「部署≠使用」典型','卓越教育':'8/17新增，建群阶段',
-    '新世纪医疗':'8/17新增，AI转型意向'
-  };
-  const dClassHtml=(d.dClass||[]).map(a=>`<div class="compact-item" onclick="navigate('account-report',{id:${a.id}})">
-    <span class="tier-badge tier-${a.tier}" style="width:auto;height:auto;padding:2px 6px;font-size:10px;background:#475569">${a.tier}</span>
-    <span class="ci-name" style="color:var(--text-secondary)">${esc(a.company_name)}</span>
-    <span class="ci-status">${dStatusMap[a.company_name]||esc((a.blockers||'').slice(0,60))||'观察中'}</span>
-  </div>`).join('');
-
-  // Section 7: Dead
-  const deadHtml=(d.deadGrouped||[]).map(g=>{
-    const items=g.items.map(it=>{
-      // Extract short lesson
-      let lesson=it.lessons_learned||'';
-      if(lesson.length>80) lesson=lesson.slice(0,80)+'…';
-      return `<div class="dead-item"><span class="di-name">${esc(it.company_name)}</span><span class="di-lesson">${esc(lesson)||'—'}</span></div>`;
-    }).join('');
-    return `<div class="dead-group">
-      <div class="dead-group-header">${g.icon} ${esc(g.title)}<span class="dg-desc">${esc(g.desc||'')}</span><span style="margin-left:auto;color:var(--danger);font-weight:700;font-size:12px">${g.items.length}家</span></div>
-      ${items}
-    </div>`;
-  }).join('');
-
-  const lessonsHtml=(d.coreLessons||[]).map((l,i)=>`<div class="lesson-item"><span class="li-num">${i+1}</span><span>${esc(l)}</span></div>`).join('');
-
-  // Section 8: Concerns
-  const concernsHtml=(d.topConcerns||[]).map(c=>`<div class="concern-item"><div class="ci-rank">${c.rank}</div><div><div class="ci-title">${esc(c.title)}</div><div class="ci-desc">${esc(c.desc)}</div></div></div>`).join('');
-
-  // Section 9: Action items
-  const prioMap={red:{label:'紧急',cls:'red'},yellow:{label:'本周',cls:'yellow'},blue:{label:'推进',cls:'blue'}};
-  const actionHtml=(d.actionItems||[]).slice(0,30).map(a=>{
-    const p=prioMap[a.priority]||prioMap.blue;
-    return `<div class="action-item ${p.cls}" onclick="navigate('account-report',{id:${a.account_id}})">
-      <span class="ai-prio">${p.label}</span>
-      <span class="ai-company">${esc(a.company_name)}</span>
-      <span class="ai-content">${esc((a.content||'').slice(0,120))}</span>
-      <span class="ai-owner">${esc(a.owner||'')}</span>
-    </div>`;
-  }).join('');
-
-  // Overview stats
-  const bPipe=(d.bClass||[]).reduce((s,a)=>s+(a.deal_amount||0),0);
-  const bidPipe=(d.bidding||[]).reduce((s,a)=>s+(a.deal_amount||0),0);
-  const wonAmt=(d.signed||[]).reduce((s,a)=>s+(a.deal_amount||0),0);
+  const actionHtml=(d.actionItems||[]).slice(0,18).map(a=>{const cls=a.priority==='red'?'red':a.priority==='yellow'?'yellow':'blue';const label={red:'紧急',yellow:'本周',blue:'推进'}[cls];return `<div class="action-item ${cls}" onclick="navigate('account-report',{id:${a.account_id}})"><span class="ai-prio">${label}</span><span class="ai-company">${esc(a.company_name)}</span><span class="ai-content">${esc(short(a.content,130))}</span><span class="ai-owner">${esc(a.owner||'')}</span></div>`}).join('');
 
   tc.innerHTML=`<div class="panorama">
+    <div class="card" style="margin-bottom:16px"><div class="card-body"><div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center"><span style="font-size:12px;color:var(--text-muted);margin-right:6px">快速导航</span>${sectionNav}</div></div></div>
 
-    <!-- Section 1: Strategy -->
-    <div class="section-card"><div class="section-header"><h3>🎯 战略定调</h3><span class="section-count">核心决策与大盘概览</span></div><div class="section-body">
-      <div class="strategy-quotes">${quotesHtml}</div>
-      <div class="strategy-overview">
-        <div class="overview-item"><div class="ov-value" style="color:var(--accent-light)">${k.totalAccounts||0}</div><div class="ov-label">覆盖客户</div></div>
-        <div class="overview-item"><div class="ov-value" style="color:var(--success)">${k.signedCount||0}</div><div class="ov-label">已签约/交付</div></div>
-        <div class="overview-item"><div class="ov-value" style="color:var(--warning)">${k.biddingCount||0}</div><div class="ov-label">投标中</div></div>
-        <div class="overview-item"><div class="ov-value" style="color:var(--accent)">${k.bClassCount||0}</div><div class="ov-label">B类重点推进</div></div>
-        <div class="overview-item"><div class="ov-value" style="color:#94a3b8">${(k.cClassCount||0)+(k.dClassCount||0)}</div><div class="ov-label">C/D类跟进观察</div></div>
-        <div class="overview-item"><div class="ov-value" style="color:var(--danger)">${k.deadCount||0}<small style="font-size:11px;color:var(--text-muted)">(${k.deadRate||0}%)</small></div><div class="ov-label">战败/放弃</div></div>
-        <div class="overview-item"><div class="ov-value" style="color:var(--success)">${wonAmt}万</div><div class="ov-label">已签约金额</div></div>
-        <div class="overview-item"><div class="ov-value" style="color:var(--pink)">${(bidPipe+bPipe)+wonAmt}万+</div><div class="ov-label">管线+签约</div></div>
-      </div>
-      <div class="funnel-strip">
-        <h4>📊 CEO获客漏斗（8场活动数据）<span style="float:right;font-weight:400;font-size:11px;color:var(--text-muted)">活动转出仅1%，大客户贡献来自高管直推</span></h4>
-        ${funnelHtml}
-      </div>
-      <div class="conclusion-box">
-        <strong>🔑 核心结论：</strong>大客户靠<strong>CEO信任 + 高管直推</strong>——39家中${cf.execReferralCount||25}家(${cf.execRefPct||64}%)来自高管直推，贡献<strong>100%签约 + 90%+管线</strong>；制造+医疗是最强赛道(贡献100%签约和80%+管线)。<br>
-        <span style="color:var(--text-muted);font-size:12px">活动获客≠大客户获取；混沌+晚点贡献96%开通量但转出率仅1%，漏斗价值在品牌势能而非直接转化</span>
-      </div>
-    </div></div>
+    <div class="section-card" id="pano-1"><div class="section-header"><h3>一、大盘概览</h3><span class="section-count">KR2整体战况</span></div><div class="section-body">${statCards}<div class="conclusion-box"><strong>战略定调：</strong>姜平明确「不能付费的客户不再投入时间」；宇通定调「亏本也拿」；卓正定调「必须发生」。客户分层围绕A/B/C/D进行资源配置，制造+医疗贡献100%签约和80%+管线。</div><div class="card" style="margin-top:14px"><div class="card-header"><h3>管线阶段金额</h3></div><div class="card-body"><div class="data-bars">${stageFunnel}</div></div></div></div></div>
 
-    <!-- Section 2: Signed -->
-    <div class="section-card"><div class="section-header"><h3>✅ 已签约/交付中</h3><span class="section-count">${(d.signed||[]).length}家 · ${wonAmt}万+</span></div><div class="section-body">
-      <div class="client-grid">${signedHtml||'<p style="color:var(--text-muted)">暂无签约客户</p>'}</div>
-    </div></div>
+    <div class="section-card" id="pano-2"><div class="section-header"><h3>二、39家客户现状</h3><span class="section-count">按阶段分层</span></div><div class="section-body"><h4>✅ 已签约/交付中（3家）</h4><div class="client-grid">${signedCards}</div><h4 style="margin-top:18px">🔴 投标进行中（1家）</h4>${biddingCard}<h4 style="margin-top:18px">🟡 B类重点推进（7家）</h4><div class="bclass-grid">${bCards}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px"><div><h4>🔵 C类跟进（9家）</h4><div class="compact-list">${compact(cClass)}</div></div><div><h4>⚪ D类观察（7家）</h4><div class="compact-list">${compact(dClass)}</div></div></div><div class="highlight-box danger" style="margin-top:14px">❌ 战败/放弃 ${deadAll.length} 家，核心原因见第八板块。</div></div></div>
 
-    <!-- Section 3: Bidding -->
-    <div class="section-card highlight-red"><div class="section-header" style="border-bottom-color:rgba(239,68,68,.3)"><h3>🔴 投标进行中 · 第一优先级</h3><span class="section-count" style="color:var(--danger);background:rgba(239,68,68,.15)">${(d.bidding||[]).length}家 · ≤${bidPipe}万+二三期</span></div><div class="section-body">
-      ${biddingHtml||'<p style="color:var(--text-muted)">暂无投标中客户</p>'}
-    </div></div>
+    <div class="section-card" id="pano-3"><div class="section-header"><h3>三、行业洞察</h3><span class="section-count">制造+医疗最强赛道</span></div><div class="section-body"><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px"><div class="card"><div class="card-header"><h3>行业分布</h3></div><div class="card-body"><div class="data-bars">${industryBars}</div></div></div><div>${industryInsights}</div></div><div class="conclusion-box" style="margin-top:14px">制造业客户规模大、私有化刚需强、合同额高；医疗客户付费意愿强但合规要求高；互联网客户技术接受度高但自研/免费替代强。</div></div></div>
 
-    <!-- Section 4: B class -->
-    <div class="section-card"><div class="section-header"><h3>🟡 B类重点推进</h3><span class="section-count">${(d.bClass||[]).length}家 · ${bPipe}万+管线</span></div><div class="section-body">
-      <div class="bclass-grid">${bClassHtml||'<p style="color:var(--text-muted)">暂无B类客户</p>'}</div>
-    </div></div>
+    <div class="section-card" id="pano-4"><div class="section-header"><h3>四、需求共性</h3><span class="section-count">TOP5关注点+高频场景</span></div><div class="section-body"><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px"><div><h4>客户最关注TOP5</h4><div class="concern-list">${concerns}</div></div><div><h4>高频产品/场景需求</h4><div class="data-bars">${demandBars}</div><div class="highlight-box" style="margin-top:12px">共性需求从「个人助手」升级到「组织协作」：AI Coding、会议Agent、HR、营销AIGC、数据治理和AtoA多Agent协作。</div></div></div></div></div>
 
-    <!-- Section 5: C class -->
-    <div class="section-card"><div class="section-header"><h3>🔵 C类跟进</h3><span class="section-count">${(d.cClass||[]).length}家</span></div><div class="section-body">
-      <div class="compact-list">${cClassHtml||'<p style="color:var(--text-muted)">暂无C类客户</p>'}</div>
-    </div></div>
+    <div class="section-card" id="pano-5"><div class="section-header"><h3>五、阻碍卡点</h3><span class="section-count">资源/商务/技术三类</span></div><div class="section-body">${blockersHtml}<h4 style="margin:16px 0 10px">需要品鉴者决策 / 关键行动项</h4><div class="action-list">${actionHtml||'<span style="color:var(--text-muted)">暂无</span>'}</div></div></div>
 
-    <!-- Section 6: D class -->
-    <div class="section-card"><div class="section-header"><h3>⚪ D类观察</h3><span class="section-count">${(d.dClass||[]).length}家</span></div><div class="section-body">
-      <div class="compact-list">${dClassHtml||'<p style="color:var(--text-muted)">暂无D类客户</p>'}</div>
-    </div></div>
+    <div class="section-card" id="pano-6"><div class="section-header"><h3>六、竞品分析</h3><span class="section-count">生态入口之争</span></div><div class="section-body"><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px"><div class="card"><div class="card-header"><h3>竞品出现频次</h3></div><div class="card-body"><div class="data-bars">${compBars}</div></div></div><div>${compInsights}</div></div></div></div>
 
-    <!-- Section 7: Dead -->
-    <div class="section-card"><div class="section-header"><h3>❌ 战败/放弃</h3><span class="section-count">${(d.deadAll||[]).length}家 · ${k.deadRate||0}%战败率</span></div><div class="section-body">
-      ${deadHtml}
-      <h4 style="font-size:13px;color:var(--text-bright);margin:20px 0 10px;font-weight:700">💡 6条核心教训</h4>
-      <div class="lessons-summary">${lessonsHtml}</div>
-    </div></div>
+    <div class="section-card" id="pano-7"><div class="section-header"><h3>七、CEO获客</h3><span class="section-count">高管信任链路</span></div><div class="section-body"><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px"><div class="card"><div class="card-header"><h3>CEO活动获客漏斗</h3></div><div class="card-body">${ceoFunnel}</div></div><div><div class="highlight-box success"><strong>核心事实：</strong>8场活动→394加微→122申请→102开通→5转出销售（1%）；但39家中25家(64%)来自高管直推，贡献100%签约+90%+管线。</div><div class="highlight-box"><strong>结论：</strong>大客户靠CEO信任+高管直推，活动获客不是直接成交漏斗，而是品牌势能和信任入口。</div></div></div></div></div>
 
-    <!-- Section 8: Top concerns -->
-    <div class="section-card"><div class="section-header"><h3>🔑 客户最关注 TOP5</h3><span class="section-count">来自39家客户真实反馈</span></div><div class="section-body">
-      <div class="concern-list">${concernsHtml}</div>
-    </div></div>
-
-    <!-- Section 9: Action items -->
-    <div class="section-card"><div class="section-header"><h3>⚡ 关键行动项</h3><span class="section-count">按紧急程度排序 · ${(d.actionItems||[]).length}项</span></div><div class="section-body">
-      <div class="action-list">${actionHtml||'<p style="color:var(--text-muted)">暂无行动项</p>'}</div>
-    </div></div>
-
+    <div class="section-card" id="pano-8"><div class="section-header"><h3>八、成功/失败模式</h3><span class="section-count">可复制经验与避坑机制</span></div><div class="section-body"><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px"><div><h4>✅ 成功模式</h4><div class="lessons-summary">${successPatterns}</div></div><div><h4>❌ 失败模式分类</h4>${failureGroups}</div></div><h4 style="margin:18px 0 10px">6条核心教训</h4><div class="lessons-summary">${coreLessons}</div></div></div>
   </div>`;
 }
 
