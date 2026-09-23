@@ -57,114 +57,69 @@ db.exec(`
     lessons_learned TEXT DEFAULT ''
   );
 
-  CREATE TABLE IF NOT EXISTS events (
+  -- CEO活动/演讲(辉哥获客活动)
+  CREATE TABLE IF NOT EXISTS ceo_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
-    event_type TEXT DEFAULT '论坛' CHECK(event_type IN ('论坛','展会','参访','峰会','沙龙','发布会','路演','其他')),
+    event_type TEXT DEFAULT '演讲' CHECK(event_type IN ('演讲','峰会','论坛','私享会','闭门会','其他')),
     date TEXT DEFAULT '',
     end_date TEXT DEFAULT '',
     location TEXT DEFAULT '',
-    scale INTEGER DEFAULT 0,
-    budget TEXT DEFAULT '',
-    status TEXT DEFAULT '筹备中' CHECK(status IN ('筹备中','进行中','已结束','已取消')),
-    theme TEXT DEFAULT '',
-    target_audience TEXT DEFAULT '',
+    topic TEXT NOT NULL DEFAULT '',
+    speech_type TEXT DEFAULT '主题演讲',
+    status TEXT DEFAULT '已结束' CHECK(status IN ('筹备中','进行中','已结束','已取消')),
+    audience_count INTEGER DEFAULT 0,
+    audience_profile TEXT DEFAULT '',
     business_design TEXT DEFAULT '',
-    story_lines TEXT DEFAULT '[]',
-    agenda TEXT DEFAULT '[]',
-    product_solutions TEXT DEFAULT '',
-    target_market TEXT DEFAULT '',
-    joint_division TEXT DEFAULT '',
-    host TEXT DEFAULT '',
-    organizer TEXT DEFAULT '',
-    partners TEXT DEFAULT '[]',
-    speakers TEXT DEFAULT '[]',
-    registration_count INTEGER DEFAULT 0,
-    attendance_count INTEGER DEFAULT 0,
-    attendance_rate REAL DEFAULT 0,
-    vip_count INTEGER DEFAULT 0,
-    vip_attendance_rate REAL DEFAULT 0,
-    booth_visitors INTEGER DEFAULT 0,
-    wechat_followers_new INTEGER DEFAULT 0,
-    industry_distribution TEXT DEFAULT '[]',
-    job_level_distribution TEXT DEFAULT '[]',
-    dept_distribution TEXT DEFAULT '[]',
-    channel_sources TEXT DEFAULT '[]',
-    checkin_industry_distribution TEXT DEFAULT '[]',
-    checkin_job_level_distribution TEXT DEFAULT '[]',
-    checkin_dept_distribution TEXT DEFAULT '[]',
-    leads_count INTEGER DEFAULT 0,
+    story_line TEXT DEFAULT '',
+    key_messages TEXT DEFAULT '',
+    wechat_followers INTEGER DEFAULT 0,
+    registrations INTEGER DEFAULT 0,
+    activations INTEGER DEFAULT 0,
     mql_count INTEGER DEFAULT 0,
     sql_count INTEGER DEFAULT 0,
     opportunity_count INTEGER DEFAULT 0,
     estimated_ppl TEXT DEFAULT '',
-    roi TEXT DEFAULT '',
-    product_signals TEXT DEFAULT '[]',
-    industry_signals TEXT DEFAULT '[]',
-    region_highlights TEXT DEFAULT '',
-    key_opportunities TEXT DEFAULT '[]',
     customer_feedback TEXT DEFAULT '',
     investor_feedback TEXT DEFAULT '',
-    media_feedback TEXT DEFAULT '',
     feedback_summary TEXT DEFAULT '',
-    lessons_learned TEXT DEFAULT '',
     structural_insights TEXT DEFAULT '',
-    action_items TEXT DEFAULT '[]',
     long_tail_content TEXT DEFAULT '',
+    action_items TEXT DEFAULT '',
+    most_important TEXT DEFAULT '',
+    key_work TEXT DEFAULT '',
+    need_decision TEXT DEFAULT '',
+    cross_team_needs TEXT DEFAULT '',
+    bottlenecks TEXT DEFAULT '',
+    next_important TEXT DEFAULT '',
     notes TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now','localtime')),
     updated_at TEXT DEFAULT (datetime('now','localtime')),
     created_by TEXT DEFAULT ''
   );
 
-  CREATE TABLE IF NOT EXISTS event_accounts (
+  CREATE TABLE IF NOT EXISTS ceo_event_attendees (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    event_id INTEGER NOT NULL REFERENCES ceo_events(id) ON DELETE CASCADE,
+    source_event_id INTEGER DEFAULT NULL REFERENCES ceo_events(id) ON DELETE SET NULL,
+    account_id INTEGER DEFAULT NULL REFERENCES accounts(id) ON DELETE SET NULL,
     contact_name TEXT DEFAULT '',
     contact_title TEXT DEFAULT '',
-    attendance_status TEXT DEFAULT '已邀请',
-    response_level TEXT DEFAULT '',
-    feedback TEXT DEFAULT '',
-    created_at TEXT DEFAULT (datetime('now','localtime')),
-    UNIQUE(event_id, account_id)
-  );
-
-  CREATE TABLE IF NOT EXISTS speeches (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date TEXT DEFAULT '',
-    location TEXT DEFAULT '',
-    event_name TEXT DEFAULT '',
-    topic TEXT NOT NULL,
-    speech_type TEXT DEFAULT '主题演讲',
-    audience_count INTEGER DEFAULT 0,
-    audience_profile TEXT DEFAULT '',
-    story_line TEXT DEFAULT '',
-    key_messages TEXT DEFAULT '[]',
-    business_design TEXT DEFAULT '',
-    leads_count INTEGER DEFAULT 0,
-    industry_distribution TEXT DEFAULT '[]',
-    feedback TEXT DEFAULT '',
-    follow_up_plan TEXT DEFAULT '',
-    content_assets TEXT DEFAULT '[]',
-    notes TEXT DEFAULT '',
-    created_at TEXT DEFAULT (datetime('now','localtime')),
-    updated_at TEXT DEFAULT (datetime('now','localtime')),
-    created_by TEXT DEFAULT ''
-  );
-
-  CREATE TABLE IF NOT EXISTS speech_touches (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    speech_id INTEGER NOT NULL REFERENCES speeches(id) ON DELETE CASCADE,
-    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-    contact_name TEXT DEFAULT '',
-    contact_title TEXT DEFAULT '',
+    company_name TEXT DEFAULT '',
+    phone TEXT DEFAULT '',
+    email TEXT DEFAULT '',
+    source TEXT DEFAULT '现场扫码',
     response_level TEXT DEFAULT '温' CHECK(response_level IN ('热','温','冷')),
+    is_champion INTEGER DEFAULT 0,
     follow_up_status TEXT DEFAULT '待跟进',
+    assigned_to TEXT DEFAULT '',
     notes TEXT DEFAULT '',
-    created_at TEXT DEFAULT (datetime('now','localtime')),
-    UNIQUE(speech_id, account_id)
+    created_at TEXT DEFAULT (datetime('now','localtime'))
   );
+
+
+
+
 
   CREATE TABLE IF NOT EXISTS leads (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -186,6 +141,7 @@ db.exec(`
     deal_amount REAL DEFAULT 0,
     lost_reason TEXT DEFAULT '',
     requirement TEXT DEFAULT '',
+    source_event_id INTEGER DEFAULT NULL REFERENCES ceo_events(id) ON DELETE SET NULL,
     account_id INTEGER DEFAULT NULL REFERENCES accounts(id) ON DELETE SET NULL,
     created_at TEXT DEFAULT (datetime('now','localtime')),
     updated_at TEXT DEFAULT (datetime('now','localtime')),
@@ -1675,5 +1631,59 @@ fixName.run('云迹','%云迹%');
 fixName.run('普联香港','%普联%');
 fixName.run('方里','%方里%');
 fixName.run('联合影像','%联合影像%');
+
+
+// ===== CEO获客资料包导入（2026-09-23）=====
+// 数据来源：CEO获客数据分析报告.md(2026-09-18) + 客户跟踪表.csv(2026-08-12)
+// 严格按原文数值录入，不做任何改动
+
+// --- 一、CEO获客8场活动（events表）---
+const insCEOEvent = db.prepare(`INSERT INTO events (name, event_type, date, location, status, theme, registration_count, attendance_count, leads_count, mql_count, sql_count, host, business_design, target_audience, notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+
+insCEOEvent.run('《晚点》头条','其他','2026-05-20','','已结束','CEO获客·吴明辉出席',198,0,80,65,4,'吴明辉(CEO)','CEO出席活动获客，配合企微活码/开通链接沉淀线索','活动受众/Octo目标客群','获客方式：企微活码扫码。指标口径：报名REG=活码加微198，留资LEADS=OCTO申请80，MQL=审核开通65，SQL=转出销售4。加微→开通33%，加微→转出2.0%。39家客户匹配：4家（卓望、宇通客车）。自报来源TOP：混沌8人/官网3人/网络3人/微信公众号3人/播客3人。转出明细：①朱江(北京仁达企业管理咨询有限公司)→李金龙(灵听工牌)②马先生(南京新街口百货商店股份有限公司)→卢悦(CDP+MA)③李端(成都爱游智学科技有限公司)→刘智行(AI短剧)④史女士(杭州海康威视数字技术股份有限公司)→赵莹。特点：流量最大（占全部活码的50%），但加微→开通转化33%，说明60%+加微后无后续动作；晚点是入口渠道而非认知来源（自报来源中「晚点」仅6人）。');
+insCEOEvent.run('AI生态峰会','峰会','2026-06-19','','已结束','CEO获客·吴明辉出席',88,0,4,3,0,'吴明辉(CEO)','CEO出席活动获客，配合企微活码/开通链接沉淀线索','活动受众/Octo目标客群','获客方式：企微活码扫码。指标口径：REG=加微88，LEADS=OCTO申请4，MQL=开通3，SQL=转出0。申请率5%，加微→开通3%。39家客户匹配：0家。特点：转化率3%。');
+insCEOEvent.run('国企EMP','其他','2026-06-28','','已结束','CEO获客·吴明辉出席',56,0,1,0,0,'吴明辉(CEO)','CEO出席活动获客，配合企微活码/开通链接沉淀线索','活动受众/Octo目标客群','获客方式：企微活码扫码。指标口径：REG=加微56，LEADS=OCTO申请1，MQL=开通0，SQL=转出0。申请率2%。39家客户匹配：0家。特点：有申请但零开通。');
+insCEOEvent.run('Octo产品发布','发布会','2026-07-01','','已结束','CEO获客·吴明辉出席',26,0,4,3,0,'吴明辉(CEO)','CEO出席活动获客，配合企微活码/开通链接沉淀线索','活动受众/Octo目标客群','获客方式：企微活码扫码。指标口径：REG=加微26，LEADS=OCTO申请4，MQL=开通3，SQL=转出0。申请率15%。39家客户匹配：0家。特点：转化率12%，小规模但精准。');
+insCEOEvent.run('CAIO峰会','峰会','2026-07-09','','已结束','CEO获客·吴明辉出席',17,0,0,0,0,'吴明辉(CEO)','CEO出席活动获客，配合企微活码/开通链接沉淀线索','活动受众/Octo目标客群','获客方式：企微活码扫码。指标口径：REG=加微17，LEADS=OCTO申请0，MQL=开通0，SQL=转出0。申请率0%。39家客户匹配：0家。特点：加微后零转化，可能是活动受众与Octo目标客群不匹配。');
+insCEOEvent.run('中欧商学院','其他','2026-07-01','','已结束','CEO获客·吴明辉出席',8,0,0,0,0,'吴明辉(CEO)','CEO出席活动获客，配合企微活码/开通链接沉淀线索','活动受众/Octo目标客群','获客方式：企微活码扫码。指标口径：REG=加微8，LEADS=OCTO申请0，MQL=开通0，SQL=转出0。申请率0%。39家客户匹配：0家。特点：加微后零转化，可能是活动受众与Octo目标客群不匹配。');
+insCEOEvent.run('外滩大会','论坛','2026-09-05','','已结束','CEO获客·吴明辉出席',1,0,0,0,0,'吴明辉(CEO)','CEO出席活动获客，配合企微活码/开通链接沉淀线索','活动受众/Octo目标客群','获客方式：企微活码扫码。指标口径：REG=加微1，LEADS=OCTO申请0，MQL=开通0，SQL=转出0。39家客户匹配：0家。特点：加微后零转化。');
+insCEOEvent.run('混沌学院','沙龙','2026-06','','已结束','CEO获客·吴明辉出席',0,0,33,31,1,'吴明辉(CEO)','CEO出席活动获客，配合企微活码/开通链接沉淀线索','活动受众/Octo目标客群','获客方式：混沌群内直接分享OCTO开通邀请链接（无活码）。指标口径：REG=加微0（无活码），LEADS=OCTO申请33，MQL=审核开通31（通过率94%，全渠道最高），SQL=转出销售1。39家客户匹配：3家（卓望、祥承、混沌学园）。特点：通过率全渠道最高（94%），用户自主意愿极强；CEO背书+混沌社群信任度高。');
+
+// --- 二、客户跟踪表新增2家客户（accounts表）---
+const insTrkAcct = db.prepare(`INSERT INTO accounts (company_name, industry, source, tier, assigned_to, octo_status, customer_stage, lead_source, notes) VALUES (?,?,?,?,?,?,?,?,?)`);
+insTrkAcct.run('吴师/黄江华','未知','线索','D','贾金良','OpenClaw安装使用','D类观察','线索来源','[客户跟踪表原文] 行业:未知｜D类战略储备｜来源:线索｜阶段:试用｜状态:冷｜关键场景/需求:OpenClaw安装使用｜客户侧关键联系人:吴师/黄江华｜明略侧Owner:贾金良｜备注:非重点客户;模型DeepSeek');
+insTrkAcct.run('Leo~JXQ金总','未知','线索','D','贾金良','认知阶段','D类观察','线索来源','[客户跟踪表原文] 行业:未知｜D类战略储备｜来源:线索｜阶段:认知｜状态:停滞｜客户侧关键联系人:Leo金总(JXQ)｜明略侧Owner:贾金良');
+
+// --- 三、客户跟踪表27家×16列原文 → account_reports（内容一字不差）---
+const insTrkReport = db.prepare(`INSERT INTO account_reports (account_id, report_type, report_period, most_important, key_work, need_decision, cross_team_needs, bottlenecks, next_important) VALUES (?,?,?,?,?,?,?,?,?)`);
+const findAcct = db.prepare(`SELECT id FROM accounts WHERE company_name=?`);
+
+{ const a=findAcct.get('吉利汽车'); if(a) insTrkReport.run(a.id,'weekly','客户跟踪表2026-08-12','[客户跟踪表·2026-08-12] 吉利汽车｜B类落地推进中｜阶段:POC｜状态:热｜来源:已有关系(辉哥直接对接)','【行业】汽车制造\n【关键场景/需求】①AI军团(数字化中心+AI Center)②营销(AIGC广告视频素材创作)③座舱软件研发④元动力平台(集团级战略项目管理系统,覆盖约1500高管)⑤组织管理(周例会Loop/选育用留费)\n【客户痛点】①身份权限与行级数据管控②云端运行时(设备低配+信息安全)③验证系统(制造业容错率极低,辉哥反复强调为大规模推广真正瓶颈)④A2A多虾协作⑤成本治理\n【AI Native进展】集团2026年数字化预算40亿;有"百人百智"计划+自研智能体"小智";客户对AI Native有清晰认知框架(To R岗位通用Agent+To E个人使用Agent);刘浩自己写了《Octo第一性原理》;7/18辉哥向CEO淦家阅及40+高管做分享\n【OCTO使用进展和反馈】已成立项目组;三条POC并行(营销/产品洞察/研发);8.5万人9军团多品牌矩阵;私有化all-in-one约8/5完成;元动力平台立项9/15倒推底线9/30;辉哥承诺每周到场一天;商务方向约1亿咨询型项目;SaaS已开通体验;前期3人+2虾;客户侧乔帅/康之喜/李先强/杨毅等已在Octo上;云端部署(吉利云);客户基本选定飞书私有化部署\n【明略侧服务人员/Owner】威少(杨威/项目总负责人)/刘静Elva(营销+整体协调)/石小筱/邱凌燕Catherine(营销FDE)/黄楠(研发场景)/王雪琴(DAP)/叶佳(FAQ资料)\n【客户侧关键联系人】刘浩(浩总/最强内部推手)/陈勇(研究院AI负责人,KDM)/盖总(上层领导)/淦家阅(CEO)/乔帅/Jason(康之喜)/李先强/杨毅/杨曌/罗伟胤\n【竞争对手情况】飞书(已基本选定私有化部署);阿里/腾讯/字节竞品;客户已有自研"小智";Eva(吉利自有平台)','①8/5完成私有化all-in-one部署②营销POC推进(洞察→策略→脚本→视频)③研发POC场景确认(建议从CRM切入而非汽车软件开发)④9/15元动力平台里程碑⑤签框架协议(按麦肯锡逻辑定价)','当前最重点标杆客户;明略定位帮吉利做组织AI转型而非单业务线智能化;客户正在做组织融合(数字化团队与AIC融合)','①缺全职驻场PM②交付团队高端咨询+交付人才不足(Delta空缺/Echo仅营销侧)③验证系统(Verification)缺位④客户对内容准确性要求极高(品牌物料库+3D建模)⑤上下文管理(长周期项目400-500人/2600活动节点)⑥客户希望对产品路线图有影响力','客户跟踪表原始数据完整保留'); }
+{ const a=findAcct.get('宇通客车'); if(a) insTrkReport.run(a.id,'weekly','客户跟踪表2026-08-12','[客户跟踪表·2026-08-12] 宇通客车｜B类落地推进中｜阶段:POC｜状态:温｜来源:主动进线(官网微信)','【行业】汽车制造(商用车/客车)\n【关键场景/需求】①车联网产品页面开发(多虾协作)②会议纪要自动化(Octic录音→结构化纪要)③数据分析报告生成(虾接DeepMiner)④AIGC内容制作(视频/图文降本)⑤GEO优化\n【客户痛点】①客户内部IT权限审批严格(外部网址需层层审批)②内网网络限制多③客户正在撰写AI+转型调研报告,涉及多厂商选型评估④客户觉得LLM智能体开发平台跟Dify区别不大\n【AI Native进展】曾是管线最高质量客户(17活跃用户/30只虾/人均近2只);5/9进线→5/14开通→5/27 CIO带队9人高层拜访→6/1开DeepMiner团队账号→6/10车联网场景跑通;客户在AI转型报告中将明略列为"AI+原生组织"标杆案例;后客户转向写AI转型调研报告Octo试用暂停;目前转AIGC+GEO服务切入;客户内容生产95%外包想借AI降本\n【OCTO使用进展和反馈】本地部署完成17人30虾;三个场景跑通过(车联网页面/会议纪要/数据分析);后因客户写报告暂停;Octopush已上架Agent但卡在内网审批;7/29与品牌营销团队沟通,客户不要"再加一个供应商"要战略级革新;7/31交接Amy(米姐)跟进\n【明略侧服务人员/Owner】前期赵玉平/7/31交接张晓Amy(米姐)/叶佳(Octopush上架)\n【客户侧关键联系人】CIO(带队参访)/朱院(设计院副院长,日常用会议纪要)/陶老师(品牌营销)/技术部门代表(云端软件开发)\n【竞争对手情况】腾讯WorkBuddy/阿里QoderWork(CodeBuddy)/字节HiAgent/飞书/Dify社区版/百度DataBuilder/High Agent(竞品调研中)','①按不同价位段提供AI制作案例+报价单②约线上案例展示会③客户内部确定Demo命题做AI视频Demo④推进AIGC内容服务(秒针销售对接承接外包)','全球最大客车制造商(B2B);场景龙虾蒸馏上架Octopush收token新商业模式探索;客户有尝试连接Homers大模型','①客户正在调研竞品写报告,预计还需1-2个月②内部权限审批流程长③客户AI基础薄弱④客户要战略级革新不要加供应商⑤曾出现多虾部署同一Mac Mini记忆混乱问题','客户跟踪表原始数据完整保留'); }
+{ const a=findAcct.get('南孚电池'); if(a) insTrkReport.run(a.id,'weekly','客户跟踪表2026-08-12','[客户跟踪表·2026-08-12] 南孚电池｜B类落地推进中｜阶段:签约｜状态:温｜来源:已有关系(辉哥导入)','【行业】消费品/电池\n【关键场景/需求】①跨部门沟通场景(线下物流项目)②对接飞书/钉钉(在Octo中控制会议室/操作文档)③AF会录音笔功能\n【客户痛点】①客户定位偏差(想用Octo替代企微/飞书,需引导聚焦AI协作)②中层及以下对产品不太接受存在抵触③客户很少使用产品,反馈泛泛④客户内部推腾讯Hermes\n【AI Native进展】客户希望以Octo替代飞书/钉钉/企微的长期愿景(需求复杂度高);已开通SaaS体验版6人+4虾;客户决定继续SaaS测试指定线下物流项目;第一版合同已拟好经威少审核提交客户,客户要求7×24运维后法务审核完毕\n【OCTO使用进展和反馈】SaaS体验版开通;6人+4虾内部调试;腾讯公有云部署方案确认;AF录音笔问题基本解决;客户持续在对接飞书/钉钉使用龙虾控制会议室操作文档\n【明略侧服务人员/Owner】常晓飞/徐孝敏Nico(华裔销售妮蔻)/贾彤(场景引导文档)/威少(合同审核)\n【客户侧关键联系人】宋志华(对接人,AI高级工程师)/CEO+CMO(前宝洁人,辉哥认识)\n【竞争对手情况】腾讯Hermes(客户内部推广中)','①安排交流引导客户找到确定场景(避免内部摸索无结果)②Loop等新能力上线后安排专门演示③通过高层top-down推动(辉哥组织全体高管交流)④腾讯云合同启动本地化部署','合同第一年免费第二年15万运维部署费(金额小,标杆价值为主);场景从"替换钉钉/企微"改为"Octo作为统一入口对接飞书/钉钉会议"','①卡在公有云采购环节(需先与云厂商签合同才能开资源)②客户反馈被动沟通不深入③仅对接AI高级工程师缺高层对接④客户要求7×24运维服务需内部商榷','客户跟踪表原始数据完整保留'); }
+{ const a=findAcct.get('金智教育'); if(a) insTrkReport.run(a.id,'weekly','客户跟踪表2026-08-12','[客户跟踪表·2026-08-12] 金智教育｜B类落地推进中｜阶段:POC｜状态:热｜来源:已有关系(郭超那边)','【行业】教育科技/SaaS\n【关键场景/需求】①研发与业务两条主流程(15Bot/11员工/4群已在跑)②高校市场(南京科技职业技术学院/中国传媒大学"智能体答辩"/CCF论坛)③高校人机协作产品\n【客户痛点】①群内多Bot职责混乱②长上下文记忆丢失③网址链接失效④待办事项缺陷⑤飞书文档权限⑥Skill管理混乱⑦长任务超30min timeout⑧IM桥接断⑨飞书Token一周失效⑩移动端未上架\n【AI Native进展】客户自有IT能力强可自主探索;梳理9个业务场景挑2-3个落地;SaaS+本地部署双版本测试;分三阶段推进(①内部试用7月完成→②技术流程改造→③联合推向市场);团队约60人(产研);客户有意愿为陪跑服务付费;CCF会议主题确定Octo联合出品双logo\n【OCTO使用进展和反馈】SaaS版15+账号使用中;15个Bot/11名员工/4个群在跑研发与业务两条主流程;同步测试本地部署;客户已基于自身系统与Octo做打通场景;80-90%场景Octo可支持\n【明略侧服务人员/Owner】叶佳→交接史佳艳佳艳/邱凌燕Catherine(前期销售)/吴锡(商务战略合作)/胡曦(高校场景)/佳佳/郭颂(技术)\n【客户侧关键联系人】于总/俞京华/郭总\n【竞争对手情况】飞书/其他教育AI产品','①周会持续推进②推进CCF合作③Loop和卡片协议两大卡点需赶在客户deadline前解决④拉客户聊具体可落地场景','"精致"应为"金智教育"的误写;合作伙伴属性有助拓展教育类客户群;非典型营销场景','①金智可能抱有希望明略投资其公司的目的,合作动机不纯需警惕②SaaS版不允许商业化收费但客户更倾向SaaS③核心卡点在通讯录和权限④时间紧:9/1开学发布CourseClub,原计划8/15全员上线','客户跟踪表原始数据完整保留'); }
+{ const a=findAcct.get('致远互联'); if(a) insTrkReport.run(a.id,'weekly','客户跟踪表2026-08-12','[客户跟踪表·2026-08-12] 致远互联｜B类落地推进中｜阶段:试用｜状态:温｜来源:已有关系(创始人徐总来访)','【行业】企业协同办公/低代码平台\n【关键场景/需求】Loop任务编排(需求量极大)/合同治理相关场景\n【客户痛点】①开源vs商业版差异②Agent管理成本("养废")③飞书/WorkBuddy集成④操作手册\n【AI Native进展】协同办公/低代码龙头(35家一级央企客户);创始人徐总7/14带队来访"取经";定位范式互补(致远=System of Record,Octo=System of Agent);辉哥定调"代码开源随便用,赚token赚FDE";CIO李时齐已本地部署一套;客户CIO拉新群先让主要人员手机端下载\n【OCTO使用进展和反馈】私有化部署已完成;客户尚未完全试用;向致远团队快速介绍过产品(因领导临时有会缩为半小时)\n【明略侧服务人员/Owner】史佳艳佳艳(主跟)\n【客户侧关键联系人】创始人徐总/CIO李时齐/李老师\n【竞争对手情况】飞书/WorkBuddy/其他协同AI','①约客户沟通使用反馈和场景②联合PR为目标(共同发布战略合作声明互相借势)','央国企协同办公/低代码龙头;合作伙伴性质联合PR比直接收入更重要','①客户尚未完全试用②须签一页边界备忘防白嫖③开放vs封闭价值观差异+潜在同层竞争','客户跟踪表原始数据完整保留'); }
+{ const a=findAcct.get('HKIC'); if(a) insTrkReport.run(a.id,'weekly','客户跟踪表2026-08-12','[客户跟踪表·2026-08-12] HKIC(hksa/hkfc/香港投资集团)｜B类落地推进中｜阶段:POC｜状态:温｜来源:资本市场(卉子/超哥)','【行业】金融\n【关键场景/需求】金融行业私有化部署/PR龙虾定制\n【客户痛点】需对接飞书和企微供应商;私有化部署需沟通海外服务器/云端保密/私有化范围/交付周期\n【AI Native进展】金融公司需私有化部署;先小批量(4-5人/35人)用私人设备做SaaS POC;定制一只PR龙虾(张晓米姐团队自行完成);进入招标阶段8/7前提交标书;小型POC(5万港币);预计两周交付一个月完成试用;POC后转私有化部署\n【OCTO使用进展和反馈】SaaS POC阶段;客户已采购POC所需硬件;争取8月初启动SaaS POC收费约10万港币;需常晓飞支持私有化技术答疑\n【明略侧服务人员/Owner】张晓Amy(米姐)/常晓飞(私有化技术答疑)\n【客户侧关键联系人】IT团队\n【竞争对手情况】飞书/企微(客户要求走采购对比过场)','①8月7日前提交标书资料②米姐约客户线上沟通私有化部署方案明确需求','香港客户;通过account团队交付;POC费+Token预充值(2-3万港币)','①卡在对接飞书和企微供应商(需走采购对比过场)②私有化部署海外服务器/数据安全等技术问题待沟通','客户跟踪表原始数据完整保留'); }
+{ const a=findAcct.get('Hysan希慎'); if(a) insTrkReport.run(a.id,'weekly','客户跟踪表2026-08-12','[客户跟踪表·2026-08-12] Hysan(希慎/西盛集团)｜B类落地推进中｜阶段:POC｜状态:温｜来源:资本市场(张晓Amy)','【行业】房地产/香港\n【关键场景/需求】协同场景(从DM转回Octo因DM无法满足协同需求);涉及5-6只虾定制\n【客户痛点】客户对法务与安全要求极高\n【AI Native进展】前期曾从Octo切到DM因Token预算不可控→又转回Octo因其核心诉求是协同;SaaS POC已中标;POC费用10万港币(定制服务人工费);Token充值待定(5-10万港币起充);预计本月签约下月服务;使用海外版Octo;大概率做成demo型项目;需与F1团队沟通协助\n【OCTO使用进展和反馈】平台切换DM→Octo;周一将进行签约前最后一轮沟通确认安全与架构\n【明略侧服务人员/Owner】张晓Amy(米姐)/Catherine团队(合并交付)\n【竞争对手情况】DM(曾切换但不满足协同需求)','①签约前最后一轮沟通(确认安全与架构)②对齐具体需求走合同流程','香港客户;从DM切回Octo的案例','①整体交付成本较高难以承受②客户法务安全要求极高前期资质整合耗时长③尚未到私有化部署阶段','客户跟踪表原始数据完整保留'); }
+{ const a=findAcct.get('卓正医疗'); if(a) insTrkReport.run(a.id,'weekly','客户跟踪表2026-08-12','[客户跟踪表·2026-08-12] 卓正医疗｜B类落地推进中｜阶段:方案沟通｜状态:温｜来源:资本市场(张晓Amy)','【行业】医疗健康\n【关键场景/需求】医疗行业AI协作(姜平定调"该案例必须发生";打磨为可复制标杆尤其医疗板块)\n【AI Native进展】合同需交付Octo已提交可行性方案;预计8月3日当周带团队沟通私有化部署方案;姜平定调"必须发生"打磨为医疗板块可复制标杆\n【OCTO使用进展和反馈】可行性方案已提交\n【明略侧服务人员/Owner】张晓Amy(米姐)','①8月3日当周带团队沟通私有化部署方案②提前约威少时间','姜哥高度重视;医疗板块标杆;Thread中0条消息','信息较少,新建Thread但无消息','客户跟踪表原始数据完整保留'); }
+{ const a=findAcct.get('墨迹天气'); if(a) insTrkReport.run(a.id,'weekly','客户跟踪表2026-08-12','[客户跟踪表·2026-08-12] 墨迹天气｜B类落地推进中｜阶段:方案/报价｜状态:温｜来源:主动接触(采购发来需求文档)','【行业】互联网/气象服务\n【关键场景/需求】研发智能体赋能:①自动生成需求/技术方案/测试用例②打通简单云+GitLab③多智能体跨机器协同④最佳实践沉淀⑤研发提效量化\n【客户痛点】①智能体能力分散未与核心研发场景对齐②内部工具(简单云/GitLab)未打通③缺乏实践案例④研发提效无量化数据\n【AI Native进展】5/15接触产品侧负责人王荣涛→5/18开通SaaS→5/22佳佳线上培训→6/8/25郭师光组试用(4人4虾)→7/2尝试自行部署Octo;7/8采购发来《研发智能体赋能项目需求文档》;威少评估"Octo基础架构+定制开发";客户反馈较好继续商务;需重新细化需求报价;预计百万级规模可能涉及招标\n【OCTO使用进展和反馈】SaaS版4人4虾试用过;客户已部署开源版但未有效使用仅1个智能体运行;Loop功能上线对该项目非常有利\n【明略侧服务人员/Owner】贾彤(贾老师/前期主对接)/威少(方案报价)/朱翾蒙(销售)\n【客户侧关键联系人】王荣涛(产品侧)/郭师光(算法组较积极)/金犁(创始人,发起AI coding招标)\n【竞争对手情况】埃森哲等;客户内部已用OpenClaw(开源版)','①提供解决方案和报价②与客户技术团队深入沟通明确定制范围③杨威组织会议协调推进','金犁工作范式"有事就发标找专业机构"真给钱不薅羊毛','①缺研发背景合适人选(团队缺乏研发方向Echo/Delta)②商业化收费模式待明确③大部分功能需定制开发','客户跟踪表原始数据完整保留'); }
+{ const a=findAcct.get('欢瑞世纪'); if(a) insTrkReport.run(a.id,'weekly','客户跟踪表2026-08-12','[客户跟踪表·2026-08-12] 欢瑞世纪｜C类线索｜阶段:试用｜状态:冷｜来源:已有关系','【行业】影视/短剧\n【关键场景/需求】①董秘Agent(上市公司信披和业务描述问答)②老板全景视角(掌握公司所有动态和决策链条)③会议录音知识库沉淀\n【客户痛点】①文档协同缺失(赵总反复追问3次以上,产品硬伤)②团队不拥抱AI(老板支持但员工推动困难)③隐私顾虑(影视行业核心创意人员不愿上传私人知识)④龙虾所有权/知识资产归属⑤"废虾"率和ROI(51只虾仅2只活跃)⑥Token费用\n【AI Native进展】200+员工公司50+只虾仅2只活跃(老板和一名专职员工);已完成私有化部署;短剧团队有AIGC工作流;赵总是核心决策人短剧团队创始发起人;合作伙伴志斌总认为Octo不适合Mission Critical工作流\n【OCTO使用进展和反馈】本地化部署已完成;刚开始测试(2人在试);安装问题由郭颂解决;赵玉平提出三个场景(董秘Agent/老板视角/录音知识库)但公司规模小预算有限\n【明略侧服务人员/Owner】刘静Elva/赵玉平\n【客户侧关键联系人】赵总(短剧创始人/核心决策人)/小雷/微微(HR/运营)\n【竞争对手情况】飞书(迁移阻力大)/个人AI工具(Claude等)','日常保持配合即可;协调裴总将短剧团队工作流资源对接;提供PR培训','暂时搁置不投入主要精力;SaaS卖虾收token费原策略已改为私有化部署','①公司规模小预算有限(最多几十万)②场景过于空泛缺乏实际价值③员工普遍反映使用复杂④"老板想推但高管团队不支持"','客户跟踪表原始数据完整保留'); }
+{ const a=findAcct.get('联合影像'); if(a) insTrkReport.run(a.id,'weekly','客户跟踪表2026-08-12','[客户跟踪表·2026-08-12] 联合影像(Kickers.ai)｜C类线索｜阶段:试用｜状态:冷｜来源:已有关系(贾金良跟进)','【行业】医疗影像/AI\n【关键场景/需求】①十几人AI团队新建独立空间协作②全产研团队使用Octo协作③统一网关平台(模型购买/充值/流量消耗5%模型差价商机)\n【客户痛点】飞书使用惯性及数据迁移成本,员工存在抵触;客户使用工具较杂(openclaw/cloud code/codebuddy等)\n【AI Native进展】十几人AI团队;从飞书迁移到Octo(策略:新项目用Octo/老项目用飞书);Kickers.ai空间使用浅(7/15仅3条人类消息0条bot协作);约3人在Octo/7人在飞书;已引导获取连接文档;贾叔建议先推动内部团队使用积累经验再推广\n【OCTO使用进展和反馈】SaaS版本引导;Octopush重新安装;学习资料(吉利分享录屏剪辑脱敏)已准备\n【明略侧服务人员/Owner】贾金良\n【客户侧关键联系人】刘应龙/新意/青山\n【竞争对手情况】飞书(深度用户)','①重新安装Octopush②吉利分享录屏剪辑脱敏后发给客户③推动内部产研团队使用octo积累经验','辉哥定调:深度飞书客户不强迁,转为深度访谈飞书AI痛点反哺Octo产品','①飞书使用惯性大数据迁移成本②外部协同仍用飞书③使用深度不够未产生真正人机协同价值','客户跟踪表原始数据完整保留'); }
+{ const a=findAcct.get('中信资本'); if(a) insTrkReport.run(a.id,'weekly','客户跟踪表2026-08-12','[客户跟踪表·2026-08-12] 中信资本｜C类线索｜阶段:试用｜状态:停滞｜来源:已有关系(贾金良跟进)','【行业】金融/投资\n【关键场景/需求】Octopush安装;关注文档协同功能;集中1-2台Mini部署其他成员通过Octo bot分配使用\n【客户痛点】办公室装修中网络不稳定;使用量极低(<50条消息)\n【AI Native进展】客户办公室装修中预计6/15完工;7/18装修完毕网络正常;AP到了但未安装;甲叔未上线\n【OCTO使用进展和反馈】后台数据显示消息数不超过50条消耗较少;本周计划安装Octopush\n【明略侧服务人员/Owner】贾金良\n【客户侧关键联系人】杨国威','等待Octopush安装后推进','部署方式:集中1-2台Mini+成员经Octo bot分配','①网络问题(装修刚完)②甲叔未上线反馈','客户跟踪表原始数据完整保留'); }
+{ const a=findAcct.get('北京破圈'); if(a) insTrkReport.run(a.id,'weekly','客户跟踪表2026-08-12','[客户跟踪表·2026-08-12] 北京破圈｜D类战略储备｜阶段:认知｜状态:停滞｜来源:内部(孙方超/超哥)','【行业】营销/代运营\n【关键场景/需求】代运营业务中的选品/文案生成/日报时报制作等标准化任务/内部管理场景(财务报销/信息收集)\n【客户痛点】多角色沟通混乱风险/AI口水战浪费Token/管理惰性与交付风险/无法替代飞书客户沟通/文档协作割裂/服务业需要温度不可替代\n【AI Native进展】业务团队(Amy Gao/伟新/向东)对Octo在代运营业务中的价值存疑;认为AI适用于标准化重复性任务但不能代表决策\n【OCTO使用进展和反馈】未正式使用;5/7与Amy Gao和超哥讨论后反馈疑虑;建议小范围试点2-3个内部项目\n【明略侧服务人员/Owner】贾金良/孙方超\n【客户侧关键联系人】Amy Gao/超哥/伟新/向东\n【竞争对手情况】飞书(客户侧核心沟通工具)','孙方超组织Octo产品团队与业务破圈团队产品沟通','破圈是内部BU不是外部客户;代运营业务;最后更新5/9','业务复杂度高不建议全员推广;价值未验证','客户跟踪表原始数据完整保留'); }
+{ const a=findAcct.get('西门子'); if(a) insTrkReport.run(a.id,'weekly','客户跟踪表2026-08-12','[客户跟踪表·2026-08-12] 西门子｜D类战略储备｜阶段:认知｜状态:冷｜来源:渠道(孙方超转邀请函)','【行业】工业/制造\n【关键场景/需求】AI规模化落地/Agent驱动组织变革/人才管理(西门子研究院和全球人才与领导力负责人交流)\n【AI Native进展】孙方超转来正式邀请函;7/21拟闭门沙龙产业生态协同;辉哥问"谁去讲课"\n【OCTO使用进展和反馈】未开始\n【明略侧服务人员/Owner】孙方超\n【客户侧关键联系人】杨三角同学关系','确认是否推进/谁去参会','非销售驱动交流;产业生态协同性质','信息极少','客户跟踪表原始数据完整保留'); }
+{ const a=findAcct.get('青钜科技'); if(a) insTrkReport.run(a.id,'weekly','客户跟踪表2026-08-12','[客户跟踪表·2026-08-12] 青矩技术｜D类战略储备｜阶段:体验部署｜状态:冷｜来源:未知','【行业】咨询/工程\n【关键场景/需求】私有化部署体验\n【客户痛点】技术问题\n【AI Native进展】已完成私有化部署;未涉及费用\n【OCTO使用进展和反馈】存在技术问题由郭松处理\n【明略侧服务人员/Owner】赵玉平/郭松(技术)','建子群并同步沟通录音(待办)','体验部署型客户;无费用','信息极少','客户跟踪表原始数据完整保留'); }
+{ const a=findAcct.get('混沌学园'); if(a) insTrkReport.run(a.id,'weekly','客户跟踪表2026-08-12','[客户跟踪表·2026-08-12] 混沌学院｜C类线索｜阶段:认知｜状态:停滞｜来源:已有关系','【行业】教育/创新\n【AI Native进展】6/16注册Octo账号后未有进展;青山老师出国刚回约聊Octopush\n【OCTO使用进展和反馈】注册账号未使用\n【明略侧服务人员/Owner】贾金良\n【客户侧关键联系人】金鑫/青山','跟进约聊Octopush','第一梯队(攻坚中)但后续无更新','无实质进展','客户跟踪表原始数据完整保留'); }
+{ const a=findAcct.get('方里'); if(a) insTrkReport.run(a.id,'weekly','客户跟踪表2026-08-12','[客户跟踪表·2026-08-12] 方里｜C类线索｜阶段:认知｜状态:停滞｜来源:已有关系(贾叔)','【行业】消费品\n【AI Native进展】第一梯队攻坚中\n【OCTO使用进展和反馈】无进展信息\n【明略侧服务人员/Owner】贾金良(前期)','','5月列为第一梯队攻坚中,此后无更新','无更新','客户跟踪表原始数据完整保留'); }
+{ const a=findAcct.get('云迹'); if(a) insTrkReport.run(a.id,'weekly','客户跟踪表2026-08-12','[客户跟踪表·2026-08-12] 云迹｜C类线索｜阶段:认知｜状态:停滞｜来源:已有关系','【行业】机器人/酒店科技\n【AI Native进展】第一梯队攻坚中\n【OCTO使用进展和反馈】无进展信息','','5月列为第一梯队攻坚中,此后无更新','无更新','客户跟踪表原始数据完整保留'); }
+{ const a=findAcct.get('PPIO'); if(a) insTrkReport.run(a.id,'weekly','客户跟踪表2026-08-12','[客户跟踪表·2026-08-12] PPIO｜C类线索｜阶段:认知｜状态:停滞｜来源:已有关系','【行业】云计算/边缘计算\n【AI Native进展】第一梯队攻坚中\n【OCTO使用进展和反馈】无进展信息','','5月第一梯队攻坚中,此后无更新','无更新','客户跟踪表原始数据完整保留'); }
+{ const a=findAcct.get('51World'); if(a) insTrkReport.run(a.id,'weekly','客户跟踪表2026-08-12','[客户跟踪表·2026-08-12] 51World｜C类线索｜阶段:认知｜状态:冷｜来源:已有关系','【行业】数字孪生/元宇宙\n【AI Native进展】第二梯队\n【OCTO使用进展和反馈】无实质进展','','5月第二梯队','信息极少','客户跟踪表原始数据完整保留'); }
+{ const a=findAcct.get('祥承'); if(a) insTrkReport.run(a.id,'weekly','客户跟踪表2026-08-12','[客户跟踪表·2026-08-12] 祥承｜C类线索｜阶段:认知｜状态:冷｜来源:已有关系','【行业】未知\n【AI Native进展】第二梯队\n【OCTO使用进展和反馈】无实质进展','','5月第二梯队','信息极少','客户跟踪表原始数据完整保留'); }
+{ const a=findAcct.get('香港中企'); if(a) insTrkReport.run(a.id,'weekly','客户跟踪表2026-08-12','[客户跟踪表·2026-08-12] 香港中企｜D类战略储备｜阶段:认知｜状态:冷｜来源:SaaS线索','【行业】企业服务(香港)\n【AI Native进展】第三梯队SaaS\n【OCTO使用进展和反馈】无实质进展\n【明略侧服务人员/Owner】AmyZhang','','5月第三梯队SaaS','信息极少','客户跟踪表原始数据完整保留'); }
+{ const a=findAcct.get('海归爸爸'); if(a) insTrkReport.run(a.id,'weekly','客户跟踪表2026-08-12','[客户跟踪表·2026-08-12] 海归爸爸｜D类战略储备｜阶段:认知｜状态:冷｜来源:SaaS线索','【行业】教育\n【AI Native进展】第三梯队SaaS\n【OCTO使用进展和反馈】无实质进展','','5月第三梯队SaaS','信息极少','客户跟踪表原始数据完整保留'); }
+{ const a=findAcct.get('我思科技'); if(a) insTrkReport.run(a.id,'weekly','客户跟踪表2026-08-12','[客户跟踪表·2026-08-12] 我思科技｜C类线索｜阶段:私有化部署｜状态:冷｜来源:已有关系(贾金良)','【行业】未知\n【关键场景/需求】升级体验文档和Loop引擎\n【AI Native进展】之前做过私有化部署,协助解决小问题后无进展;想升级体验文档和Loop引擎\n【OCTO使用进展和反馈】已私有化部署\n【明略侧服务人员/Owner】贾金良\n【客户侧关键联系人】方老师','已联系约近期升级','升级需求','','客户跟踪表原始数据完整保留'); }
+{ const a=findAcct.get('元梦灵境'); if(a) insTrkReport.run(a.id,'weekly','客户跟踪表2026-08-12','[客户跟踪表·2026-08-12] 元梦灵境｜D类战略储备｜阶段:认知｜状态:停滞｜来源:线索','【行业】未知\n【AI Native进展】6/9开通空间后仅6/9-10有消息之后无消息\n【OCTO使用进展和反馈】已沉寂\n【明略侧服务人员/Owner】贾金良\n【客户侧关键联系人】郭强','','','已沉寂','客户跟踪表原始数据完整保留'); }
+{ const a=findAcct.get('吴师/黄江华'); if(a) insTrkReport.run(a.id,'weekly','客户跟踪表2026-08-12','[客户跟踪表·2026-08-12] 吴师/黄江华｜D类战略储备｜阶段:试用｜状态:冷｜来源:线索','【行业】未知\n【关键场景/需求】OpenClaw安装使用\n【AI Native进展】6/30已安装OpenClaw模型DeepSeek;7/18协助安装\n【OCTO使用进展和反馈】已安装使用\n【明略侧服务人员/Owner】贾金良\n【客户侧关键联系人】吴师/黄江华','','非重点客户;模型DeepSeek','','客户跟踪表原始数据完整保留'); }
+{ const a=findAcct.get('Leo~JXQ金总'); if(a) insTrkReport.run(a.id,'weekly','客户跟踪表2026-08-12','[客户跟踪表·2026-08-12] Leo~JXQ金总｜D类战略储备｜阶段:认知｜状态:停滞｜来源:线索','【行业】未知\n【AI Native进展】6/26拉群后未有进展正在加微信;等忙完1-2周成立小组再教使用\n【明略侧服务人员/Owner】贾金良\n【客户侧关键联系人】Leo金总(JXQ)','','','等客户忙完再推进','客户跟踪表原始数据完整保留'); }
 
 export default db;
