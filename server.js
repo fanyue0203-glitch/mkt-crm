@@ -345,28 +345,27 @@ app.delete('/api/accounts/contacts/:contactId', (req, res) => {
   res.json({ message: '删除成功' });
 });
 
-// ===== Octo Summary (大客户复盘看板) =====
+// ===== Octo Summary (大客户全景报告) =====
+const accountCols = 'id, company_name, tier, industry, scale, deal_amount, customer_stage, assigned_to, blockers, next_step, next_deadline, ceo_involvement, ecosystem_lock, lessons_learned, customer_recognition, competitors, core_painpoint, key_contacts_count';
+
 app.get('/api/octo/summary', (req, res) => {
   const totalAccounts = db.prepare('SELECT COUNT(*) as c FROM accounts').get().c;
 
-  // KPI counts by stage
+  // KPI counts
   const signedCount = db.prepare("SELECT COUNT(*) as c FROM accounts WHERE customer_stage IN ('已签约','交付中')").get().c;
   const biddingCount = db.prepare("SELECT COUNT(*) as c FROM accounts WHERE customer_stage = '投标中'").get().c;
-  const bClassCount = db.prepare("SELECT COUNT(*) as c FROM accounts WHERE tier = 'B' AND customer_stage IN ('重点推进','POC中')").get().c;
+  const bClassCount = db.prepare("SELECT COUNT(*) as c FROM accounts WHERE customer_stage = 'B类重点推进'").get().c;
+  const cClassCount = db.prepare("SELECT COUNT(*) as c FROM accounts WHERE customer_stage = 'C类跟进'").get().c;
+  const dClassCount = db.prepare("SELECT COUNT(*) as c FROM accounts WHERE customer_stage = 'D类观察'").get().c;
   const deadCount = db.prepare("SELECT COUNT(*) as c FROM accounts WHERE customer_stage IN ('战败','放弃')").get().c;
 
-  // Pipeline amounts
-  const pipelineResult = db.prepare(`
-    SELECT COALESCE(SUM(deal_amount),0) as total FROM accounts
-    WHERE customer_stage NOT IN ('战败','放弃','') AND customer_stage IS NOT NULL
-  `).get();
+  const pipelineResult = db.prepare(`SELECT COALESCE(SUM(deal_amount),0) as total FROM accounts WHERE customer_stage NOT IN ('战败','放弃','D类观察','') AND customer_stage IS NOT NULL`).get();
   const pipeline = Math.round(pipelineResult.total * 10) / 10;
 
-  const wonResult = db.prepare(`
-    SELECT COALESCE(SUM(deal_amount),0) as total FROM accounts
-    WHERE customer_stage IN ('已签约','交付中')
-  `).get();
+  const wonResult = db.prepare(`SELECT COALESCE(SUM(deal_amount),0) as total FROM accounts WHERE customer_stage IN ('已签约','交付中')`).get();
   const wonAmount = Math.round(wonResult.total * 10) / 10;
+
+  const deadRate = totalAccounts > 0 ? Math.round(deadCount / totalAccounts * 100) : 0;
 
   // By stage distribution
   const byStage = db.prepare(`
@@ -374,14 +373,14 @@ app.get('/api/octo/summary', (req, res) => {
     FROM accounts WHERE customer_stage != '' GROUP BY customer_stage
     ORDER BY CASE customer_stage
       WHEN '已签约' THEN 1 WHEN '交付中' THEN 2 WHEN '投标中' THEN 3
-      WHEN 'POC中' THEN 4 WHEN '重点推进' THEN 5 WHEN '跟进中' THEN 6
-      WHEN '观察' THEN 7 WHEN '战败' THEN 8 WHEN '放弃' THEN 9 ELSE 10 END
+      WHEN 'B类重点推进' THEN 4 WHEN 'POC中' THEN 5 WHEN 'C类跟进' THEN 6
+      WHEN 'D类观察' THEN 7 WHEN '战败' THEN 8 WHEN '放弃' THEN 9 ELSE 10 END
   `).all();
 
   // By industry
   const byIndustry = db.prepare("SELECT industry, COUNT(*) as c FROM accounts WHERE industry != '' GROUP BY industry ORDER BY c DESC").all();
 
-  // Competitor frequency (rough parse from comma/slash separated text)
+  // Competitor frequency
   const allCompetitors = db.prepare("SELECT competitors FROM accounts WHERE competitors != ''").all();
   const compMap = {};
   allCompetitors.forEach(r => {
@@ -390,48 +389,42 @@ app.get('/api/octo/summary', (req, res) => {
   });
   const byCompetitor = Object.entries(compMap).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
 
-  // Active pipeline (sorted by deal_amount desc, not dead)
+  // Active pipeline list
   const pipelineList = db.prepare(`
     SELECT id, company_name, tier, industry, deal_amount, customer_stage, assigned_to, next_step, next_deadline, blockers
-    FROM accounts WHERE customer_stage NOT IN ('战败','放弃','') AND customer_stage IS NOT NULL
-    ORDER BY deal_amount DESC
+    FROM accounts WHERE customer_stage NOT IN ('战败','放弃','D类观察') AND customer_stage IS NOT NULL AND customer_stage != ''
+    ORDER BY CASE tier WHEN 'S' THEN 1 WHEN 'A' THEN 2 WHEN 'B' THEN 3 WHEN 'C' THEN 4 ELSE 5 END, deal_amount DESC
   `).all();
 
-  // Recent updates
   const recentUpdates = db.prepare(`
     SELECT id, company_name, tier, customer_stage, deal_amount, assigned_to, updated_at
     FROM accounts ORDER BY updated_at DESC LIMIT 10
   `).all();
 
-  // Upcoming deadlines
   const upcomingDeadlines = db.prepare(`
     SELECT id, company_name, tier, next_step, next_deadline, customer_stage
     FROM accounts WHERE next_deadline != '' AND next_deadline IS NOT NULL
-      AND customer_stage NOT IN ('战败','放弃','已签约')
+      AND customer_stage NOT IN ('战败','放弃','已签约','D类观察')
     ORDER BY next_deadline ASC
   `).all();
 
-  // Blockers
   const blockersList = db.prepare(`
     SELECT id, company_name, tier, blockers, customer_stage, assigned_to
     FROM accounts WHERE blockers != '' AND blockers IS NOT NULL
-    ORDER BY tier ASC
+    ORDER BY CASE tier WHEN 'S' THEN 1 WHEN 'A' THEN 2 WHEN 'B' THEN 3 ELSE 4 END
   `).all();
 
-  // CEO referrals
   const ceoReferrals = db.prepare(`
     SELECT id, company_name, tier, customer_stage, deal_amount, assigned_to
     FROM accounts WHERE ceo_involvement = 1
-    ORDER BY deal_amount DESC
+    ORDER BY CASE tier WHEN 'S' THEN 1 WHEN 'A' THEN 2 WHEN 'B' THEN 3 ELSE 5 END, deal_amount DESC
   `).all();
 
-  // Lessons from dead accounts
   const lessons = db.prepare(`
-    SELECT id, company_name, lessons_learned, customer_stage
+    SELECT id, company_name, lessons_learned, customer_stage, ecosystem_lock
     FROM accounts WHERE customer_stage IN ('战败','放弃') AND lessons_learned != ''
   `).all();
 
-  // Pending decisions from reports
   const pendingDecisions = db.prepare(`
     SELECT r.id, r.account_id, r.report_type, r.report_period, r.need_decision, r.created_at, a.company_name, a.tier
     FROM account_reports r JOIN accounts a ON r.account_id = a.id
@@ -439,18 +432,120 @@ app.get('/api/octo/summary', (req, res) => {
     ORDER BY r.created_at DESC
   `).all();
 
+  // ===== Grouped customers for panoramic report =====
+  const signed = db.prepare(`SELECT ${accountCols} FROM accounts WHERE customer_stage IN ('已签约','交付中') ORDER BY deal_amount DESC`).all();
+  const bidding = db.prepare(`SELECT ${accountCols} FROM accounts WHERE customer_stage = '投标中' ORDER BY deal_amount DESC`).all();
+  const bClass = db.prepare(`SELECT ${accountCols} FROM accounts WHERE customer_stage = 'B类重点推进' ORDER BY deal_amount DESC`).all();
+  const cClass = db.prepare(`SELECT ${accountCols} FROM accounts WHERE customer_stage = 'C类跟进' ORDER BY CASE tier WHEN 'S' THEN 1 WHEN 'A' THEN 2 WHEN 'B' THEN 3 ELSE 4 END, deal_amount DESC`).all();
+  const dClass = db.prepare(`SELECT ${accountCols} FROM accounts WHERE customer_stage = 'D类观察' ORDER BY updated_at DESC`).all();
+  const deadAll = db.prepare(`SELECT ${accountCols} FROM accounts WHERE customer_stage IN ('战败','放弃') ORDER BY company_name`).all();
+
+  // Group dead by reason category based on ecosystem_lock + blockers + lessons
+  const deadGroups = [
+    {
+      key: 'ecosystem', icon: '🔒', title: '生态锁定',
+      desc: '客户已有成熟内部AI/协同体系，Octo无法提供增量价值',
+      match: (a) => /飞书|生态锁定|内网|自研AI/.test((a.ecosystem_lock||'') + (a.blockers||'') + (a.lessons_learned||'')) && !/部署≠使用|沉寂/.test(a.lessons_learned||'')
+    },
+    {
+      key: 'compliance', icon: '📋', title: '合规门槛',
+      desc: '香港/国际客户合规资质、费用封顶、保险等硬性要求',
+      match: (a) => /SOC2|合规|专业责任险|Token.*不封顶|ISO27001/.test((a.blockers||'') + (a.lessons_learned||'') + (a.ecosystem_lock||''))
+    },
+    {
+      key: 'deployed', icon: '💤', title: '「部署≠使用」',
+      desc: '部署/开通后客户内部未真正用起来，缺乏场景引导和推动力',
+      match: (a) => /部署≠使用|私有化完成|沉寂|部署后|未真正使用|停滞.*场景|开通后.*沉寂/.test((a.lessons_learned||'') + (a.blockers||''))
+    },
+    {
+      key: 'nodemand', icon: '📞', title: '需求未建立',
+      desc: '冷接触/试用后无明确需求，信息不足，未形成有效商机',
+      match: (a) => /需求未建立|无明确需求|未提出明确|信息不足|冷接触|行业遇冷|无实质进展/.test((a.lessons_learned||'') + (a.blockers||''))
+    },
+    {
+      key: 'relation', icon: '⏰', title: '关系型流失',
+      desc: '人脉/学术引荐而非销售驱动，窗口期内未建立商务对接',
+      match: (a) => /关系型|人脉|杨三角|非销售驱动|商务接触/.test((a.lessons_learned||'') + (a.blockers||''))
+    }
+  ];
+  const deadGrouped = [];
+  const assigned = new Set();
+  deadGroups.forEach(g => {
+    const items = deadAll.filter(a => !assigned.has(a.id) && g.match(a));
+    items.forEach(a => assigned.add(a.id));
+    if (items.length) deadGrouped.push({ ...g, items });
+  });
+  // leftovers
+  const rest = deadAll.filter(a => !assigned.has(a.id));
+  if (rest.length) deadGrouped.push({ key: 'other', icon: '❓', title: '其他原因', desc: '其他战败/放弃原因', items: rest });
+
+  // Core lessons (curated)
+  const coreLessons = [
+    '「部署≠使用」是系统性问题，影响6家(占已部署40%+)，需建立「部署后30天激活」机制',
+    '飞书生态锁定一旦建立几乎不可破（得到/方里/联合影像/欢瑞/吉利都受影响），必须先评「生态锁定度」再定级',
+    '香港/国际客户合规是硬门槛（SOC2/专业责任险/Token封顶方案），需前置解决',
+    '关系型线索2周内不建立商务接触就流失（西门子教训），人脉引荐≠销售机会',
+    'A级Onboarding≠高转化（方里教训），需先评生态锁定度再投入重型资源',
+    '12家战败中仅2家「真失败」，其余10家「一开始就不该投重型资源」→更早更准地筛选'
+  ];
+
+  // Top concerns
+  const topConcerns = [
+    { rank: 1, title: '私有化部署能力', desc: '大客户（制造/医疗/金融）几乎全部要求私有化部署，是准入门槛' },
+    { rank: 2, title: '与飞书/钉钉差异共存', desc: '客户已有钉飞企微，需明确「协同工具vs Agent平台」差异定位和共存方案' },
+    { rank: 3, title: '非技术人员上手难度', desc: '业务人员能否低门槛创建/使用Agent，决定全员推广成败' },
+    { rank: 4, title: '费用/ROI可见度', desc: 'Token不封顶、云主机费用、提效量化是客户决策核心顾虑' },
+    { rank: 5, title: 'Agent协作场景落地(AtoA)', desc: '从1v1助手到多Agent协作(AtoA)的标杆场景是差异化竞争力' }
+  ];
+
+  // Action items: aggregate blockers + next_step + pendingDecisions
+  // Tag urgency: red = 紧急/卡点 (has blockers in bidding/B类), yellow = 本周/本月硬时点, blue = 常规
+  const actionItems = [];
+  // From blockers: all active accounts
+  blockersList.forEach(b => {
+    let priority = 'blue';
+    if (b.customer_stage === '投标中') priority = 'red';
+    else if (b.customer_stage === 'B类重点推进' || (b.next_deadline && b.next_deadline.includes('9月'))) priority = 'yellow';
+    actionItems.push({
+      account_id: b.id, company_name: b.company_name, tier: b.tier,
+      type: 'blocker', priority, content: b.blockers, owner: b.assigned_to, stage: b.customer_stage
+    });
+  });
+  // From pending decisions
+  pendingDecisions.forEach(p => {
+    actionItems.push({
+      account_id: p.account_id, company_name: p.company_name, tier: p.tier,
+      type: 'decision', priority: 'yellow', content: p.need_decision, owner: '', stage: '', period: p.report_period
+    });
+  });
+  // Sort: red first, then yellow, then blue
+  const pOrder = { red: 0, yellow: 1, blue: 2 };
+  actionItems.sort((a, b) => pOrder[a.priority] - pOrder[b.priority]);
+
+  // CEO funnel data (static, from report)
+  const ceoFunnel = {
+    events: 8, wechat: 394, applied: 122, activated: 102, converted: 5,
+    execReferralCount: ceoReferrals.length, execReferralPct: totalAccounts > 0 ? Math.round(ceoReferrals.length / totalAccounts * 100) : 0,
+    note: '8场活动→394加微→122申请→102开通→5转出(1%)；但39家中' + ceoReferrals.length + '家来自高管直推，贡献100%签约+90%+管线'
+  };
+
+  // Strategic quotes
+  const quotes = [
+    { who: '姜平', text: '不能付费的客户不再投入时间', date: '9/7' },
+    { who: '姜平', text: '亏本也拿（宇通）', date: '9月' },
+    { who: '姜平', text: '卓正必须发生', date: '9月' },
+    { who: '辉哥', text: '代码开源随便用，赚Token+FDE（致远）', date: '9月' }
+  ];
+
   res.json({
-    kpi: { totalAccounts, signedCount, biddingCount, bClassCount, pipeline, wonAmount, deadCount, pendingDecisions: pendingDecisions.length, blockers: blockersList.length, ceoReferrals: ceoReferrals.length },
-    byStage,
-    byIndustry,
-    byCompetitor,
-    pipeline: pipelineList,
-    recentUpdates,
-    upcomingDeadlines,
-    blockers: blockersList,
-    ceoReferrals,
-    lessons,
-    pendingDecisions
+    kpi: { totalAccounts, signedCount, biddingCount, bClassCount, cClassCount, dClassCount, pipeline, wonAmount, deadCount, deadRate, pendingDecisions: pendingDecisions.length, blockers: blockersList.length, ceoReferrals: ceoReferrals.length },
+    byStage, byIndustry, byCompetitor,
+    pipeline: pipelineList, recentUpdates, upcomingDeadlines,
+    blockers: blockersList, ceoReferrals, lessons, pendingDecisions,
+    // New panoramic groups
+    signed, bidding, bClass, cClass, dClass,
+    deadGrouped, deadAll,
+    coreLessons, topConcerns, actionItems, ceoFunnel, quotes
   });
 });
 
