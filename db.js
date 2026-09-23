@@ -225,6 +225,38 @@ db.exec(`
     imported_by TEXT DEFAULT '',
     imported_at TEXT DEFAULT (datetime('now','localtime'))
   );
+
+  -- 客户周报/月报推进记录
+  CREATE TABLE IF NOT EXISTS account_reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    report_type TEXT DEFAULT 'weekly' CHECK(report_type IN ('weekly','monthly')),
+    report_period TEXT DEFAULT '',
+    most_important TEXT DEFAULT '',
+    key_work TEXT DEFAULT '',
+    need_decision TEXT DEFAULT '',
+    cross_team_needs TEXT DEFAULT '',
+    bottlenecks TEXT DEFAULT '',
+    next_important TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now','localtime')),
+    updated_at TEXT DEFAULT (datetime('now','localtime')),
+    created_by TEXT DEFAULT ''
+  );
+
+  -- 客户联系人/组织架构
+  CREATE TABLE IF NOT EXISTS account_contacts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    name TEXT NOT NULL DEFAULT '',
+    title TEXT DEFAULT '',
+    department TEXT DEFAULT '',
+    role_level TEXT DEFAULT '',
+    phone TEXT DEFAULT '',
+    email TEXT DEFAULT '',
+    is_champion INTEGER DEFAULT 0,
+    notes TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now','localtime'))
+  );
 `);
 
 // ===== 插入示例数据（基于真实复盘报告） =====
@@ -305,5 +337,103 @@ db.exec(`
     ('分众传媒', '赵总', '下午茶活动', '媒介力学·广州场', 'new', 'AdEff', '互联网', '2026-09-03', 'AdEff广告创意前测'),
     ('玛氏箭牌', '陈经理', '下午茶活动', '媒介力学·广州场', 'new', 'CVB', '食品饮料', '2026-09-03', 'CVB数据方案+AI数字人');
 `);
+
+// ===== 示例报告 & 联系人数据（用 prepared statement 避免SQL转义问题） =====
+const insertReport = db.prepare(`INSERT INTO account_reports (account_id, report_type, report_period, most_important, key_work, need_decision, cross_team_needs, bottlenecks, next_important) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+const insertContact = db.prepare(`INSERT INTO account_contacts (account_id, name, title, department, role_level, phone, email, is_champion, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+
+const insertSampleData = db.transaction(() => {
+  // 宝洁 id=1: 周报W39
+  insertReport.run(1, 'weekly', '2026-W39',
+    '媒介力学广州场后与宝洁CMO办公室建立直接对接，确认4条产品线全面评估需求',
+    '1. 媒介力学广州场宝洁到场27人，覆盖4个产品线\n2. 会后与品牌总监张雯完成1v1深度交流\n3. 输出CBP/AIGC/GEO/Social四份产品介绍材料\n4. 协调产品线团队准备定制化demo',
+    '宝洁要求品鉴者层面确认是否可以开放CBP早期测试环境给宝洁做POC，涉及数据安全合规审批',
+    '需要产品团队（CBP线+AIGC线）配合准备demo环境；需要售前团队输出方案书',
+    'CBP早期测试环境的合规审批流程尚未启动，可能影响POC时间线',
+    '完成宝洁POC方案书提交，争取10月第1周启动正式POC');
+  // 宝洁 id=1: 周报W38
+  insertReport.run(1, 'weekly', '2026-W38',
+    '媒介力学广州场筹备，确认宝洁作为战略级客户重点邀约',
+    '1. 完成宝洁华南总部4个BU的定向邀约\n2. 协调华南团队提供客户背景资料\n3. 准备宝洁专属产品矩阵介绍材料',
+    '',
+    '需要华南销售团队提供宝洁最新组织架构和决策链信息',
+    '',
+    '确保宝洁CMO办公室高层到场，安排会后1v1交流');
+  // 宝洁 id=1: 月报9月
+  insertReport.run(1, 'monthly', '2026-09',
+    '9月成功将宝洁从活动触达推进到POC评估阶段，是Octo大客户模块的标杆突破',
+    '1. 媒介力学广州场宝洁深度参与\n2. 建立CMO办公室直接沟通渠道\n3. 完成4条产品线需求梳理\n4. 启动CBP+AIGC组合方案设计\n5. 内部协调3条产品线资源',
+    '需要确定宝洁项目的资源优先级——是否将宝洁列为Q4 TOP1战略客户，配置专属交付团队',
+    '需要交付团队提前介入POC阶段；需要法务提前准备数据安全协议模板',
+    '跨产品线资源协调机制不够顺畅，需要品鉴者层面明确主R',
+    '10月完成POC签约，启动联合创新项目立项');
+  // 嘉顿 id=2
+  insertReport.run(2, 'weekly', '2026-W39',
+    '嘉顿张经理确认本周约产品会议，DOMO+微伴组合方案初步对齐需求',
+    '1. 与嘉顿市场部张经理完成电话沟通\n2. 确认核心需求：经销商管理+终端物料数字化\n3. 准备DOMO+企业微信集成demo',
+    '嘉顿要求给出10万预算范围内的交付边界和时间线，需要确认标准产品包还是定制化',
+    '需要微伴团队确认集成方案和商务模式',
+    '',
+    '本周产品demo会议，争取拿到确认函');
+  // 莲藕健康 id=3
+  insertReport.run(3, 'weekly', '2026-W39',
+    '莲藕健康GEO优化需求明确，预期PPL 20万，等待客户内部预算审批',
+    '1. 完成莲藕健康官网SEO现状诊断\n2. 输出GEO优化初步方案\n3. 与李总确认技术对接人',
+    '',
+    '需要GEO产品团队输出详细技术方案和报价',
+    '客户Q3预算已锁定，需等到Q4预算释放（10月中旬）',
+    '跟进Q4预算审批进度，提前准备合同');
+  // 维他奶 id=4
+  insertReport.run(4, 'weekly', '2026-W39',
+    '维他奶AIGC内容生成需求初步沟通，客户对营销文案自动生成场景感兴趣',
+    '1. 会后与王总交换微信\n2. 发送AIGC营销文案产品介绍\n3. 等待客户反馈具体使用场景',
+    '',
+    '快消行业AIGC内容合规标准需要确认，尤其是食品饮料行业的广告法约束',
+    '客户尚未明确决策人和预算规模',
+    '约第二次深度沟通，明确使用场景和预算');
+  // 徕芬 id=5
+  insertReport.run(5, 'weekly', '2026-W39',
+    '徕芬DOMO+妙啊创意内容需求确认，但客户预算有限（约5万）',
+    '1. 与刘经理电话沟通\n2. 确认需求集中在短视频脚本生成\n3. 探讨标准SaaS订阅模式',
+    '',
+    '',
+    '客户预算偏低，需要评估是否值得投入售前资源',
+    '发送标准报价单，看客户反馈再决定推进力度');
+  // 分众 id=6
+  insertReport.run(6, 'weekly', '2026-W39',
+    '分众传媒对AdEff广告创意前测产品感兴趣，但属于同行/生态合作定位',
+    '1. 与赵总交换联系方式\n2. 初步探讨AdEff在分众投放场景的应用可能\n3. 明确分众更可能是渠道合作伙伴而非直接客户',
+    '需要品鉴者确认分众的合作定位——是客户还是渠道伙伴？这决定后续推进策略',
+    '需要BD团队评估渠道合作可能性',
+    '',
+    '内部讨论后确定合作定位，再安排正式沟通');
+  // 玛氏 id=7
+  insertReport.run(7, 'weekly', '2026-W39',
+    '玛氏箭牌CVB数据方案+AI数字人需求，陈经理表示需内部汇报后反馈',
+    '1. 会后发送CVB产品资料\n2. 介绍AI数字人在快消终端场景的应用案例',
+    '',
+    '需要CVB团队提供快消行业案例',
+    '客户尚未明确跟进时间，可能需要二次触达',
+    '下周跟进客户反馈，争取安排产品介绍会');
+
+  // 联系人：宝洁（3人）
+  insertContact.run(1, '张雯', '品牌总监', '品牌管理部', '管理层', '138****1001', 'zhangwen@pg.com', 1, '媒介力学广州场到场，活动后主动约1v1，是内部最强champion');
+  insertContact.run(1, '李明', 'CMO', 'CMO办公室', '决策层', '', '', 0, '宝洁华南区最高决策人，张雯汇报线，需通过张雯触达');
+  insertContact.run(1, '王晓燕', '数字营销经理', '数字营销中心', '执行层', '139****1003', 'wangxy@pg.com', 0, '具体产品评估和技术对接人');
+  // 嘉顿
+  insertContact.run(2, '张经理', '市场部经理', '市场部', '管理层', '136****2001', '', 1, '活动现场主动留资，本周约产品会议');
+  // 莲藕健康
+  insertContact.run(3, '李总', '市场副总裁', '市场部', '决策层', '', 'li@lianou.com', 1, 'GEO优化需求明确，预算20万，等Q4预算释放');
+  insertContact.run(3, '陈工', '技术负责人', '技术部', '执行层', '', '', 0, '后续技术对接人');
+  // 维他奶
+  insertContact.run(4, '王总', '品牌总监', '品牌部', '管理层', '', '', 0, 'AIGC内容生成场景感兴趣，待二次沟通');
+  // 徕芬
+  insertContact.run(5, '刘经理', '新媒体经理', '市场部', '执行层', '137****5001', '', 0, '短视频脚本生成需求，预算约5万');
+  // 分众
+  insertContact.run(6, '赵总', '产品总监', '产品部', '管理层', '', '', 0, '更可能是渠道合作而非直接客户，待确认定位');
+  // 玛氏
+  insertContact.run(7, '陈经理', '数字营销经理', '市场部', '执行层', '', '', 0, 'CVB+AI数字人需求，需内部汇报后反馈');
+});
+insertSampleData();
 
 export default db;

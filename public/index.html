@@ -239,6 +239,38 @@ tr:hover td{background:rgba(255,255,255,.02)}
 /* Animate counter */
 @keyframes countUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .animate-in{animation:countUp .4s ease both}
+
+/* Octo 大客户模块 */
+.timeline{display:flex;flex-direction:column;gap:16px}
+.report-card{position:relative}
+.report-card .report-meta{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.report-card .report-period{font-size:15px;font-weight:700;color:var(--accent-light)}
+.report-card .report-type-badge{padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.report-type-weekly{background:rgba(59,130,246,.15);color:#60a5fa}
+.report-type-monthly{background:rgba(139,92,246,.15);color:#a78bfa}
+.report-card .report-field{margin-bottom:10px}
+.report-card .report-field-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;display:flex;align-items:center;gap:4px}
+.report-card .report-field-value{font-size:13px;line-height:1.7;white-space:pre-wrap}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.decision-card{background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--warning);border-radius:var(--radius);padding:14px 18px;margin-bottom:8px;cursor:pointer;transition:all .15s}
+.decision-card:hover{border-color:var(--warning);background:var(--bg-card-hover)}
+.decision-card .dc-company{font-size:12px;color:var(--accent-light);font-weight:600;margin-bottom:4px}
+.decision-card .dc-period{font-size:11px;color:var(--text-muted);margin-left:8px}
+.decision-card .dc-content{font-size:13px;line-height:1.6}
+.timeline-item{display:flex;gap:14px;position:relative;padding-bottom:14px;border-bottom:1px solid rgba(51,65,85,.3)}
+.timeline-item:last-child{border-bottom:none;padding-bottom:0}
+.timeline-dot{width:10px;height:10px;border-radius:50%;background:var(--accent);margin-top:6px;flex-shrink:0;box-shadow:0 0 0 3px var(--accent-glow)}
+.timeline-content{flex:1;min-width:0}
+.timeline-item .ti-header{display:flex;gap:8px;align-items:center;margin-bottom:4px;flex-wrap:wrap}
+.timeline-item .ti-company{font-weight:600;font-size:13px;cursor:pointer;color:var(--accent-light)}
+.timeline-item .ti-company:hover{text-decoration:underline}
+.timeline-item .ti-period{font-size:11px;color:var(--text-muted);background:var(--bg-surface);padding:1px 6px;border-radius:3px}
+.timeline-item .ti-most{font-size:12px;color:var(--text-secondary);line-height:1.5;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.champion-tag{background:linear-gradient(135deg,#f59e0b,#ec4899);color:#fff;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.3px}
+.account-header{display:flex;align-items:center;gap:16px;margin-bottom:20px;padding:20px 24px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg)}
+.account-header .ah-name{font-size:20px;font-weight:700}
+.account-header .ah-meta{display:flex;gap:12px;margin-top:6px;flex-wrap:wrap;font-size:12px;color:var(--text-secondary)}
+.sub-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px}
 </style>
 </head>
 <body>
@@ -263,8 +295,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <div class="nav-item" data-page="speeches" onclick="navigate('speeches')">
           <span class="icon">🎤</span>辉哥演讲<span class="badge" id="badge-speeches">0</span>
         </div>
-        <div class="nav-item" data-page="accounts" onclick="navigate('accounts')">
-          <span class="icon">🐙</span>Octo 大客户<span class="badge" id="badge-accounts">0</span>
+        <div class="nav-item" data-page="octo-summary" onclick="navigate('octo-summary')">
+          <span class="icon">🐙</span>Octo 大客户<span class="badge" id="badge-decisions" style="display:none">0</span>
         </div>
         <div class="nav-item" data-page="funnel" onclick="navigate('funnel')">
           <span class="icon">🔄</span>SDR 漏斗<span class="badge" id="badge-leads">0</span>
@@ -311,9 +343,9 @@ function navigate(page,params={}){
   const content=document.getElementById('content');
   const ha=document.getElementById('header-actions');
   ha.innerHTML='';destroyCharts();
-  const titles={dashboard:'Dashboard',events:'🎪 Event 活动工作台','event-detail':'🎪 活动详情','event-form':'🎪 新建/编辑活动',speeches:'🎤 辉哥演讲获客','speech-detail':'🎤 演讲详情','speech-form':'🎤 新建/编辑演讲',accounts:'🐙 Octo 大客户','account-detail':'🐙 客户 360° 视图','account-form':'🐙 新建/编辑客户',funnel:'🔄 SDR 漏斗',import:'📥 数据导入'};
+  const titles={dashboard:'Dashboard',events:'🎪 Event 活动工作台','event-detail':'🎪 活动详情','event-form':'🎪 新建/编辑活动',speeches:'🎤 辉哥演讲获客','speech-detail':'🎤 演讲详情','speech-form':'🎤 新建/编辑演讲','octo-summary':'🐙 Octo 大客户','account-report':'🐙 客户全景报告',accounts:'🏢 客户列表','account-detail':'🐙 客户 360° 视图','account-form':'🐙 新建/编辑客户',funnel:'🔄 SDR 漏斗',import:'📥 数据导入'};
   document.getElementById('page-title').textContent=titles[page]||page;
-  const r={dashboard:renderDashboard,events:renderEvents,'event-detail':()=>renderEventDetail(params.id),'event-form':()=>renderEventForm(params.id),speeches:renderSpeeches,'speech-detail':()=>renderSpeechDetail(params.id),'speech-form':()=>renderSpeechForm(params.id),accounts:renderAccounts,'account-detail':()=>renderAccountDetail(params.id),'account-form':()=>renderAccountForm(params.id),funnel:renderFunnel,import:renderImport};
+  const r={dashboard:renderDashboard,events:renderEvents,'event-detail':()=>renderEventDetail(params.id),'event-form':()=>renderEventForm(params.id),speeches:renderSpeeches,'speech-detail':()=>renderSpeechDetail(params.id),'speech-form':()=>renderSpeechForm(params.id),'octo-summary':()=>renderOctoSummary(params.tab),'account-report':()=>renderAccountReport(params.id),accounts:renderAccounts,'account-detail':()=>renderAccountDetail(params.id),'account-form':()=>renderAccountForm(params.id),funnel:renderFunnel,import:renderImport};
   (r[page]||renderDashboard)();
 }
 function destroyCharts(){Object.values(charts).forEach(c=>c.destroy());charts={}}
@@ -346,7 +378,7 @@ async function renderDashboard(){
           <div class="label">辉哥演讲</div>
           <div class="sub">累计触达 ${fmtNum(stats.speeches.totalAudience)} 人</div>
         </div>
-        <div class="hero-stat animate-in" onclick="navigate('accounts')" style="animation-delay:.3s">
+        <div class="hero-stat animate-in" onclick="navigate('octo-summary')" style="animation-delay:.3s">
           <span class="icon">🐙</span>
           <div class="value green">${stats.accounts.total}</div>
           <div class="label">Octo 大客户</div>
@@ -414,7 +446,6 @@ async function renderDashboard(){
 function updateBadges(){
   document.getElementById('badge-events').textContent=stats.events?.total??0;
   document.getElementById('badge-speeches').textContent=stats.speeches?.total??0;
-  document.getElementById('badge-accounts').textContent=stats.accounts?.total??0;
   document.getElementById('badge-leads').textContent=stats.leads?.total??0;
 }
 
@@ -746,13 +777,13 @@ async function renderAccounts(){
     </table></div></div>`;
 }
 function accRow(a){
-  return `<tr class="clickable-row" onclick="navigate('account-detail',{id:${a.id}})">
+  return `<tr class="clickable-row" onclick="navigate('account-report',{id:${a.id}})">
     <td><span class="tier-badge tier-${a.tier}">${a.tier}</span></td>
     <td><strong>${esc(a.company_name)}</strong>${a.region?'<br><span style="font-size:11px;color:var(--text-muted)">'+esc(a.region)+'</span>':''}</td>
     <td>${esc(a.industry)||'—'}</td><td>${sourceTag(a.source)}</td><td>${a.touch_count}</td>
     <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.needs_summary)||'—'}</td>
     <td>${followUpTag(a.follow_up_status)}</td>
-    <td><button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();navigate('account-form',{id:${a.id}})">编辑</button></td>
+    <td><button class="btn btn-sm btn-primary" onclick="event.stopPropagation();navigate('account-report',{id:${a.id}})">全景报告</button></td>
   </tr>`;
 }
 async function searchAccounts(){
@@ -1115,6 +1146,268 @@ async function switchImportTab(el,tab){
   if(tab==='history'){try{const logs=await api('/api/import/logs');c.innerHTML=logs.length?`<div class="card"><div class="table-wrap"><table><tr><th>文件</th><th>目标</th><th>总行</th><th>成功</th><th>失败</th><th>时间</th></tr>${logs.map(l=>`<tr><td>${esc(l.filename)}</td><td>${l.target_table}</td><td>${l.total_rows}</td><td style="color:var(--success)">${l.success_rows}</td><td style="color:${l.error_rows?'var(--danger)':'inherit'}">${l.error_rows}</td><td>${l.imported_at}</td></tr>`).join('')}</table></div></div>`:'<div class="empty-state"><p>暂无导入记录</p></div>'}catch(e){c.innerHTML=err(e)}}
   else if(tab==='guide'){c.innerHTML=`<div class="card"><div class="card-body" style="line-height:2"><h3 style="margin-bottom:12px">数据导入指南</h3><p>1. 准备Excel文件，第一行为表头（中文或英文均可）</p><p>2. 选择导入目标：活动/演讲/客户/线索</p><p>3. 上传文件，系统自动识别列名匹配字段</p><hr style="border:none;border-top:1px solid var(--border);margin:12px 0"><p><strong>SDR线索字段说明：</strong></p><p>日期格式YYYY-MM-DD · 客户等级S/A/B/C</p><p>线索状态：new(新进线)/contacted(已联系)/qualified(已转出)/opportunity(商机)/closed_won(成单)/closed_lost(无效)</p><p>来源渠道：直接传中文原值（400电话/官方微信/Octo体验等）</p><p>成单金额：单位万元</p></div></div>`}
   else renderImport();
+}
+
+// ===== OCTO SUMMARY (大客户汇总看板) =====
+let _octoData = null;
+async function renderOctoSummary(tab){
+  const content=document.getElementById('content'),ha=document.getElementById('header-actions');
+  ha.innerHTML='<button class="btn btn-primary" onclick=\'navigate("account-form")\'>+ 新建客户</button>';
+  content.innerHTML='<div style="text-align:center;padding:60px;color:var(--text-muted)">⏳ 加载中...</div>';
+  try{_octoData=await api('/api/octo/summary')}catch(e){content.innerHTML=err(e);return}
+  // Update decision badge
+  const db=document.getElementById('badge-decisions');
+  if(_octoData.pendingDecisions.length>0){db.style.display='';db.textContent=_octoData.pendingDecisions.length}else{db.style.display='none'}
+
+  const activeTab=tab||'summary';
+  content.innerHTML=`
+    <div class="sub-tabs" id="octo-tabs">
+      <div class="tab ${activeTab==='summary'?'active':''}" onclick="switchOctoTab(this,'summary')">📊 整理报告</div>
+      <div class="tab ${activeTab==='list'?'active':''}" onclick="switchOctoTab(this,'list')">🏢 客户列表</div>
+    </div>
+    <div id="octo-tab-content"></div>`;
+
+  if(activeTab==='summary') renderOctoSummaryTab();
+  else renderOctoListTab();
+}
+function switchOctoTab(el,tab){
+  document.querySelectorAll('#octo-tabs .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  if(tab==='summary') renderOctoSummaryTab();
+  else renderOctoListTab();
+}
+function renderOctoSummaryTab(){
+  const d=_octoData;if(!d)return;
+  const k=d.kpi||{};
+  const tc=document.getElementById('octo-tab-content');
+  tc.innerHTML=`
+    <div class="kpi-row">
+      ${[{v:k.totalAccounts,l:'客户总数',c:'var(--accent)',i:'🏢'},{v:k.saCount,l:'S/A级客户',c:'var(--danger)',i:'⭐'},{v:k.pendingDecisions,l:'待决策事项',c:'var(--warning)',i:'❓'},{v:k.weekActive,l:'本周活跃客户',c:'var(--success)',i:'📈'}].map(s=>`<div class="stat-card"><div class="accent-bar" style="background:${s.c}"></div><div style="font-size:20px;margin-bottom:4px">${s.i}</div><div class="stat-value" style="color:${s.c}">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="card"><div class="card-header"><h3>❓ 待决策事项 ${d.pendingDecisions.length?`<span class="tag tag-yellow" style="margin-left:8px">${d.pendingDecisions.length}</span>`:''}</h3></div><div class="card-body">
+        ${d.pendingDecisions.length?d.pendingDecisions.map(p=>`<div class="decision-card" onclick="navigate('account-report',{id:${p.account_id}})">
+          <div class="dc-company"><span class="tier-badge tier-${p.tier}" style="width:auto;height:auto;padding:1px 6px;font-size:10px;margin-right:6px">${p.tier}</span>${esc(p.company_name)}<span class="dc-period">${p.report_type==='weekly'?'周报':'月报'} ${esc(p.report_period)}</span></div>
+          <div class="dc-content">${esc(p.need_decision)}</div>
+        </div>`).join(''):'<div class="empty-state" style="padding:24px"><div class="icon">✅</div><p>暂无待决策事项</p></div>'}
+      </div></div>
+      <div class="card"><div class="card-header"><h3>📋 最近推进更新</h3></div><div class="card-body">
+        ${d.recentReports.length?`<div class="timeline">${d.recentReports.map(r=>`<div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content">
+            <div class="ti-header">
+              <span class="ti-company" onclick="navigate('account-report',{id:${r.account_id}})">${esc(r.company_name)}</span>
+              <span class="tier-badge tier-${r.tier}" style="width:auto;height:auto;padding:1px 6px;font-size:10px">${r.tier}</span>
+              <span class="ti-period">${r.report_type==='weekly'?'周报':'月报'} ${esc(r.report_period)}</span>
+            </div>
+            <div class="ti-most">${esc(r.most_important)}</div>
+          </div>
+        </div>`).join('')}</div>`:'<div class="empty-state" style="padding:24px"><p>暂无报告记录</p></div>'}
+      </div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="card"><div class="card-header"><h3>📊 按等级分布</h3></div><div class="card-body">${d.byTier.length?renderDistBars(d.byTier,'tier',t=>t.tier,t=>t.c):'<p style="color:var(--text-muted)">暂无数据</p>'}</div></div>
+      <div class="card"><div class="card-header"><h3>🏭 按行业分布</h3></div><div class="card-body">${d.byIndustry.length?renderDistBars(d.byIndustry,'industry',t=>t.industry,t=>t.c,'#10b981'):'<p style="color:var(--text-muted)">暂无数据</p>'}</div></div>
+      <div class="card"><div class="card-header"><h3>📌 按状态分布</h3></div><div class="card-body">${d.byStatus.length?renderDistBars(d.byStatus,'status',t=>t.status,t=>t.c,'#f59e0b'):'<p style="color:var(--text-muted)">暂无数据</p>'}</div></div>
+    </div>
+    ${d.activeOpps.length?`<div class="card"><div class="card-header"><h3>💰 活跃商机（有预算且未完成）</h3></div><div class="card-body" style="padding:0"><table><tr><th>等级</th><th>客户</th><th>行业</th><th>需求</th><th>预估预算</th></tr>${d.activeOpps.map(a=>`<tr class="clickable-row" onclick="navigate('account-report',{id:${a.id}})"><td><span class="tier-badge tier-${a.tier}">${a.tier}</span></td><td><strong>${esc(a.company_name)}</strong></td><td>${esc(a.industry)}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.needs_summary)}</td><td style="font-weight:600;color:var(--warning)">${esc(a.estimated_budget)}</td></tr>`).join('')}</table></div></div>`:''}`;
+}
+function renderDistBars(data,type,labelFn,valFn,defaultColor){
+  const max=Math.max(...data.map(d=>valFn(d)),1);
+  const colorMap={'S':'#ef4444','A':'#f97316','B':'#3b82f6','C':'#64748b'};
+  return `<div class="data-bars">${data.map(d=>{const v=valFn(d);const w=Math.max(v/max*100,3);const l=labelFn(d);const c=type==='tier'?(colorMap[l]||defaultColor||'#3b82f6'):(defaultColor||'#3b82f6');return `<div class="data-bar-row"><div class="data-bar-label">${esc(l)}</div><div class="data-bar"><div class="data-bar-fill" style="width:${w}%;background:${c}"></div></div><div class="data-bar-value">${v}</div></div>`}).join('')}</div>`;
+}
+
+let _octoAccSearch='',_octoAccTier='';
+async function renderOctoListTab(){
+  const tc=document.getElementById('octo-tab-content');
+  tc.innerHTML=`<div class="search-bar"><input type="text" placeholder="搜索公司/行业/地区..." id="octo-acc-search" oninput="searchOctoAccounts()"><select id="octo-acc-tier" onchange="searchOctoAccounts()"><option value="">全部等级</option><option value="S">S级</option><option value="A">A级</option><option value="B">B级</option><option value="C">C级</option></select></div><div class="card"><div class="table-wrap"><table><tr><th>等级</th><th>公司名称</th><th>行业</th><th>来源</th><th>触达</th><th>需求</th><th>状态</th><th>操作</th></tr><tbody id="octo-acc-tbody"></tbody></table></div></div>`;
+  searchOctoAccounts();
+}
+async function searchOctoAccounts(){
+  const q=document.getElementById('octo-acc-search')?.value||'';
+  const t=document.getElementById('octo-acc-tier')?.value||'';
+  const p=new URLSearchParams();if(q)p.set('search',q);if(t)p.set('tier',t);
+  try{const d=await api('/api/accounts?'+p);const tb=document.getElementById('octo-acc-tbody');if(tb)tb.innerHTML=d.data.length?d.data.map(a=>`<tr class="clickable-row" onclick="navigate('account-report',{id:${a.id}})"><td><span class="tier-badge tier-${a.tier}">${a.tier}</span></td><td><strong>${esc(a.company_name)}</strong>${a.region?'<br><span style="font-size:11px;color:var(--text-muted)">'+esc(a.region)+'</span>':''}</td><td>${esc(a.industry)||'—'}</td><td>${sourceTag(a.source)}</td><td>${a.touch_count}</td><td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.needs_summary)||'—'}</td><td>${followUpTag(a.follow_up_status)}</td><td onclick="event.stopPropagation()"><button class="btn btn-sm btn-primary" onclick="navigate('account-report',{id:${a.id}})">全景报告</button></td></tr>`).join(''):'<tr><td colspan="8"><div class="empty-state"><p>无匹配结果</p></div></td></tr>'}catch(e){toast(e.message,'error')}
+}
+
+// ===== ACCOUNT REPORT (客户全景报告) =====
+let _accountReportData=null,_accountReports=[],_accountContacts=[];
+async function renderAccountReport(id){
+  const content=document.getElementById('content'),ha=document.getElementById('header-actions');
+  ha.innerHTML=`<button class="btn btn-secondary" onclick="navigate('octo-summary')">← 返回</button><button class="btn btn-primary" onclick="openReportForm(null,${id})">+ 新增报告</button>`;
+  content.innerHTML='<div style="text-align:center;padding:60px;color:var(--text-muted)">⏳ 加载中...</div>';
+  try{
+    const [a,reports,contacts]=await Promise.all([
+      api(`/api/accounts/${id}`),
+      api(`/api/accounts/${id}/reports`),
+      api(`/api/accounts/${id}/contacts`)
+    ]);
+    _accountReportData=a;_accountReports=reports;_accountContacts=contacts;
+  }catch(e){content.innerHTML=err(e);return}
+  const a=_accountReportData;
+  document.getElementById('page-title').textContent=`🐙 ${a.company_name} · 全景报告`;
+
+  content.innerHTML=`
+    <div class="account-header">
+      <span class="tier-badge tier-${a.tier}" style="width:40px;height:40px;font-size:16px">${a.tier}</span>
+      <div style="flex:1">
+        <div class="ah-name">${esc(a.company_name)}</div>
+        <div class="ah-meta">
+          ${a.industry?`<span class="tag tag-blue">${esc(a.industry)}</span>`:''}
+          ${a.region?`<span class="tag tag-gray">${esc(a.region)}</span>`:''}
+          ${a.follow_up_status?followUpTag(a.follow_up_status):''}
+          ${a.estimated_budget?`<span style="color:var(--warning);font-weight:600">💰 ${esc(a.estimated_budget)}</span>`:''}
+          ${a.assigned_to?`<span>👤 ${esc(a.assigned_to)}</span>`:''}
+        </div>
+      </div>
+    </div>
+    <div class="tabs" id="ar-tabs">
+      <div class="tab active" onclick="switchArTab(this,'reports')">📋 推进报告 (${_accountReports.length})</div>
+      <div class="tab" onclick="switchArTab(this,'contacts')">👥 组织架构/联系人 (${_accountContacts.length})</div>
+      <div class="tab" onclick="switchArTab(this,'info')">📊 基本信息</div>
+    </div>
+    <div id="ar-tab-content"></div>`;
+  renderArReportsTab();
+}
+function switchArTab(el,tab){
+  document.querySelectorAll('#ar-tabs .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  if(tab==='reports') renderArReportsTab();
+  else if(tab==='contacts') renderArContactsTab();
+  else renderArInfoTab();
+}
+function renderArReportsTab(){
+  const tc=document.getElementById('ar-tab-content');
+  tc.innerHTML=`<div style="margin-bottom:16px"><button class="btn btn-primary" onclick="openReportForm(null,${_accountReportData.id})">+ 新增报告</button></div>`;
+  if(!_accountReports.length){
+    tc.innerHTML+='<div class="empty-state"><div class="icon">📋</div><p>暂无推进报告</p><button class="btn btn-primary" onclick="openReportForm(null,'+_accountReportData.id+')">+ 写第一条报告</button></div>';return;
+  }
+  tc.innerHTML+=`<div class="timeline">${_accountReports.map(r=>renderReportCard(r)).join('')}</div>`;
+}
+function renderReportCard(r){
+  const typeLabel=r.report_type==='weekly'?'周报':'月报';
+  const typeClass=r.report_type==='weekly'?'report-type-weekly':'report-type-monthly';
+  const field=(icon,label,val,extraClass='')=>val?`<div class="report-field"><div class="report-field-label">${icon} ${label}</div><div class="report-field-value ${extraClass}">${esc(val)}</div></div>`:'';
+  return `<div class="card report-card" style="margin-bottom:4px"><div class="card-body">
+    <div class="report-meta">
+      <span class="report-period">${esc(r.report_period)||'未设周期'}</span>
+      <span class="report-type-badge ${typeClass}">${typeLabel}</span>
+      <span style="margin-left:auto;font-size:11px;color:var(--text-muted)">${r.created_at||''}</span>
+      <button class="btn btn-sm btn-secondary" onclick="openReportForm(${r.id},${r.account_id})">编辑</button>
+      <button class="btn btn-sm btn-danger" onclick="if(confirm('确定删除这条报告？'))deleteReport(${r.id})">删除</button>
+    </div>
+    ${field('🔴','本期最重要的一件事',r.most_important,'highlight-box')}
+    ${field('📝','重点工作',r.key_work)}
+    ${field('❓','需要品鉴者决策',r.need_decision,'highlight-box insight')}
+    ${field('🤝','跨线协同需求',r.cross_team_needs)}
+    ${field('🚧','瓶颈/阻塞',r.bottlenecks)}
+    ${field('➡️','下期最重要的一件事',r.next_important)}
+  </div></div>`;
+}
+function renderArContactsTab(){
+  const tc=document.getElementById('ar-tab-content');
+  const roleColor={'决策层':'tag-red','管理层':'tag-yellow','执行层':'tag-blue'};
+  tc.innerHTML=`<div style="margin-bottom:16px"><button class="btn btn-primary" onclick="openContactForm(null,${_accountReportData.id})">+ 新增联系人</button></div>
+    <div class="card"><div class="table-wrap"><table>
+      <tr><th>姓名</th><th>职位</th><th>部门</th><th>级别</th><th>电话</th><th>邮箱</th><th>标记</th><th>备注</th><th>操作</th></tr>
+      <tbody>${_accountContacts.length?_accountContacts.map(c=>`<tr>
+        <td><strong>${esc(c.name)}</strong></td>
+        <td>${esc(c.title)||'—'}</td>
+        <td>${esc(c.department)||'—'}</td>
+        <td>${c.role_level?`<span class="tag ${roleColor[c.role_level]||'tag-gray'}">${esc(c.role_level)}</span>`:'—'}</td>
+        <td style="font-size:12px">${esc(c.phone)||'—'}</td>
+        <td style="font-size:12px">${esc(c.email)||'—'}</td>
+        <td>${c.is_champion?'<span class="champion-tag">⭐ Champion</span>':''}</td>
+        <td style="font-size:12px;color:var(--text-secondary);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.notes)||''}</td>
+        <td style="white-space:nowrap"><button class="btn btn-sm btn-secondary" onclick="openContactForm(${c.id},${c.account_id})">编辑</button> <button class="btn btn-sm btn-danger" onclick="if(confirm('确定删除？'))deleteContact(${c.id})">删除</button></td>
+      </tr>`).join(''):'<tr><td colspan="9"><div class="empty-state"><p>暂无联系人</p></div></td></tr>'}</tbody>
+    </table></div></div>`;
+}
+function renderArInfoTab(){
+  const a=_accountReportData;
+  const tc=document.getElementById('ar-tab-content');
+  const events=a.events||[];const leads=a.leads||[];
+  tc.innerHTML=`
+    <div class="card" style="margin-bottom:16px"><div class="card-header"><h3>📊 基本信息</h3><button class="btn btn-sm btn-primary" onclick="navigate('account-form',{id:${a.id}})">编辑</button></div><div class="card-body"><div class="detail-grid">
+      ${[['行业',a.industry],['规模',a.scale],['地区',a.region],['来源',a.source],['等级',a.tier+'级'],['首次触达',a.first_touch_date],['触达次数',a.touch_count],['Octo状态',a.octo_status],['负责人',a.assigned_to],['预估预算',a.estimated_budget]].map(([l,v])=>`<div><div class="detail-field"><div class="label">${l}</div><div class="value">${esc(v)}</div></div></div>`).join('')}
+    </div>
+    ${a.needs_summary?`<div class="detail-field" style="margin-top:8px"><div class="label">需求摘要</div><div class="value" style="white-space:pre-wrap">${esc(a.needs_summary)}</div></div>`:''}
+    ${a.notes?`<div class="detail-field" style="margin-top:8px"><div class="label">备注</div><div class="value" style="white-space:pre-wrap">${esc(a.notes)}</div></div>`:''}
+    </div></div>`;
+}
+
+// Report CRUD
+async function openReportForm(reportId,accountId){
+  let r={};if(reportId){r=_accountReports.find(x=>x.id===reportId)||{}}
+  openModal(`
+    <div class="modal-header"><h3>${reportId?'编辑报告':'新增报告'}</h3><button onclick="closeModal()" style="font-size:20px">✕</button></div>
+    <div class="modal-body"><form id="report-form" onsubmit="saveReport(event,${reportId||'null'},${accountId})">
+      <div class="form-row">
+        <div class="form-group"><label>报告类型</label><select name="report_type"><option value="weekly" ${r.report_type!=='monthly'?'selected':''}>周报</option><option value="monthly" ${r.report_type==='monthly'?'selected':''}>月报</option></select></div>
+        <div class="form-group"><label>周期</label><input name="report_period" value="${esc(r.report_period||'')}" placeholder="如 2026-W39 或 2026-09"></div>
+      </div>
+      <div class="form-group"><label>🔴 本${r.report_type==='monthly'?'月':'周'}最重要的一件事</label><textarea name="most_important" rows="2" placeholder="一件事，不是三件事">${esc(r.most_important||'')}</textarea></div>
+      <div class="form-group"><label>📝 重点工作（每行一条）</label><textarea name="key_work" rows="4" placeholder="1. 完成了什么\n2. 推进了什么\n3. ...">${esc(r.key_work||'')}</textarea></div>
+      <div class="form-group"><label>❓ 需要品鉴者决策的事</label><textarea name="need_decision" rows="2" placeholder="需要拍板的事，没有则留空">${esc(r.need_decision||'')}</textarea></div>
+      <div class="form-group"><label>🤝 跨线协同需求</label><textarea name="cross_team_needs" rows="2" placeholder="需要其他团队/部门配合的事">${esc(r.cross_team_needs||'')}</textarea></div>
+      <div class="form-group"><label>🚧 瓶颈/阻塞</label><textarea name="bottlenecks" rows="2" placeholder="当前卡点是什么">${esc(r.bottlenecks||'')}</textarea></div>
+      <div class="form-group"><label>➡️ 下${r.report_type==='monthly'?'月':'周'}最重要的一件事</label><textarea name="next_important" rows="2" placeholder="下期聚焦什么">${esc(r.next_important||'')}</textarea></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+        <button type="submit" class="btn btn-primary">💾 保存</button>
+      </div>
+    </form></div>`);
+}
+async function saveReport(ev,reportId,accountId){
+  ev.preventDefault();const body=Object.fromEntries(new FormData(document.getElementById('report-form')));
+  try{
+    if(reportId){await api('/api/accounts/reports/'+reportId,{method:'PUT',body});toast('报告更新成功')}
+    else{await api(`/api/accounts/${accountId}/reports`,{method:'POST',body});toast('报告创建成功')}
+    closeModal();renderAccountReport(accountId);
+  }catch(e){toast(e.message,'error')}
+}
+async function deleteReport(reportId){
+  try{await api('/api/accounts/reports/'+reportId,{method:'DELETE'});toast('删除成功');renderAccountReport(_accountReportData.id)}catch(e){toast(e.message,'error')}
+}
+
+// Contact CRUD
+async function openContactForm(contactId,accountId){
+  let c={};if(contactId){c=_accountContacts.find(x=>x.id===contactId)||{}}
+  openModal(`
+    <div class="modal-header"><h3>${contactId?'编辑联系人':'新增联系人'}</h3><button onclick="closeModal()" style="font-size:20px">✕</button></div>
+    <div class="modal-body"><form id="contact-form" onsubmit="saveContact(event,${contactId||'null'},${accountId})">
+      <div class="form-row">
+        <div class="form-group"><label>姓名 *</label><input name="name" required value="${esc(c.name||'')}"></div>
+        <div class="form-group"><label>职位</label><input name="title" value="${esc(c.title||'')}"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>部门</label><input name="department" value="${esc(c.department||'')}"></div>
+        <div class="form-group"><label>角色级别</label><select name="role_level"><option value="">请选择</option>${['决策层','管理层','执行层'].map(l=>`<option value="${l}" ${c.role_level===l?'selected':''}>${l}</option>`).join('')}</select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>电话</label><input name="phone" value="${esc(c.phone||'')}"></div>
+        <div class="form-group"><label>邮箱</label><input name="email" value="${esc(c.email||'')}"></div>
+      </div>
+      <div class="form-group"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" name="is_champion" value="1" ${c.is_champion?'checked':''} style="width:auto"> ⭐ 内部支持者/Champion</label></div>
+      <div class="form-group"><label>备注</label><textarea name="notes" rows="2">${esc(c.notes||'')}</textarea></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+        <button type="submit" class="btn btn-primary">💾 保存</button>
+      </div>
+    </form></div>`);
+}
+async function saveContact(ev,contactId,accountId){
+  ev.preventDefault();const fd=new FormData(document.getElementById('contact-form'));const body=Object.fromEntries(fd);
+  body.is_champion=fd.get('is_champion')?1:0;
+  try{
+    if(contactId){await api('/api/accounts/contacts/'+contactId,{method:'PUT',body});toast('联系人更新成功')}
+    else{await api(`/api/accounts/${accountId}/contacts`,{method:'POST',body});toast('联系人创建成功')}
+    closeModal();renderAccountReport(accountId);
+  }catch(e){toast(e.message,'error')}
+}
+async function deleteContact(contactId){
+  try{await api('/api/accounts/contacts/'+contactId,{method:'DELETE'});toast('删除成功');renderAccountReport(_accountReportData.id)}catch(e){toast(e.message,'error')}
 }
 
 // ===== HELPERS =====

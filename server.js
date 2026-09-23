@@ -270,6 +270,112 @@ app.delete('/api/accounts/:id', (req, res) => {
   res.json({ message: '删除成功' });
 });
 
+// ===== Account Reports (周报/月报) =====
+app.get('/api/accounts/:id/reports', (req, res) => {
+  const rows = db.prepare('SELECT * FROM account_reports WHERE account_id = ? ORDER BY report_period DESC, created_at DESC').all(req.params.id);
+  res.json(rows);
+});
+
+app.post('/api/accounts/:id/reports', (req, res) => {
+  const { report_type, report_period, most_important, key_work, need_decision, cross_team_needs, bottlenecks, next_important } = req.body;
+  const stmt = db.prepare(`INSERT INTO account_reports (account_id, report_type, report_period, most_important, key_work, need_decision, cross_team_needs, bottlenecks, next_important, created_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  const r = stmt.run(req.params.id, report_type || 'weekly', report_period || '', most_important || '', key_work || '', need_decision || '', cross_team_needs || '', bottlenecks || '', next_important || '', req.body.created_by || '');
+  res.json({ id: r.lastInsertRowid, message: '创建成功' });
+});
+
+app.put('/api/accounts/reports/:reportId', (req, res) => {
+  const old = db.prepare('SELECT * FROM account_reports WHERE id = ?').get(req.params.reportId);
+  if (!old) return res.status(404).json({ error: '报告不存在' });
+  const allowed = ['report_type', 'report_period', 'most_important', 'key_work', 'need_decision', 'cross_team_needs', 'bottlenecks', 'next_important'];
+  const fields = Object.keys(req.body).filter(k => allowed.includes(k));
+  if (!fields.length) return res.json({ message: '无更新' });
+  const sets = fields.map(f => `${f} = @${f}`).join(', ');
+  db.prepare(`UPDATE account_reports SET ${sets}, updated_at = datetime('now','localtime') WHERE id = @id`).run({ ...req.body, id: +req.params.reportId });
+  res.json({ message: '更新成功' });
+});
+
+app.delete('/api/accounts/reports/:reportId', (req, res) => {
+  db.prepare('DELETE FROM account_reports WHERE id = ?').run(req.params.reportId);
+  res.json({ message: '删除成功' });
+});
+
+// ===== Account Contacts (联系人) =====
+app.get('/api/accounts/:id/contacts', (req, res) => {
+  const rows = db.prepare('SELECT * FROM account_contacts WHERE account_id = ? ORDER BY is_champion DESC, id ASC').all(req.params.id);
+  res.json(rows);
+});
+
+app.post('/api/accounts/:id/contacts', (req, res) => {
+  const { name, title, department, role_level, phone, email, is_champion, notes } = req.body;
+  if (!name) return res.status(400).json({ error: '联系人姓名不能为空' });
+  const stmt = db.prepare(`INSERT INTO account_contacts (account_id, name, title, department, role_level, phone, email, is_champion, notes)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  const r = stmt.run(req.params.id, name, title || '', department || '', role_level || '', phone || '', email || '', is_champion ? 1 : 0, notes || '');
+  res.json({ id: r.lastInsertRowid, message: '创建成功' });
+});
+
+app.put('/api/accounts/contacts/:contactId', (req, res) => {
+  const old = db.prepare('SELECT * FROM account_contacts WHERE id = ?').get(req.params.contactId);
+  if (!old) return res.status(404).json({ error: '联系人不存在' });
+  const allowed = ['name', 'title', 'department', 'role_level', 'phone', 'email', 'is_champion', 'notes'];
+  const fields = Object.keys(req.body).filter(k => allowed.includes(k));
+  if (!fields.length) return res.json({ message: '无更新' });
+  const sets = fields.map(f => `${f} = @${f}`).join(', ');
+  const body = { ...req.body, id: +req.params.contactId };
+  if (body.is_champion !== undefined) body.is_champion = body.is_champion ? 1 : 0;
+  db.prepare(`UPDATE account_contacts SET ${sets} WHERE id = @id`).run(body);
+  res.json({ message: '更新成功' });
+});
+
+app.delete('/api/accounts/contacts/:contactId', (req, res) => {
+  db.prepare('DELETE FROM account_contacts WHERE id = ?').run(req.params.contactId);
+  res.json({ message: '删除成功' });
+});
+
+// ===== Octo Summary (大客户汇总看板) =====
+app.get('/api/octo/summary', (req, res) => {
+  const totalAccounts = db.prepare('SELECT COUNT(*) as c FROM accounts').get().c;
+  const byTier = db.prepare("SELECT tier, COUNT(*) as c FROM accounts GROUP BY tier ORDER BY tier").all();
+  const byStatus = db.prepare("SELECT follow_up_status as status, COUNT(*) as c FROM accounts GROUP BY follow_up_status").all();
+  const byIndustry = db.prepare("SELECT industry, COUNT(*) as c FROM accounts WHERE industry != '' GROUP BY industry ORDER BY c DESC").all();
+  const recentReports = db.prepare(`
+    SELECT r.id, r.account_id, r.report_type, r.report_period, r.most_important, r.created_at, a.company_name, a.tier
+    FROM account_reports r JOIN accounts a ON r.account_id = a.id
+    ORDER BY r.created_at DESC LIMIT 10
+  `).all();
+  const pendingDecisions = db.prepare(`
+    SELECT r.id, r.account_id, r.report_type, r.report_period, r.need_decision, r.created_at, a.company_name, a.tier
+    FROM account_reports r JOIN accounts a ON r.account_id = a.id
+    WHERE r.need_decision != '' AND r.need_decision IS NOT NULL
+    ORDER BY r.created_at DESC
+  `).all();
+  const activeOpps = db.prepare(`
+    SELECT id, company_name, tier, industry, needs_summary, estimated_budget, follow_up_status
+    FROM accounts WHERE estimated_budget != '' AND follow_up_status != '已完成'
+    ORDER BY tier ASC
+  `).all();
+
+  // 本周活跃客户数（本周有报告更新的去重客户）
+  const weekActive = db.prepare(`
+    SELECT COUNT(DISTINCT account_id) as c FROM account_reports
+    WHERE created_at >= datetime('now','localtime','-7 days')
+  `).get().c;
+
+  const saCount = db.prepare("SELECT COUNT(*) as c FROM accounts WHERE tier IN ('S','A')").get().c;
+
+  res.json({
+    totalAccounts,
+    byTier,
+    byStatus,
+    byIndustry,
+    recentReports,
+    pendingDecisions,
+    activeOpps,
+    kpi: { totalAccounts, saCount, pendingDecisions: pendingDecisions.length, weekActive }
+  });
+});
+
 // ===== Leads CRUD =====
 app.get('/api/leads', (req, res) => {
   const { status, source_channel, search, page = 1, limit = 50 } = req.query;
