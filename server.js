@@ -216,7 +216,7 @@ app.get('/api/accounts', (req, res) => {
   if (customer_stage) { sql += ' AND customer_stage = @customer_stage'; params.customer_stage = customer_stage; }
   if (industry) { sql += ' AND industry LIKE @industry'; params.industry = `%${industry}%`; }
   if (search) { sql += ' AND (company_name LIKE @s OR industry LIKE @s OR assigned_to LIKE @s)'; params.s = `%${search}%`; }
-  sql += ' ORDER BY CASE tier WHEN "S" THEN 1 WHEN "A" THEN 2 WHEN "B" THEN 3 WHEN "C" THEN 4 WHEN "D" THEN 5 END, deal_amount DESC, updated_at DESC';
+  sql += " ORDER BY CASE tier WHEN 'S' THEN 1 WHEN 'A' THEN 2 WHEN 'B' THEN 3 WHEN 'C' THEN 4 WHEN 'D' THEN 5 END, deal_amount DESC, updated_at DESC";
   const total = db.prepare(sql.replace('SELECT *', 'SELECT COUNT(*) as c')).get(params).c;
   sql += ` LIMIT @limit OFFSET @offset`;
   params.limit = +limit;
