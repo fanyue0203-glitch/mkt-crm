@@ -18,6 +18,7 @@ import AccountForm from './pages/AccountForm.jsx';
 import Accounts from './pages/Accounts.jsx';
 import Funnel from './pages/Funnel.jsx';
 import ImportPage from './pages/ImportPage.jsx';
+import DataLogicPage from './pages/DataLogicPage.jsx';
 
 function Header() {
   const header = useSyncExternalStore(subscribeHeader, getHeader);
@@ -53,6 +54,7 @@ export default function App() {
             <Route path="/speeches/:id/edit" element={<CeoSpeechForm />} />
             <Route path="/speeches/:id" element={<CeoSpeechDetail />} />
             <Route path="/octo" element={<OctoSummary />} />
+            <Route path="/octo/data-logic" element={<DataLogicPage />} />
             <Route path="/octo/pipeline" element={<OctoPipeline />} />
             <Route path="/octo/account-form" element={<AccountForm />} />
             <Route path="/octo/account-form/:id" element={<AccountForm />} />

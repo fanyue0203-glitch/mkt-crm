@@ -20,6 +20,7 @@ export default function OctoSummary() {
 
   useEffect(() => {
     setHeader('🐙 Octo 大客户复盘', <>
+      <button className="btn btn-secondary" onClick={() => navigate('/octo/data-logic')}>📐 取数逻辑</button>
       <button className="btn btn-secondary" onClick={() => navigate('/octo/pipeline')}>📊 看板视图</button>
       <button className="btn btn-primary" onClick={() => navigate('/octo/account-form')}>+ 新建客户</button>
     </>);
@@ -38,6 +39,7 @@ export default function OctoSummary() {
       <div className="sub-tabs">
         <div className={'tab' + (tab === 'dashboard' ? ' active' : '')} onClick={() => setSearchParams({ tab: 'dashboard' })}>📊 全景报告</div>
         <div className={'tab' + (tab === 'list' ? ' active' : '')} onClick={() => setSearchParams({ tab: 'list' })}>🏢 全部客户</div>
+        <div className={'tab'} onClick={() => navigate('/octo/data-logic')}>📐 取数逻辑</div>
       </div>
       {tab === 'dashboard' ? <OctoDashboard d={data} /> : <OctoListTab />}
     </>

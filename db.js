@@ -14,6 +14,7 @@ const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
+
 // ===== Schema =====
 db.exec(`
   CREATE TABLE IF NOT EXISTS accounts (
@@ -54,7 +55,8 @@ db.exec(`
     key_events TEXT DEFAULT '[]',
     ceo_involvement INTEGER DEFAULT 0,
     ecosystem_lock TEXT DEFAULT '',
-    lessons_learned TEXT DEFAULT ''
+    lessons_learned TEXT DEFAULT '',
+    source_coverage TEXT DEFAULT '{}' -- 数据源覆盖JSON：{graph_v3,onboarding,org_chart,chat_scan,weekly_meeting,ceo_funnel}
   );
 
   -- CEO活动/演讲(辉哥获客活动)
@@ -201,6 +203,13 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now','localtime'))
   );
 `);
+
+// ===== 安全迁移：为已存在的库补列（source_coverage，取数逻辑数据源标注）=====
+const acctCols = db.prepare("PRAGMA table_info(accounts)").all().map(c=>c.name);
+if (!acctCols.includes('source_coverage')) {
+  db.exec("ALTER TABLE accounts ADD COLUMN source_coverage TEXT DEFAULT '{}'");
+}
+
 
 // ===== 种子数据：仅在空库时插入（防止重启重复导入）=====
 const __accountsCount = (() => { try { return db.prepare('SELECT COUNT(*) as c FROM accounts').get().c; } catch(e) { return -1; } })();
@@ -1670,5 +1679,59 @@ if (__accountsCount === 0) {
 
 
 }
+
+
+// ===== 39家客户数据源覆盖标注（按KR2取数逻辑：5源+CEO获客漏斗）=====
+const sourceCoverageData = {
+  // 图谱v3(14家) + Onboarding表(15家) + 架构表(4家) + 消息扫描 + 周会纪要 + CEO获客
+  '卓正医疗': {graph_v3:true, onboarding:true, org_chart:false, chat_scan:false, weekly_meeting:true, ceo_funnel:false, note:'周会确认签约+培训阶段'},
+  '南孚电池': {graph_v3:true, onboarding:true, org_chart:true, chat_scan:true, weekly_meeting:true, ceo_funnel:false, note:'有架构表（6联系人）；子区消息扫描；周会姜平催合同'},
+  'HKIC': {graph_v3:true, onboarding:true, org_chart:false, chat_scan:true, weekly_meeting:true, ceo_funnel:false, note:'子区消息扫描（scan_HKIC.md）；周会确认9/18安装'},
+  '宇通客车': {graph_v3:true, onboarding:true, org_chart:true, chat_scan:true, weekly_meeting:true, ceo_funnel:true, note:'有架构表（16联系人）；子区扫描（scan_宇通客车.md）；周会定调"亏本也拿"；CEO获客漏斗匹配（晚点头条2加微3申请3开通1转出）'},
+  '吉利汽车': {graph_v3:true, onboarding:true, org_chart:true, chat_scan:true, weekly_meeting:true, ceo_funnel:false, note:'有架构表（14联系人）；最重子区扫描82K（scan_吉利汽车.md 224条消息）；周会周周在讨'},
+  '三一重工': {graph_v3:true, onboarding:false, org_chart:false, chat_scan:false, weekly_meeting:true, ceo_funnel:false, note:'周会重点（9/17梁在中升级）；图谱跟进；Elva详细资料未到位'},
+  '极光湾科技': {graph_v3:true, onboarding:false, org_chart:false, chat_scan:false, weekly_meeting:true, ceo_funnel:false, note:'周会确认复刻吉利路径；Elva详细资料未到位'},
+  '墨迹天气': {graph_v3:true, onboarding:false, org_chart:false, chat_scan:false, weekly_meeting:true, ceo_funnel:true, note:'周会跟进POC；CEO获客漏斗匹配（1申请1开通）'},
+  '金智教育': {graph_v3:true, onboarding:true, org_chart:true, chat_scan:false, weekly_meeting:true, ceo_funnel:true, note:'有架构表（5联系人）；Onboarding S级；CEO获客匹配（2申请1开通）'},
+  '致远互联': {graph_v3:true, onboarding:true, org_chart:false, chat_scan:false, weekly_meeting:true, ceo_funnel:true, note:'Onboarding表；周会确认8/31用Loop汇报；CEO获客匹配（1申请1开通）'},
+  '普联香港': {graph_v3:false, onboarding:false, org_chart:false, chat_scan:false, weekly_meeting:true, ceo_funnel:true, note:'周会姜平亲推；CEO获客匹配（1申请1开通）'},
+  '中信资本': {graph_v3:false, onboarding:true, org_chart:false, chat_scan:false, weekly_meeting:false, ceo_funnel:false, note:'Onboarding S级；消息<50条'},
+  '混沌学园': {graph_v3:false, onboarding:true, org_chart:false, chat_scan:false, weekly_meeting:false, ceo_funnel:true, note:'Onboarding A级；CEO获客漏斗最强渠道（33申请31开通94%）'},
+  '曼伦': {graph_v3:false, onboarding:true, org_chart:false, chat_scan:false, weekly_meeting:false, ceo_funnel:false, note:'仅Onboarding S级一行（挣钱/on hold）'},
+  'PPIO': {graph_v3:true, onboarding:false, org_chart:false, chat_scan:false, weekly_meeting:false, ceo_funnel:false, note:'图谱攻坚名单；11人2Agent'},
+  '联合影像': {graph_v3:false, onboarding:true, org_chart:false, chat_scan:false, weekly_meeting:false, ceo_funnel:false, note:'Onboarding表；Kickers.ai空间'},
+  '中金公司': {graph_v3:false, onboarding:false, org_chart:false, chat_scan:false, weekly_meeting:false, ceo_funnel:true, note:'CEO获客匹配（1转出→荣生）；卉子资本市场渠道'},
+  '华泰研究所': {graph_v3:false, onboarding:false, org_chart:false, chat_scan:false, weekly_meeting:false, ceo_funnel:true, note:'CEO获客匹配（1转出→李新伦）；卉子渠道'},
+  '健主任': {graph_v3:false, onboarding:true, org_chart:false, chat_scan:false, weekly_meeting:true, ceo_funnel:false, note:'Onboarding表；周会跟进10万服务包'},
+  '鹏扬基金': {graph_v3:false, onboarding:true, org_chart:false, chat_scan:false, weekly_meeting:true, ceo_funnel:true, note:'Onboarding表；周会确认8/18沟通会；CEO获客匹配（1申请1开通）'},
+  '卓望': {graph_v3:false, onboarding:false, org_chart:false, chat_scan:false, weekly_meeting:false, ceo_funnel:true, note:'CEO获客漏斗匹配最强之一（2加微2申请2开通，混沌+晚点双渠道）'},
+  '刀法咨询': {graph_v3:false, onboarding:false, org_chart:false, chat_scan:false, weekly_meeting:false, ceo_funnel:false, note:'信息极少；刀姐IP'},
+  '祥承': {graph_v3:false, onboarding:false, org_chart:false, chat_scan:false, weekly_meeting:false, ceo_funnel:true, note:'CEO获客匹配（4申请4开通1转出→张晓）；混沌渠道'},
+  '欢瑞世纪': {graph_v3:true, onboarding:true, org_chart:false, chat_scan:true, weekly_meeting:true, ceo_funnel:false, note:'子区扫描（scan_欢瑞世纪.md 14条消息）；51虾仅2活跃'},
+  '青钜科技': {graph_v3:false, onboarding:false, org_chart:false, chat_scan:false, weekly_meeting:false, ceo_funnel:false, note:'仅知私有化完成Loop未用'},
+  '卓越教育': {graph_v3:false, onboarding:false, org_chart:false, chat_scan:false, weekly_meeting:true, ceo_funnel:false, note:'8/17周会新增'},
+  '新世纪医疗集团': {graph_v3:false, onboarding:false, org_chart:false, chat_scan:false, weekly_meeting:true, ceo_funnel:true, note:'8/17周会新增；CEO获客匹配（1转出→张晓Amy）'},
+  'Hysan希慎': {graph_v3:false, onboarding:true, org_chart:false, chat_scan:false, weekly_meeting:true, ceo_funnel:false, note:'Onboarding表；周会战败复盘（法务三大卡点）'},
+  '得到': {graph_v3:false, onboarding:true, org_chart:false, chat_scan:false, weekly_meeting:false, ceo_funnel:false, note:'仅Onboarding一行（原B级放弃）'},
+  '方里': {graph_v3:false, onboarding:true, org_chart:false, chat_scan:false, weekly_meeting:false, ceo_funnel:false, note:'仅Onboarding一行（原A级放弃）'},
+  '流利说': {graph_v3:false, onboarding:true, org_chart:false, chat_scan:false, weekly_meeting:false, ceo_funnel:false, note:'仅Onboarding一行'},
+  '香港中企': {graph_v3:false, onboarding:false, org_chart:false, chat_scan:false, weekly_meeting:true, ceo_funnel:false, note:'周会补充发现的放弃客户'},
+  '海归爸爸': {graph_v3:false, onboarding:false, org_chart:false, chat_scan:false, weekly_meeting:true, ceo_funnel:false, note:'周会补充发现的放弃客户'},
+  '云迹': {graph_v3:false, onboarding:false, org_chart:false, chat_scan:false, weekly_meeting:true, ceo_funnel:true, note:'周会补充发现；CEO获客匹配（1转出→张晓）'},
+  '51World': {graph_v3:false, onboarding:false, org_chart:false, chat_scan:false, weekly_meeting:true, ceo_funnel:false, note:'周会补充发现的放弃客户'},
+  '我思科技': {graph_v3:false, onboarding:true, org_chart:false, chat_scan:false, weekly_meeting:false, ceo_funnel:true, note:'Onboarding一行；CEO获客匹配（2申请2开通）'},
+  '元梦灵境': {graph_v3:false, onboarding:false, org_chart:false, chat_scan:false, weekly_meeting:false, ceo_funnel:false, note:'信息极少'},
+  '北京破圈': {graph_v3:false, onboarding:false, org_chart:false, chat_scan:false, weekly_meeting:true, ceo_funnel:false, note:'内部BU；周会提及'},
+  '西门子': {graph_v3:false, onboarding:false, org_chart:false, chat_scan:false, weekly_meeting:true, ceo_funnel:false, note:'主群消息（沙龙邀请函）；非销售驱动'},
+};
+const updCoverage = db.prepare("UPDATE accounts SET source_coverage = ? WHERE company_name = ?");
+const covCount = db.transaction(() => {
+  let n = 0;
+  for (const [name, cov] of Object.entries(sourceCoverageData)) {
+    if (updCoverage.run(JSON.stringify(cov), name).changes > 0) n++;
+  }
+  return n;
+})();
+console.log(`[seed] 数据源覆盖标注已更新 ${covCount} 家客户`);
 
 export default db;

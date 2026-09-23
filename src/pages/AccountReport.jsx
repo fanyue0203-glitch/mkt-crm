@@ -220,6 +220,8 @@ export default function AccountReport() {
           </div>
         </div>
 
+        <SourceCoverageCard cov={a.source_coverage} />
+
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
           <div className="card"><div className="card-header"><h3>🎯 核心痛点</h3></div><div className="card-body"><div className="highlight-box danger" style={{ whiteSpace: 'pre-wrap' }}>{a.core_painpoint || <span style={{ color: 'var(--text-muted)' }}>暂无记录</span>}</div></div></div>
           <div className="card"><div className="card-header"><h3>💚 客户认可点</h3></div><div className="card-body"><div className="highlight-box success" style={{ whiteSpace: 'pre-wrap' }}>{a.customer_recognition || <span style={{ color: 'var(--text-muted)' }}>暂无记录</span>}</div></div></div>
@@ -368,5 +370,38 @@ export default function AccountReport() {
 
       {tab === 'profile' ? renderProfile() : tab === 'reports' ? renderReports() : renderContacts()}
     </>
+  );
+}
+
+
+// ===== 数据源覆盖卡片（KR2取数逻辑：5源+CEO获客漏斗）=====
+const SOURCE_META = {
+  graph_v3: { label: '① 图谱v3', desc: '大客户拓展图谱（14家基础池）' },
+  onboarding: { label: '② Onboarding', desc: 'Onboarding跟踪表（15家，优先级S/A/B）' },
+  org_chart: { label: '③ 架构表', desc: '客户组织架构表（仅4家：吉利/金智/宇通/南孚）' },
+  chat_scan: { label: '④ 消息扫描', desc: '子区消息扫描486条（实际沟通原话）' },
+  weekly_meeting: { label: '⑤ 周会纪要', desc: '3期周会（8/31、9/7、9/14，姜平决策）' },
+  ceo_funnel: { label: 'CEO获客漏斗', desc: '微伴×内测申请表交叉匹配' },
+};
+function SourceCoverageCard({ cov }) {
+  let c = {};
+  try { c = typeof cov === 'string' ? JSON.parse(cov || '{}') : (cov || {}); } catch (e) { c = {}; }
+  if (!Object.keys(c).length) return null;
+  const keys = Object.keys(SOURCE_META).filter(k => c[k]);
+  if (!keys.length) return null;
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <div className="card-header"><h3>📐 数据源覆盖（取数逻辑）</h3><span className="section-count">{keys.length}/6 源</span></div>
+      <div className="card-body">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: c.note ? 10 : 0 }}>
+          {Object.entries(SOURCE_META).map(([k, m]) => (
+            <span key={k} className={'tag ' + (c[k] ? 'tag-green' : 'tag-gray')} style={{ fontSize: 11 }} title={m.desc}>
+              {c[k] ? '✓' : '×'} {m.label}
+            </span>
+          ))}
+        </div>
+        {c.note ? <div className="highlight-box" style={{ fontSize: 12 }}>📌 {c.note}</div> : null}
+      </div>
+    </div>
   );
 }
