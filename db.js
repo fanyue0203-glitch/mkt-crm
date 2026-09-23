@@ -334,7 +334,7 @@ db.exec(`
     '南孚电池', '快消/电池', '大型企业', '福建', 'CEO+CMO辉哥直通', 'A',
     '2026-07-01', '2026-09-14', 8, '全场景AI Agent平台，10场景含AtoA石墨烯研发标杆，愿景统一替代钉飞企微',
     '常晓飞/威少', '部署中', '9/14资源到位部署中，CEO+CMO辉哥直通（前宝洁系），竞品腾讯Hermes',
-    '交付中', 20, '20万(两年期合同)，部署进行中', 'CEO+CMO辉哥直通，前宝洁系管理团队，愿景统一替代钉飞企微',
+    '已签约', 20, '20万(两年期合同)，部署进行中', 'CEO+CMO辉哥直通，前宝洁系管理团队，愿景统一替代钉飞企微',
     4, '市场+IT+运营+研发', '腾讯Hermes', '认可Octo AI原生定位，愿景统一：替代钉钉/飞书/企微成为AI时代工作平台',
     '私有化', '10大场景AI Agent部署，含AtoA(Agent-to-Agent)标杆石墨烯研发案例',
     '传统办公协同工具无法满足AI时代Agent协作需求，研发效率提升有强诉求',
@@ -352,9 +352,9 @@ db.exec(`
     deployment_type, product_solutions_detail, core_painpoint, blockers,
     next_step, next_deadline, ceo_involvement, ecosystem_lock,
     key_events, notes) VALUES (
-    'HKIC香港会计师公会', '专业服务/会计', '中型机构', '香港', '香港渠道', 'B',
+    'HKIC', '专业服务/会计', '中型机构', '香港', '香港渠道', 'B',
     '2026-08-15', '2026-09-18', 5, '香港会计行业AI审计/税务助手POC',
-    'Amy/梦林', 'POC中', '9/18现场安装POC，卡点：Token显示缺失、云主机2000元/月异议',
+    'Amy/梦林', '已签约', '9/18现场安装POC，卡点：Token显示缺失、云主机2000元/月异议',
     'POC中', 5, '5万港币POC阶段', '香港渠道引荐',
     2, 'IT+审计', '', '认可Octo多语言能力和行业适配潜力',
     '私有化(云主机)', '审计底稿AI辅助+税务咨询Agent+报告自动生成',
@@ -376,7 +376,7 @@ db.exec(`
     '宇通客车', '制造/汽车', '大型企业', '河南郑州', '官网进线→招标翻转', 'A',
     '2026-05-09', '2026-09-18', 20, '全员AI工作平台，11月需量化提效数据',
     'Amy主跟/玉平BD/威少方案', '投标中', '9/18郑州述标完成，等9/25结果，姜平定调"亏本也拿"',
-    '投标中', 600, '一期≤200万，二三期各200万，总计600万+。9/18述标完成纯技术打分', '贾祥轩5/9官网主动联系→9/10招标翻转(营销线C类→IT线CIO景宏源招标)',
+    '投标中', 200, '首期≤200万（咨询+bot搭建全案服务），二三期每期约200万，12/31前闭环。9/18述标完成纯技术打分', '贾祥轩5/9官网主动联系→9/10招标翻转(营销线C类→IT线CIO景宏源招标)',
     16, '10条线：IT/营销/研发/HR/制造/供应链/财务/法务/售后/质量', '酷开/浙江实在/联想/腾讯WorkBuddy/阿里QoderWork', '客户明确认可Octo是AI原生平台(非AI增强工具)，核心差异化',
     '私有化', '全员AI工作平台，覆盖营销/研发/HR/制造/售后等场景，11月需量化提效数据',
     '传统IT系统智能化不足，组织效率提升诉求强，11月需有量化提效数据交付',
@@ -520,7 +520,7 @@ db.exec(`
     deployment_type, product_solutions_detail, core_painpoint, blockers,
     next_step, next_deadline, ceo_involvement, ecosystem_lock,
     key_events, notes) VALUES (
-    '普联香港(TP-Link)', '制造/网络设备', '大型(年预算600万)', '香港', '姜平亲推', 'B',
+    '普联香港', '制造/网络设备', '大型(年预算600万)', '香港', '姜平亲推', 'B',
     '2026-08-01', '2026-09-20', 4, 'OA+Octo融合共建(系统级集成)，不提供产研只提供培训，9月底出第一批bot',
     'Amy', '重点推进', '姜平亲推，9月底出第一批bot硬时点，进度会待安排(姜平已催)',
     '重点推进', 600, '客户年预算600万', '姜平亲推',
@@ -585,7 +585,7 @@ db.exec(`
     key_events, notes) VALUES (
     '健主任', '医疗/连锁诊所', '小型连锁', '华南', '医疗渠道', 'C',
     '2026-08-15', '2026-09-15', 3, '10万服务包，医疗连锁AI助手，已付费',
-    'Amy', '已付费', '10万服务包，医疗连锁，已付费',
+    'Amy', 'C类跟进', '10万服务包，医疗连锁，已付费',
     '已付费', 10, '10万服务包已付费', '医疗渠道',
     2, '运营+IT', '', '小客户但已付费，医疗赛道补充',
     'SaaS', '医疗连锁运营AI助手',
@@ -647,7 +647,7 @@ db.exec(`
     deployment_type, product_solutions_detail, core_painpoint, blockers,
     next_step, next_deadline, ceo_involvement, ecosystem_lock,
     key_events, lessons_learned, notes) VALUES (
-    '方里(FunnyElves)', '美妆个护', '中型新消费', '华东', 'CEO活动/A级Onboarding', 'D',
+    '方里', '美妆个护', '中型新消费', '华东', 'CEO活动/A级Onboarding', 'D',
     '2026-07-01', '2026-09-01', 6, '美妆新消费AI营销助手',
     '贾金良(贾叔)', '已战败', '飞书Aily双闭环(内部+外部)锁定，原A级客户战败',
     '战败', 0, '飞书Aily生态锁定，无法突破', 'CEO活动获客，原A级Onboarding客户',
@@ -712,7 +712,7 @@ db.exec(`
     deployment_type, product_solutions_detail, core_painpoint, blockers,
     next_step, next_deadline, ceo_involvement, ecosystem_lock,
     key_events, notes) VALUES (
-    '联合影像(Kickers.ai)', '医疗影像/AI', '小型(10+人AI团队)', '', '贾叔跟进', 'C',
+    '联合影像', '医疗影像/AI', '小型(10+人AI团队)', '', '贾叔跟进', 'C',
     '2026-07-15', '2026-09-01', 4, '医疗AI团队独立协作空间，飞书主力新项目用Octo，潜在模型网关商机(5%差价)',
     '贾金良(贾叔)', '跟进中', '飞书主力/新项目用Octo，使用深度极浅(7/15仅3条消息0条bot)',
     '跟进中', 0, '待评估，潜在模型网关5%差价商机', '贾叔跟进',
@@ -1629,5 +1629,51 @@ const insertSampleData = db.transaction(() => {
   insertContact.run(39, '孙方超', '关系引荐(明略)', '内部', '执行层', '', '', 0, '杨三角关系引入，发沙龙邀请函');
 });
 insertSampleData();
+
+// ===== 数据修正：严格按照KR2报告原文统一分类和数值 =====
+const fixStage = db.prepare("UPDATE accounts SET customer_stage=? WHERE company_name=?");
+const fixStageExact = db.prepare("UPDATE accounts SET customer_stage=? WHERE company_name LIKE ?");
+const fixAmt = db.prepare("UPDATE accounts SET deal_amount=? WHERE company_name=?");
+const fixName = db.prepare("UPDATE accounts SET company_name=? WHERE company_name LIKE ?");
+
+// 统一customer_stage严格按报告分类
+const stageMap = {
+  '卓正医疗':'已签约','南孚电池':'已签约','HKIC':'已签约',
+  '宇通客车':'投标中',
+  '吉利汽车':'B类重点推进','三一重工':'B类重点推进','极光湾科技':'B类重点推进',
+  '墨迹天气':'B类重点推进','金智教育':'B类重点推进','致远互联':'B类重点推进','普联香港':'B类重点推进',
+  '中信资本':'C类跟进','混沌学园':'C类跟进','曼伦':'C类跟进','PPIO':'C类跟进',
+  '联合影像':'C类跟进','中金公司':'C类跟进','华泰研究所':'C类跟进','健主任':'C类跟进','鹏扬基金':'C类跟进',
+  '卓望':'D类观察','刀法咨询':'D类观察','祥承':'D类观察','欢瑞世纪':'D类观察',
+  '青钜科技':'D类观察','卓越教育':'D类观察','新世纪医疗集团':'D类观察',
+  'Hysan希慎':'战败','得到':'战败','方里':'战败','流利说':'战败',
+  '香港中企':'战败','海归爸爸':'战败','云迹科技':'战败','51World':'战败',
+  '我思科技':'战败','元梦灵境':'战败','北京破圈':'战败','西门子':'战败',
+};
+for(const [name,stage] of Object.entries(stageMap)){ fixStage.run(stage,name); }
+fixStageExact.run('战败','%云迹%');
+
+// 金额严格按报告原文
+fixAmt.run(500,'卓正医疗');   // 500万已回款（+200万后续写在deal_stage里）
+fixAmt.run(20,'南孚电池');    // 20万两年
+fixAmt.run(5,'HKIC');         // 5万港币
+fixAmt.run(200,'宇通客车');   // 首期≤200万（二三期各200万是预期，写在notes）
+fixAmt.run(390,'吉利汽车');   // 390万/908人天
+fixAmt.run(100,'墨迹天气');   // ~100万
+fixAmt.run(600,'普联香港');   // 客户年预算600万
+fixAmt.run(10,'健主任');      // 10万服务包
+fixAmt.run(0,'三一重工');
+fixAmt.run(0,'极光湾科技');
+fixAmt.run(0,'金智教育');
+fixAmt.run(0,'致远互联');
+fixAmt.run(0,'Hysan希慎');
+// 其余0
+
+// 修正公司名（去掉报告原文没有的英文名括号）
+fixName.run('HKIC','%HKIC%');
+fixName.run('云迹','%云迹%');
+fixName.run('普联香港','%普联%');
+fixName.run('方里','%方里%');
+fixName.run('联合影像','%联合影像%');
 
 export default db;
