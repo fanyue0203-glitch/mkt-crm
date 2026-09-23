@@ -583,9 +583,9 @@ function navigate(page,params={}){
   const content=document.getElementById('content');
   const ha=document.getElementById('header-actions');
   ha.innerHTML='';destroyCharts();
-  const titles={dashboard:'Dashboard','ceo-events':'🎤 活动和CEO获客','ceo-event-detail':'🎤 活动详情','ceo-event-form':'🎤 新建/编辑活动','octo-summary':'🐙 Octo 大客户复盘','octo-pipeline':'🐙 Account Pipeline','account-report':'🐙 客户全景档案',accounts:'🏢 客户列表','account-detail':'🐙 客户 360° 视图','account-form':'🐙 新建/编辑客户',funnel:'🔄 SDR 漏斗',import:'📥 数据导入',pipeline:'📋 Account Pipeline'};
+  const titles={dashboard:'Dashboard','ceo-events':'🎤 活动和CEO获客','event-detail':'🎪 活动详情','event-form':'🎪 新建/编辑活动','ceo-event-detail':'🎤 演讲详情','ceo-event-form':'🎤 新建/编辑演讲','octo-summary':'🐙 Octo 大客户复盘','octo-pipeline':'🐙 Account Pipeline','account-report':'🐙 客户全景档案',accounts:'🏢 客户列表','account-detail':'🐙 客户 360° 视图','account-form':'🐙 新建/编辑客户',funnel:'🔄 SDR 漏斗',import:'📥 数据导入',pipeline:'📋 Account Pipeline'};
   document.getElementById('page-title').textContent=titles[page]||page;
-  const r={dashboard:renderDashboard,'ceo-events':renderCeoEvents,'ceo-event-detail':()=>renderCeoEventDetail(params.id),'ceo-event-form':()=>renderCeoEventForm(params.id),'octo-summary':()=>renderOctoSummary(params.tab),'octo-pipeline':()=>renderOctoPipeline(params.stage),'account-report':()=>renderAccountReport(params.id),accounts:renderAccounts,'account-detail':()=>renderAccountDetail(params.id),'account-form':()=>renderAccountForm(params.id),funnel:renderFunnel,import:renderImport,pipeline:()=>renderOctoPipeline(params.stage)};
+  const r={dashboard:renderDashboard,'ceo-events':renderCeoEvents,'event-detail':()=>renderEventDetail(params.id),'event-form':()=>renderEventForm(params.id),'ceo-event-detail':()=>renderCeoEventDetail(params.id),'ceo-event-form':()=>renderCeoEventForm(params.id),'octo-summary':()=>renderOctoSummary(params.tab),'octo-pipeline':()=>renderOctoPipeline(params.stage),'account-report':()=>renderAccountReport(params.id),accounts:renderAccounts,'account-detail':()=>renderAccountDetail(params.id),'account-form':()=>renderAccountForm(params.id),funnel:renderFunnel,import:renderImport,pipeline:()=>renderOctoPipeline(params.stage)};
   (r[page]||renderDashboard)();
 }
 function destroyCharts(){Object.values(charts).forEach(c=>c.destroy());charts={}}
@@ -730,8 +730,32 @@ async function renderEventDetail(id){
   const content=document.getElementById('content'),ha=document.getElementById('header-actions');
   try{
     const e=await api(`/api/events/${id}`);
-    ha.innerHTML=`<button class="btn btn-secondary" onclick="navigate('events')">← 返回列表</button><button class="btn btn-primary" onclick="navigate('event-form',{id:${id}})">编辑</button>`;
     document.getElementById('page-title').textContent=`🎪 ${e.name}`;
+
+    // ===== CEO获客活动专用明细（二级目录）=====
+    if(e.key_messages==='吴明辉(CEO)'){
+      const rate1=e.wechat_followers>0?((e.activations||0)/e.wechat_followers*100).toFixed(1)+'%':'—';
+      const rate2=e.registrations>0?((e.sql_count||0)/e.registrations*100).toFixed(1)+'%':'—';
+      ha.innerHTML=`<button class="btn btn-secondary" onclick="navigate('ceo-events')">← 返回看板</button><button class="btn btn-primary" onclick="navigate('event-form',{id:${id}})">编辑</button><button class="btn btn-danger" onclick="if(confirm('确定删除这场CEO获客活动？'))deleteEvent(${id})">删除</button>`;
+      const sfunnel=[['活码加微',e.wechat_followers||0,Math.max(e.wechat_followers,e.registrations||0,1)],['OCTO申请',e.registrations||0,Math.max(e.wechat_followers,e.registrations||0,1)],['审核开通',e.activations||0,Math.max(e.wechat_followers,e.registrations||0,1)],['转出销售',e.sql_count||0,Math.max(e.wechat_followers,e.registrations||0,1)]].map(([l,v,max])=>`<div class="funnel-row"><span class="fl-label">${l}</span><div class="fl-bar"><div class="fl-fill" style="width:${Math.max(v/max*100,2)}%"></div></div><span class="fl-val">${v}</span></div>`).join('');
+      content.innerHTML=`
+        <div class="stats-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:20px">
+          ${[{v:e.wechat_followers>0?fmtNum(e.wechat_followers):'无活码',l:'活码加微',c:'var(--accent)'},{v:e.registrations||0,l:'OCTO申请',c:'var(--info)'},{v:e.activations||0,l:'审核开通',c:'var(--success)'},{v:e.sql_count||0,l:'转出销售',c:'var(--warning)'},{v:rate1,l:'加微→开通',c:'var(--pink)'}].map(s=>`<div class="stat-card"><div class="accent-bar" style="background:${s.c}"></div><div class="stat-value" style="color:${s.c}">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('')}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <div class="card"><div class="card-header"><h3>基本信息</h3></div><div class="card-body"><div class="detail-grid">
+            <div><div class="detail-field"><div class="label">活动类型</div><div class="value"><span class="tag tag-blue">${e.event_type||'—'}</span></div></div></div>
+            <div><div class="detail-field"><div class="label">活码创建</div><div class="value">${e.date||'—'}</div></div></div>
+            <div><div class="detail-field"><div class="label">获客方式</div><div class="value">${e.wechat_followers>0?'企微活码扫码':'群内直接分享OCTO开通邀请链接'}</div></div></div>
+            <div><div class="detail-field"><div class="label">主讲</div><div class="value">${esc(e.key_messages)}</div></div></div>
+          </div></div></div>
+          <div class="card"><div class="card-header"><h3>漏斗</h3></div><div class="card-body">${sfunnel}<div style="margin-top:8px;font-size:12px;color:var(--text-muted)">申请→转出：${rate2}</div></div></div>
+        </div>
+        <div class="card"><div class="card-header"><h3>📋 获客明细与特点（报告原文）</h3></div><div class="card-body"><div style="white-space:pre-wrap;line-height:1.8">${esc(e.notes)}</div></div></div>`;
+      return;
+    }
+
+    ha.innerHTML=`<button class="btn btn-secondary" onclick="navigate('ceo-events')">← 返回看板</button><button class="btn btn-primary" onclick="navigate('event-form',{id:${id}})">编辑</button>`;
 
     const indDist=tryParse(e.industry_distribution);
     const jobDist=tryParse(e.job_level_distribution);
@@ -892,7 +916,7 @@ function renderBars(data,color){
 // ===== EVENT FORM =====
 async function renderEventForm(id){
   const content=document.getElementById('content'),ha=document.getElementById('header-actions');
-  ha.innerHTML=`<button class="btn btn-secondary" onclick="navigate('events')">← 返回列表</button>`;
+  ha.innerHTML=`<button class="btn btn-secondary" onclick="navigate('ceo-events')">← 返回看板</button>`;
   let e={};if(id){try{e=await api(`/api/events/${id}`)}catch(er){content.innerHTML=err(er);return}}
   document.getElementById('page-title').textContent=id?'🎪 编辑活动':'🎪 新建活动';
   content.innerHTML=`<div class="card"><div class="card-body">
@@ -942,7 +966,7 @@ async function renderEventForm(id){
       <div class="form-group"><label>经验总结</label><textarea name="lessons_learned">${esc(e.lessons_learned||'')}</textarea></div>
       <div class="form-group"><label>备注</label><textarea name="notes">${esc(e.notes||'')}</textarea></div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
-        <button type="button" class="btn btn-secondary" onclick="navigate('events')">取消</button>
+        <button type="button" class="btn btn-secondary" onclick="navigate('ceo-events')">取消</button>
         <button type="submit" class="btn btn-primary">💾 保存</button>
       </div>
     </form></div></div>`;
@@ -952,24 +976,69 @@ async function saveEvent(ev,id){
   ['scale','registration_count','attendance_count','vip_count','leads_count','mql_count','sql_count'].forEach(f=>body[f]=+body[f]||0);
   try{if(id){await api(`/api/events/${id}`,{method:'PUT',body});toast('活动更新成功')}else{const r=await api('/api/events',{method:'POST',body});id=r.id;toast('活动创建成功')}navigate('event-detail',{id})}catch(e){toast(e.message,'error')}
 }
+async function deleteEvent(id){
+  try{await api(`/api/events/${id}`,{method:'DELETE'});toast('删除成功');navigate('ceo-events')}catch(e){toast(e.message,'error')}
+}
 
 // ===== CEO-EVENTS (活动和CEO获客) =====
 async function renderCeoEvents(){
   const content=document.getElementById('content'),ha=document.getElementById('header-actions');
-  ha.innerHTML='<button class="btn btn-primary" onclick="navigate(\'ceo-event-form\')">+ 新建活动</button>';
-  let data,ov;try{[data,ov]=await Promise.all([api('/api/speeches'),api('/api/speeches/stats/overview')])}catch(e){content.innerHTML=err(e);return}
+  ha.innerHTML='<button class="btn btn-primary" onclick="navigate(\'event-form\')">+ 新建活动</button>';
+  let evData;try{evData=await api('/api/events')}catch(e){content.innerHTML=err(e);return}
+  const all=evData.data||[];
+  const ceo=all.filter(e=>e.key_messages==='吴明辉(CEO)');
+  const mkt=all.filter(e=>e.key_messages!=='吴明辉(CEO)');
+  
+
+  // CEO获客汇总（数据源：events表CEO获客活动，口径与CEO获客数据分析报告一致）
+  const tReg=ceo.reduce((s,e)=>s+(e.wechat_followers||0),0);
+  const tLeads=ceo.reduce((s,e)=>s+(e.registrations||0),0);
+  const tMql=ceo.reduce((s,e)=>s+(e.activations||0),0);
+  const tSql=ceo.reduce((s,e)=>s+(e.sql_count||0),0);
+
+  const funnel=[['活码加微',tReg,tReg],['OCTO申请',tLeads,tReg],['审核开通',tMql,tReg],['转出销售',tSql,tReg]].map(([l,v,max])=>`<div class="funnel-row"><span class="fl-label">${l}</span><div class="fl-bar"><div class="fl-fill" style="width:${Math.max(v/max*100,2)}%"></div></div><span class="fl-val">${v}</span></div>`).join('');
+
   content.innerHTML=`
     <div class="stats-grid">
-      ${[{i:'🎤',v:ov.total,l:'累计场次',c:'var(--pink)'},{i:'👥',v:fmtNum(ov.totalAudience),l:'累计触达',c:'var(--accent)'},{i:'🏢',v:ov.uniqueAccounts,l:'触达客户',c:'var(--success)'},{i:'📊',v:ov.totalLeads,l:'累计获客',c:'var(--warning)'}].map(s=>`<div class="stat-card"><div class="accent-bar" style="background:${s.c}"></div><div class="stat-value" style="color:${s.c}">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('')}
+      ${[{v:ceo.length,l:'🎯 CEO获客活动',c:'var(--pink)'},{v:fmtNum(tReg),l:'👥 活码加微',c:'var(--accent)'},{v:fmtNum(tLeads),l:'📝 OCTO申请',c:'var(--info)'},{v:fmtNum(tMql),l:'✅ 审核开通',c:'var(--success)'},{v:tSql,l:'📤 转出销售',c:'var(--warning)'}].map(s=>`<div class="stat-card"><div class="accent-bar" style="background:${s.c}"></div><div class="stat-value" style="color:${s.c}">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('')}
     </div>
-    <div class="card"><div class="table-wrap"><table>
-      <tr><th>活动主题</th><th>日期</th><th>活动</th><th>听众</th><th>获客</th><th>操作</th></tr>
-      <tbody>${data.data.length?data.data.map(s=>`<tr class="clickable-row" onclick="navigate('ceo-event-detail',{id:${s.id}})">
-        <td><strong>${esc(s.topic)}</strong></td><td>${s.date||'—'}</td><td>${esc(s.event_name)||'—'}</td>
-        <td>${fmtNum(s.audience_count)}</td><td style="font-weight:700">${s.leads_count||0}</td>
-        <td><button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();navigate('ceo-event-form',{id:${s.id}})">编辑</button></td>
-      </tr>`).join(''):'<tr><td colspan="6"><div class="empty-state"><p>暂无活动记录</p></div></td></tr>'}</tbody>
-    </table></div></div>`;
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="card"><div class="card-header"><h3>🎯 CEO获客漏斗（${ceo.length}场活动·全渠道总计）</h3></div><div class="card-body">
+        ${funnel}
+        <div style="margin-top:12px;font-size:12px;color:var(--text-muted)">口径：REG=活码加微，LEADS=OCTO申请，MQL=审核开通，SQL=转出销售；混沌学院无活码直接发开通链接</div>
+      </div></div>
+      <div class="card"><div class="card-header"><h3>💡 核心洞察</h3></div><div class="card-body">
+        <div class="highlight-box success"><strong>渠道效果排名：</strong>🥇混沌学院(94%通过率·CEO社群信任背书) 🥈《晚点》头条(33%·流量最大198加微) 🥉Octo产品发布(12%·小规模精准)；混沌+晚点贡献96%开通量</div>
+        <div class="highlight-box"><strong>活动获客≠大客户获取：</strong>39家大客户中25家(64%)来自高管直推，贡献100%签约+90%+管线；线上活动是品牌势能和信任入口</div>
+        <div class="highlight-box warning"><strong>混沌模式值得复制：</strong>不走活码直接发开通链接(94%通过率)——CEO在高信任社群分享→直接引导注册，跳过加微中间环节</div>
+        <div class="highlight-box insight"><strong>加微≠转化：</strong>394个活码加微中77%加微后零后续动作，建议加微后7天内SDR外呼/私信激活</div>
+      </div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px"><div class="card-header"><h3>📊 逐活动转化对比 <span style="font-size:12px;color:var(--text-muted);font-weight:400">点击行查看明细 →</span></h3></div><div class="card-body" style="padding:0"><table>
+      <tr><th>活动</th><th>日期</th><th>获客方式</th><th>加微</th><th>申请</th><th>开通</th><th>转出</th><th>转化率</th></tr>
+      <tbody>${ceo.length?ceo.map(e=>{
+        const rate=e.wechat_followers>0?((e.activations||0)/e.wechat_followers*100).toFixed(0)+'%':(e.registrations>0?((e.activations||0)/e.registrations*100).toFixed(0)+'%(申请→)':'—');
+        return `<tr class="clickable-row" onclick="navigate('event-detail',{id:${e.id}})">
+          <td><strong>${esc(e.name)}</strong></td><td>${e.date||'—'}</td>
+          <td style="font-size:12px">${e.wechat_followers>0?'企微活码扫码':'直接开通链接'}</td>
+          <td>${e.wechat_followers>0?e.wechat_followers:'无活码'}</td>
+          <td style="font-weight:600">${e.registrations||0}</td>
+          <td style="font-weight:600;color:var(--success)">${e.activations||0}</td>
+          <td>${e.sql_count||0}</td>
+          <td>${rate}</td>
+        </tr>`}).join(''):'<tr><td colspan="8"><div class="empty-state"><p>暂无CEO获客活动</p></div></td></tr>'}</tbody>
+    </table></div></div>
+
+    ${mkt.length?`<div class="card" style="margin-bottom:16px"><div class="card-header"><h3>🎪 市场部活动（${mkt.length}场）<span style="font-size:12px;color:var(--text-muted);font-weight:400">点击行查看明细 →</span></h3></div><div class="card-body" style="padding:0"><table>
+      <tr><th>活动</th><th>日期</th><th>类型</th><th>报名</th><th>到场</th><th>留资</th><th>MQL</th></tr>
+      <tbody>${mkt.map(e=>`<tr class="clickable-row" onclick="navigate('event-detail',{id:${e.id}})">
+        <td><strong>${esc(e.name)}</strong></td><td>${e.date||'—'}</td><td>${e.event_type||'—'}</td>
+        <td>${fmtNum(e.registrations)}</td><td>${fmtNum(e.audience_count)}</td><td>${e.activations||0}</td><td>${e.mql_count||0}</td>
+      </tr>`).join('')}</tbody>
+    </table></div></div>`:''}
+`;
 }
 
 async function renderCeoEventDetail(id){
