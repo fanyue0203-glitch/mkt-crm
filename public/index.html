@@ -356,7 +356,7 @@ async function renderDashboard(){
           <span class="icon">🔄</span>
           <div class="value orange">${stats.leads.total}</div>
           <div class="label">SDR 线索</div>
-          <div class="sub">${stats.leads.byStage.map(s=>stageName(s.stage)+' '+s.c).join(' · ')||'等待导入'}</div>
+          <div class="sub">${(stats.leads.byStatus||[]).map(s=>stageName(s.status)+' '+s.c).join(' · ')||'等待导入'}</div>
         </div>
       </div>
     </div>
@@ -364,7 +364,7 @@ async function renderDashboard(){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
       <div class="card">
         <div class="card-header"><h3>📊 SDR 线索漏斗</h3></div>
-        <div class="card-body">${stats.leads.byStage.length?'<div class="chart-container"><canvas id="chart-funnel"></canvas></div>':'<div class="empty-state" style="padding:24px"><p>导入线索数据后自动生成漏斗</p></div>'}</div>
+        <div class="card-body">${(stats.leads.byStatus||[]).length?'<div class="chart-container"><canvas id="chart-funnel"></canvas></div>':'<div class="empty-state" style="padding:24px"><p>导入线索数据后自动生成漏斗</p></div>'}</div>
       </div>
       <div class="card">
         <div class="card-header"><h3>🏢 客户等级分布</h3></div>
