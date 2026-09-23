@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard.jsx';
 import CeoEvents from './pages/CeoEvents.jsx';
 import CeoEventDetail from './pages/CeoEventDetail.jsx';
 import CeoDataLogicPage from './pages/CeoDataLogicPage.jsx';
+import CeoReportPage from './pages/CeoReportPage.jsx';
 import EventForm from './pages/EventForm.jsx';
 import CeoSpeechDetail from './pages/CeoSpeechDetail.jsx';
 import CeoSpeechForm from './pages/CeoSpeechForm.jsx';
@@ -50,6 +51,7 @@ export default function App() {
             <Route path="/ceo-events" element={<CeoEvents />} />
             <Route path="/ceo-events/new" element={<EventForm />} />
             <Route path="/ceo-events/:id/edit" element={<EventForm />} />
+            <Route path="/ceo-events/report" element={<CeoReportPage />} />
             <Route path="/ceo-events/data-logic" element={<CeoDataLogicPage />} />
             <Route path="/ceo-events/:id" element={<CeoEventDetail />} />
             <Route path="/speeches/new" element={<CeoSpeechForm />} />

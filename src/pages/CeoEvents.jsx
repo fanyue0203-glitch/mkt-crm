@@ -11,6 +11,7 @@ export default function CeoEvents() {
 
   useEffect(() => {
     setHeader('🎤 活动和CEO获客', <>
+      <button className="btn btn-secondary" onClick={() => navigate('/ceo-events/report')}>📊 分析报告</button>
       <button className="btn btn-secondary" onClick={() => navigate('/ceo-events/data-logic')}>📐 取数逻辑</button>
       <button className="btn btn-primary" onClick={() => navigate('/ceo-events/new')}>+ 新建活动</button>
     </>);
