@@ -660,6 +660,487 @@ db.exec(`
     '原A级客户战败。飞书Aily双闭环生态锁定。教训：先评生态锁定度再定级，A级Onboarding≠高转化。'
   );
 
+  -- 18. 曼伦：C类跟进/on hold
+  INSERT INTO accounts (company_name, industry, scale, region, source, tier,
+    first_touch_date, last_touch_date, touch_count, needs_summary,
+    assigned_to, follow_up_status, octo_status,
+    customer_stage, deal_amount, deal_stage, lead_source,
+    key_contacts_count, key_departments, competitors, customer_recognition,
+    deployment_type, product_solutions_detail, core_painpoint, blockers,
+    next_step, next_deadline, ceo_involvement, ecosystem_lock,
+    key_events, notes) VALUES (
+    '曼伦', '', '', '', 'Onboarding S级', 'C',
+    '2026-08-01', '2026-09-01', 2, 'S级评级高付费潜力，但信息极少on hold',
+    '叶佳', 'on hold', 'S级/on hold/信息少，原因待补充',
+    '观察', 0, '待评估', 'Onboarding S级',
+    1, '', '', '',
+    '', '', '',
+    '信息极少，客户画像不完整(行业/规模/需求/联系人均缺失)；on hold原因不明',
+    '叶佳补充客户完整信息，明确on hold原因', '', 0, '',
+    '[{"date":"2026-08-01","event":"S级Onboarding","note":"前期评估为S级高付费潜力客户"},{"date":"2026-09-01","event":"on hold","note":"进入on hold状态，原因待查"}]',
+    'S级客户on hold，信息极少。叶佳负责，需补充客户完整信息(行业/规模/需求/联系人)和on hold原因。S级客户每月至少一次主动触达。'
+  );
+
+  -- 19. PPIO：C类跟进/攻坚后停滞
+  INSERT INTO accounts (company_name, industry, scale, region, source, tier,
+    first_touch_date, last_touch_date, touch_count, needs_summary,
+    assigned_to, follow_up_status, octo_status,
+    customer_stage, deal_amount, deal_stage, lead_source,
+    key_contacts_count, key_departments, competitors, customer_recognition,
+    deployment_type, product_solutions_detail, core_painpoint, blockers,
+    next_step, next_deadline, ceo_involvement, ecosystem_lock,
+    key_events, notes) VALUES (
+    'PPIO', '云计算/边缘计算', '中型(分布式GPU云平台)', '', '第一梯队攻坚目标', 'C',
+    '2026-07-01', '2026-08-15', 5, '边缘计算/分布式GPU云平台，11人2Agent，攻坚后停滞，场景匹配度待验证',
+    '刘静(Elva)', 'on hold', '11人+2Agent但无活跃使用，攻坚后停滞',
+    '观察', 0, '待评估，场景匹配度待验证', '第一梯队攻坚',
+    1, '技术/研发', '', '技术型团队上手门槛低，11人+2Agent已有基础但无活跃使用',
+    'SaaS', 'AI团队协同+潜在算力+Agent平台生态合作',
+    '分布式GPU/边缘计算团队的AI协同需求场景不明确(内部协同？客户服务？研发流程？)',
+    '攻坚后无后续实质性进展；11人+2Agent但缺乏杀手级场景驱动；PPIO核心业务与Octo协同定位场景交叉点不清晰',
+    '刘静重新接触客户了解实际需求，探索算力+Agent平台生态合作，识别1个高价值场景做Demo', '', 0, '无强锁定',
+    '[{"date":"2026-07-01","event":"首次接触","note":"定位为第一梯队攻坚目标"},{"date":"2026-08-01","event":"开通账号","note":"11人+2Agent开通"},{"date":"2026-08-15","event":"攻坚后停滞","note":"初期接触未转化为持续需求，进入on hold"}]',
+    '边缘计算/分布式GPU云平台，曾定位第一梯队攻坚。11人+2Agent但无活跃使用，场景交叉点不清晰。潜力：GPU云+Octo Agent互补可能。刘静负责。'
+  );
+
+  -- 20. 联合影像(Kickers.ai)：C类跟进/飞书迁移中
+  INSERT INTO accounts (company_name, industry, scale, region, source, tier,
+    first_touch_date, last_touch_date, touch_count, needs_summary,
+    assigned_to, follow_up_status, octo_status,
+    customer_stage, deal_amount, deal_stage, lead_source,
+    key_contacts_count, key_departments, competitors, customer_recognition,
+    deployment_type, product_solutions_detail, core_painpoint, blockers,
+    next_step, next_deadline, ceo_involvement, ecosystem_lock,
+    key_events, notes) VALUES (
+    '联合影像(Kickers.ai)', '医疗影像/AI', '小型(10+人AI团队)', '', '贾叔跟进', 'C',
+    '2026-07-15', '2026-09-01', 4, '医疗AI团队独立协作空间，飞书主力新项目用Octo，潜在模型网关商机(5%差价)',
+    '贾金良(贾叔)', '跟进中', '飞书主力/新项目用Octo，使用深度极浅(7/15仅3条消息0条bot)',
+    '跟进中', 0, '待评估，潜在模型网关5%差价商机', '贾叔跟进',
+    3, 'AI研发', '飞书/OpenClaw/Cloud Code/CodeBuddy', '10+人AI团队对Agent/多模型协同有真实需求，迁移策略已定(新项目Octo/老项目飞书)',
+    'SaaS/混合', 'AI团队独立协作空间+统一模型网关平台(5%模型调用差价)',
+    'AI团队需要独立于公司飞书的协作空间；统一模型调用网关需求',
+    '飞书使用惯性极大(全公司飞书)；7/15仅3条人类消息0条bot协作使用深度极浅；多工具并行分散注意力(飞书/OpenClaw/Cloud Code/CodeBuddy)',
+    '推动重新安装Octopush让团队日常使用，发吉利分享录屏展示多Agent价值，推动产研用Octo跑新项目', '', 0, '飞书主力(双轨运行摩擦成本)',
+    '[{"date":"2026-07-15","event":"跟进","note":"贾叔跟进，空间名Kickers.ai，仅3条消息0条bot"},{"date":"2026-07-18","event":"迁移策略确定","note":"新项目用Octo/老项目留飞书"}]',
+    '医疗AI 10+人团队，飞书主力/新项目用Octo。对接人刘应龙/新意/青山。潜在模型网关商机(5%差价)。使用深度极浅需推动Octopush重新安装。与卓正形成医疗双案例。贾叔负责。'
+  );
+
+  -- 21. 中金公司：C类跟进/早期试用
+  INSERT INTO accounts (company_name, industry, scale, region, source, tier,
+    first_touch_date, last_touch_date, touch_count, needs_summary,
+    assigned_to, follow_up_status, octo_status,
+    customer_stage, deal_amount, deal_stage, lead_source,
+    key_contacts_count, key_departments, competitors, customer_recognition,
+    deployment_type, product_solutions_detail, core_painpoint, blockers,
+    next_step, next_deadline, ceo_involvement, ecosystem_lock,
+    key_events, notes) VALUES (
+    '中金公司', '金融/证券', '大型券商', '北京', '卉子资本市场渠道', 'C',
+    '2026-08-01', '2026-09-01', 2, '金融证券AI投研助手，资本市场早期试用',
+    '卉子', '跟进中', '卉子资本市场渠道引入，早期试用阶段',
+    '跟进中', 0, '待评估', '卉子资本市场渠道',
+    1, '', '', '',
+    '', '投研AI助手+研报生成+数据分析',
+    '证券投研效率提升',
+    '早期试用阶段，使用情况待跟踪；场景需求待明确',
+    '跟进使用情况，了解场景需求；鹏扬基金合同审核跑通后可复制', '', 0, '',
+    '[{"date":"2026-08-01","event":"渠道引入","note":"卉子资本市场渠道引入"}]',
+    '卉子资本市场渠道引入，金融证券行业早期试用。公募基金合同审核场景(鹏扬)跑通后可复制到中金。'
+  );
+
+  -- 22. 华泰研究所：C类跟进/早期试用
+  INSERT INTO accounts (company_name, industry, scale, region, source, tier,
+    first_touch_date, last_touch_date, touch_count, needs_summary,
+    assigned_to, follow_up_status, octo_status,
+    customer_stage, deal_amount, deal_stage, lead_source,
+    key_contacts_count, key_departments, competitors, customer_recognition,
+    deployment_type, product_solutions_detail, core_painpoint, blockers,
+    next_step, next_deadline, ceo_involvement, ecosystem_lock,
+    key_events, notes) VALUES (
+    '华泰研究所', '金融/研究', '大型券商研究所', '', '卉子资本市场渠道', 'C',
+    '2026-08-01', '2026-09-01', 2, '研究所研报AI辅助+分析场景，早期试用',
+    '卉子', '跟进中', '卉子引入，研究报告/分析场景方向，早期试用',
+    '跟进中', 0, '待评估', '卉子资本市场渠道',
+    1, '研究', '', '',
+    '', '研报AI辅助+数据分析+报告自动生成',
+    '券商研究所研报产出效率提升',
+    '早期试用阶段，场景需求待深入了解',
+    '跟进使用情况，明确研报场景需求', '', 0, '',
+    '[{"date":"2026-08-01","event":"渠道引入","note":"卉子资本市场渠道引入"}]',
+    '卉子引入，研究报告/分析场景方向。鹏扬合同审核跑通后可复制到华泰等金融客户。'
+  );
+
+  -- 23. 鹏扬基金：C类跟进/合同审核数字化
+  INSERT INTO accounts (company_name, industry, scale, region, source, tier,
+    first_touch_date, last_touch_date, touch_count, needs_summary,
+    assigned_to, follow_up_status, octo_status,
+    customer_stage, deal_amount, deal_stage, lead_source,
+    key_contacts_count, key_departments, competitors, customer_recognition,
+    deployment_type, product_solutions_detail, core_painpoint, blockers,
+    next_step, next_deadline, ceo_involvement, ecosystem_lock,
+    key_events, notes) VALUES (
+    '鹏扬基金', '金融/公募基金', '中型公募基金', '', '卉子渠道→玉平对接', 'C',
+    '2026-08-18', '2026-09-20', 6, '合同审核流程数字化(专家团+webhook)，提交→法务评审→财务评审→OA调API，原邮件流转效率低',
+    '赵玉平/贾金良/刘静', '跟进中', '8/18产品沟通会确认方案方向(专家团+webhook)，8/23刘静建子区，升温中🔥',
+    '跟进中', 0, '待报价，专家团+webhook方案确认', '卉子资本市场渠道',
+    1, '技术部', '', '黄梦成(技术部)对产品理解快推动执行力强；8/18沟通会已确认方案方向',
+    '云上虚拟机(2核2G)/私有化待定', '合同审核数字化：专家团(法务+财务+AI Bot编排)+webhook精准推送，SOP写在专家团指引，运行时云上2核2G虚拟机',
+    '合同审核原通过单点邮件流转，效率低无法追溯；期望迁移到群聊+AI协作模式实现串行审核',
+    '1.私有化版本无Loop功能(客户看了Loop演示有兴趣)；2.多群webhook精准匹配待验证(10个业务同学各一群，专家团审核后需精准通知)；3.从试用到付费转化路径和商务模式未明确(SaaS按量vs私有化买断)',
+    '玉平完成多群webhook精准匹配测试；跟进黄梦成专家团SaaS试用反馈；明确商务模式(SaaS按量or私有化注意Loop缺失)', '2026-10-15', 0, '',
+    '[{"date":"2026-08-18","event":"产品沟通会","note":"黄梦成/玉平/刘静/贾叔参会，确认专家团+webhook方案方向"},{"date":"2026-08-23","event":"创建子区","note":"刘静创建鹏扬基金子区"},{"date":"2026-09-20","event":"升温中","note":"方案确认，技术验证中"}]',
+    '公募基金合同审核数字化场景，需求清晰痛点明确(邮件→AI协作)。对接人黄梦成(技术部)。方案：专家团+webhook。卡点：私有化无Loop、多群webhook待验证、商务模式未定。跑通后可复制到中金/华泰。玉平/贾叔/刘静负责。🔥升温中。'
+  );
+
+  -- 24. 卓望：D类观察/中国移动子公司
+  INSERT INTO accounts (company_name, industry, scale, region, source, tier,
+    first_touch_date, last_touch_date, touch_count, needs_summary,
+    assigned_to, follow_up_status, octo_status,
+    customer_stage, deal_amount, deal_stage, lead_source,
+    key_contacts_count, key_departments, competitors, customer_recognition,
+    deployment_type, product_solutions_detail, core_painpoint, blockers,
+    next_step, next_deadline, ceo_involvement, ecosystem_lock,
+    key_events, notes) VALUES (
+    '卓望', '通信/央企子公司', '大型(中国移动子公司)', '', 'Onboarding B级', 'D',
+    '2026-07-01', '2026-08-01', 3, '中国移动子公司，对产品感兴趣想培训+产品合作，SaaS接入问题已解决但后续停滞',
+    '贾彤', '观察中', '客户对产品感兴趣想培训+合作，SaaS版bot接入困难已远程解决，后续停滞',
+    '观察', 0, '待评估', 'Onboarding B级',
+    1, '', '', '客户主动表达培训+合作意向',
+    'SaaS', '产品培训+合作探索',
+    '央企子公司数字化转型需求',
+    'SaaS接入问题解决后客户未进一步推进；央企决策链长内部审批采购流程可能较长',
+    '贾彤联系李奕诺了解停滞原因，安排产品培训，明确合作模式', '', 0, '中国移动体系',
+    '[{"date":"2026-07-01","event":"B级Onboarding","note":"评为B级高优先级"},{"date":"2026-07-15","event":"SaaS问题解决","note":"SaaS版接入bot困难已远程解决"},{"date":"2026-08-01","event":"停滞","note":"后续无新动态"}]',
+    '中国移动子公司，对接人李奕诺。Onboarding B级，客户感兴趣想培训+产品合作。SaaS接入问题已解决但后续停滞。央企决策链长。贾彤负责。'
+  );
+
+  -- 25. 祥承：D类观察/pending未开始
+  INSERT INTO accounts (company_name, industry, scale, region, source, tier,
+    first_touch_date, last_touch_date, touch_count, needs_summary,
+    assigned_to, follow_up_status, octo_status,
+    customer_stage, deal_amount, deal_stage, lead_source,
+    key_contacts_count, key_departments, competitors, customer_recognition,
+    deployment_type, product_solutions_detail, core_painpoint, blockers,
+    next_step, next_deadline, ceo_involvement, ecosystem_lock,
+    key_events, notes) VALUES (
+    '祥承', '', '', '', '叶佳/pending angelclaw', 'D',
+    '2026-08-01', '2026-08-01', 1, 'pending/angelclaw/还未开始，信息极少',
+    '叶佳', '待开始', 'pending angelclaw，尚未开始',
+    '观察', 0, '待评估', 'pending',
+    0, '', '', '',
+    '', '', '',
+    '尚未开始，无任何信息',
+    '等待客户侧明确需求后再推进', '', 0, '',
+    '[{"date":"2026-08-01","event":"pending","note":"angelclaw相关，尚未开始"}]',
+    'pending/angelclaw，还未开始。叶佳负责，信息极少待补充。'
+  );
+
+  -- 26. 欢瑞世纪：D类观察/原C类降级
+  INSERT INTO accounts (company_name, industry, scale, region, source, tier,
+    first_touch_date, last_touch_date, touch_count, needs_summary,
+    assigned_to, follow_up_status, octo_status,
+    customer_stage, deal_amount, deal_stage, lead_source,
+    key_contacts_count, key_departments, competitors, customer_recognition,
+    deployment_type, product_solutions_detail, core_painpoint, blockers,
+    next_step, next_deadline, ceo_involvement, ecosystem_lock,
+    key_events, notes) VALUES (
+    '欢瑞世纪', '影视/娱乐', '中型上市公司(200+员工)', '', '玉平跟进', 'D',
+    '2026-07-01', '2026-09-07', 8, '上市影视公司，私有化部署+培训完成，51只虾仅2活跃，董秘Agent/CEO全景/录音豆场景，预算有限飞书迁移阻力大',
+    '赵玉平', '观察中', '私有化+培训完成，51虾仅2活跃，9月从C类降级D类',
+    '观察', 0, '预算有限，付费意愿低', '玉平跟进',
+    2, '', '飞书', '私有化部署已完成，技术基础设施就位',
+    '私有化', '董秘Agent(信息披露/合规问答)+CEO全景视角(经营数据+AI决策)+录音豆沉淀知识库+IR投资者关系',
+    '上市公司董秘合规、经营决策、知识管理场景AI化需求',
+    '1.预算有限(影视公司AI工具预算池小，付费意愿低)；2.场景空泛(董秘Agent/CEO全景/录音豆停在概念阶段)；3.飞书迁移阻力大(51只虾仅2活跃，推广不力)',
+    '评估是否值得继续投入(2人活跃vs投入产出比)；如继续聚焦董秘Agent单场景做MVP', '', 0, '飞书迁移阻力大',
+    '[{"date":"2026-07-01","event":"安装测试","note":"郭颂解决安装问题"},{"date":"2026-07-22","event":"场景提出","note":"赵玉平提出董秘Agent/CEO全景/录音豆三大方向"},{"date":"2026-08-14","event":"私有化完成","note":"私有化+培训完成，付费意愿低"},{"date":"2026-09-07","event":"试用中","note":"7月后无新进展仅2人活跃"},{"date":"2026-09-15","event":"降级D类","note":"从C类降级为D类观察"}]',
+    '200+员工上市影视公司，原C类9月降级D类。私有化部署+培训完成但51虾仅2活跃。董秘Agent概念独特但预算有限+场景空泛+飞书阻力。技术支持郭颂。玉平负责。教训："部署≠使用"典型案例。'
+  );
+
+  -- 27. 青钜科技：D类观察/私有化完成Loop未用
+  INSERT INTO accounts (company_name, industry, scale, region, source, tier,
+    first_touch_date, last_touch_date, touch_count, needs_summary,
+    assigned_to, follow_up_status, octo_status,
+    customer_stage, deal_amount, deal_stage, lead_source,
+    key_contacts_count, key_departments, competitors, customer_recognition,
+    deployment_type, product_solutions_detail, core_painpoint, blockers,
+    next_step, next_deadline, ceo_involvement, ecosystem_lock,
+    key_events, lessons_learned, notes) VALUES (
+    '青钜科技', '咨询/工程', '中型', '', '玉平/郭松', 'D',
+    '2026-07-01', '2026-09-01', 4, '咨询/工程公司，私有化完成Loop未用，"部署≠使用"教训',
+    '赵玉平/郭松', '观察中', '私有化完成，Loop未使用，待培训推进',
+    '观察', 0, '待激活', '玉平跟进',
+    1, '', '', '私有化已完成，技术基础设施就位',
+    '私有化', '',
+    '咨询/工程行业AI协同需求',
+    'Loop未用=核心功能未体验(客户不了解或未培训)；整体使用深度和活跃度信息缺失',
+    '安排Loop培训让客户体验核心功能，了解当前使用情况', '', 0, '',
+    '[{"date":"2026-07-01","event":"私有化部署","note":"私有化部署完成"},{"date":"2026-09-01","event":"Loop未用","note":"Loop功能未使用，待培训"}]',
+    '"部署≠使用"教训：私有化完成后停滞，需建立"部署后30天激活"机制。部署完成≠项目完成，培训+场景引导才是关键。与我思科技同类案例。',
+    '咨询/工程公司，私有化完成但Loop未用。"部署≠使用"教训典型案例。玉平/郭松负责。待安排Loop培训。'
+  );
+
+  -- 28. 卓越教育：D类观察/建群阶段
+  INSERT INTO accounts (company_name, industry, scale, region, source, tier,
+    first_touch_date, last_touch_date, touch_count, needs_summary,
+    assigned_to, follow_up_status, octo_status,
+    customer_stage, deal_amount, deal_stage, lead_source,
+    key_contacts_count, key_departments, competitors, customer_recognition,
+    deployment_type, product_solutions_detail, core_painpoint, blockers,
+    next_step, next_deadline, ceo_involvement, ecosystem_lock,
+    key_events, notes) VALUES (
+    '卓越教育', '教育', '', '', '8/17周会新增', 'D',
+    '2026-08-17', '2026-08-17', 1, '教育行业新商机，8/17周会新增，建群阶段，待深入了解需求',
+    '', '建群阶段', '8/17周会新增，建群阶段，待深入了解',
+    '观察', 0, '待评估', '8/17周会新增',
+    0, '', '', '',
+    '', '', '教育行业AI转型需求待确认',
+    '新商机，尚在建群阶段，需求未明确',
+    '建群后深入了解客户需求', '', 0, '',
+    '[{"date":"2026-08-17","event":"新增商机","note":"8/17周会新增，建群阶段"}]',
+    '教育行业新商机，8/17周会新增，建群阶段待深入了解需求。'
+  );
+
+  -- 29. 新世纪医疗：D类观察/AI转型意向
+  INSERT INTO accounts (company_name, industry, scale, region, source, tier,
+    first_touch_date, last_touch_date, touch_count, needs_summary,
+    assigned_to, follow_up_status, octo_status,
+    customer_stage, deal_amount, deal_stage, lead_source,
+    key_contacts_count, key_departments, competitors, customer_recognition,
+    deployment_type, product_solutions_detail, core_painpoint, blockers,
+    next_step, next_deadline, ceo_involvement, ecosystem_lock,
+    key_events, notes) VALUES (
+    '新世纪医疗集团', '医疗健康', '', '', '8/17周会新增', 'D',
+    '2026-08-17', '2026-08-17', 1, '医疗健康集团，AI架构转型意向，8/17周会新增，需求待确认',
+    '', '观察中', 'AI架构转型意向，需求待确认',
+    '观察', 0, '待评估', '8/17周会新增',
+    0, '', '', '',
+    '', '', '医疗集团AI架构转型需求',
+    'AI转型意向但具体需求和场景待确认',
+    '跟进确认AI架构转型具体需求和场景', '', 0, '',
+    '[{"date":"2026-08-17","event":"新增商机","note":"8/17周会新增，AI架构转型意向"}]',
+    '医疗健康集团AI转型意向，8/17周会新增。与卓正/健主任形成医疗行业客户群。需求待确认。'
+  );
+
+  -- 30. 得到：放弃/飞书+自研AI生态锁定
+  INSERT INTO accounts (company_name, industry, scale, region, source, tier,
+    first_touch_date, last_touch_date, touch_count, needs_summary,
+    assigned_to, follow_up_status, octo_status,
+    customer_stage, deal_amount, deal_stage, lead_source,
+    key_contacts_count, key_departments, competitors, customer_recognition,
+    deployment_type, product_solutions_detail, core_painpoint, blockers,
+    next_step, next_deadline, ceo_involvement, ecosystem_lock,
+    key_events, lessons_learned, notes) VALUES (
+    '得到', '知识服务/在线教育', '中型', '北京', 'Onboarding B级', 'D',
+    '2026-07-01', '2026-08-01', 3, '知识服务平台，飞书+自研AI成熟，飞书生态锁定，放弃',
+    '贾金良(贾叔)', '已放弃', '内部飞书+自研AI成熟，对接人忙于新产品，生态锁定无法突破',
+    '放弃', 0, '飞书+自研AI已满足需求，无Octo增量价值', 'Onboarding B级',
+    1, '', '飞书Aily+自研AI', '内部深度使用飞书，并已构建自研AI能力，Octo无法提供飞书生态内增量价值',
+    '', '', '知识服务在线教育AI化',
+    '1.内部飞书+自研AI体系成熟，Octo无法提供飞书生态内增量价值；2.对接人忙于新产品开发无精力评估外部工具',
+    '', '', 0, '飞书生态+自研AI强锁定',
+    '[{"date":"2026-07-01","event":"B级Onboarding","note":"曾重点跟进B级"},{"date":"2026-08-01","event":"放弃","note":"飞书+自研AI成熟，对接人忙新产品"}]',
+    '飞书生态锁定典型：内部深度使用飞书+自研AI成熟，Octo无法提供增量价值。复活条件：飞书Aily无法满足多Agent协作时。教训：飞书深度客户先评生态锁定度再投入资源。',
+    '飞书+自研AI成熟，飞书生态锁定放弃。贾叔负责。复活概率低。飞书生态锁定战败典型。'
+  );
+
+  -- 31. 流利说：放弃/内网限制+部署不统一
+  INSERT INTO accounts (company_name, industry, scale, region, source, tier,
+    first_touch_date, last_touch_date, touch_count, needs_summary,
+    assigned_to, follow_up_status, octo_status,
+    customer_stage, deal_amount, deal_stage, lead_source,
+    key_contacts_count, key_departments, competitors, customer_recognition,
+    deployment_type, product_solutions_detail, core_painpoint, blockers,
+    next_step, next_deadline, ceo_involvement, ecosystem_lock,
+    key_events, lessons_learned, notes) VALUES (
+    '流利说', '教育/AI语言学习', '中型', '上海', '叶佳跟进', 'D',
+    '2026-07-01', '2026-08-01', 3, 'AI英语学习平台，内网限制严格+部署方式不统一，SaaS试用后放弃',
+    '叶佳', '已放弃', '内网限制多+部署不统一，SaaS版反馈后放弃',
+    '放弃', 0, '内网兼容性无法解决', '叶佳跟进',
+    1, '', '', '',
+    '', '', 'AI教育平台内部协同AI化',
+    '1.内网对外部工具接入限制严格，SaaS版无法顺畅使用；2.内部对SaaS vs私有化没有明确决策，试用后未推进正式评估；3.SaaS版试用后客户未给出正面反馈直接搁置',
+    '', '', 0, '内网限制强',
+    '[{"date":"2026-07-01","event":"SaaS试用","note":"SaaS版试用"},{"date":"2026-08-01","event":"放弃","note":"内网限制+部署不统一，试用后放弃"}]',
+    '内网兼容性问题战败：内网限制严格SaaS无法顺畅使用，部署方式不统一(SaaS vs私有化未定)。复活条件：提供标准化企业级部署方案解决内网兼容。',
+    '内网限制+部署不统一导致放弃。叶佳负责。复活条件：标准化企业级部署方案解决内网兼容。'
+  );
+
+  -- 32. 我思科技：放弃/部署≠使用
+  INSERT INTO accounts (company_name, industry, scale, region, source, tier,
+    first_touch_date, last_touch_date, touch_count, needs_summary,
+    assigned_to, follow_up_status, octo_status,
+    customer_stage, deal_amount, deal_stage, lead_source,
+    key_contacts_count, key_departments, competitors, customer_recognition,
+    deployment_type, product_solutions_detail, core_painpoint, blockers,
+    next_step, next_deadline, ceo_involvement, ecosystem_lock,
+    key_events, lessons_learned, notes) VALUES (
+    '我思科技', '科技', '中型', '', '贾叔跟进/原C类试用', 'D',
+    '2026-07-01', '2026-08-15', 4, '科技公司，私有化部署完成但使用停滞，"部署≠使用"典型',
+    '贾金良(贾叔)', '已放弃', '私有化已部署但使用停滞，升级需求未推进',
+    '放弃', 0, '私有化后沉寂', '原C类试用',
+    1, '', '', '',
+    '私有化', '', '科技企业AI协同需求',
+    '私有化部署完成但客户内部未真正使用起来；缺乏内部推动力和明确应用场景；升级需求未推进自然搁置',
+    '', '', 0, '',
+    '[{"date":"2026-07-01","event":"私有化部署","note":"完成私有化部署"},{"date":"2026-08-15","event":"停滞放弃","note":"使用停滞，升级需求未推进"}]',
+    '"部署≠使用"典型：私有化完成但缺乏场景引导和使用培训，客户部署后沉寂。教训：需建立"部署后30天激活"跟进机制，私有化交付不是终点。复活条件：客户主动提出升级需求。',
+    '私有化部署但使用停滞。贾叔负责。"部署≠使用"教训，与青钜科技同类。复活概率有条件。'
+  );
+
+  -- 33. 元梦灵境：放弃/开通后完全沉寂
+  INSERT INTO accounts (company_name, industry, scale, region, source, tier,
+    first_touch_date, last_touch_date, touch_count, needs_summary,
+    assigned_to, follow_up_status, octo_status,
+    customer_stage, deal_amount, deal_stage, lead_source,
+    key_contacts_count, key_departments, competitors, customer_recognition,
+    deployment_type, product_solutions_detail, core_painpoint, blockers,
+    next_step, next_deadline, ceo_involvement, ecosystem_lock,
+    key_events, lessons_learned, notes) VALUES (
+    '元梦灵境', '游戏/元宇宙', '', '', '贾叔跟进', 'D',
+    '2026-07-01', '2026-07-15', 2, '游戏/元宇宙公司，开通后完全沉寂无任何使用',
+    '贾金良(贾叔)', '已放弃', '开通后完全沉寂，无任何使用',
+    '放弃', 0, '开通后未使用', '活动/注册获客',
+    0, '', '', '',
+    '', '', '',
+    '开通后完全沉寂无任何使用，无内部推动者无明确需求',
+    '', '', 0, '',
+    '[{"date":"2026-07-01","event":"开通","note":"账号开通"},{"date":"2026-07-15","event":"沉寂","note":"完全无使用"}]',
+    '开通后完全沉寂无任何使用，"部署≠使用"类别。复活概率低，需客户主动重新激活。',
+    '开通后完全沉寂。贾叔负责。"部署≠使用"案例。复活概率低。'
+  );
+
+  -- 34. 云迹：放弃/攻坚后停滞
+  INSERT INTO accounts (company_name, industry, scale, region, source, tier,
+    first_touch_date, last_touch_date, touch_count, needs_summary,
+    assigned_to, follow_up_status, octo_status,
+    customer_stage, deal_amount, deal_stage, lead_source,
+    key_contacts_count, key_departments, competitors, customer_recognition,
+    deployment_type, product_solutions_detail, core_painpoint, blockers,
+    next_step, next_deadline, ceo_involvement, ecosystem_lock,
+    key_events, lessons_learned, notes) VALUES (
+    '云迹科技', '机器人/酒店科技', '中型', '北京', '攻坚客户', 'D',
+    '2026-07-01', '2026-08-01', 3, '机器人/酒店科技公司，攻坚后停滞无后续更新',
+    '', '已放弃', '攻坚后停滞，无后续更新',
+    '放弃', 0, '攻坚未转化', '攻坚目标',
+    0, '', '', '',
+    '', '', '酒店/机器人场景AI协同',
+    '攻坚后停滞，未找到酒店/机器人场景切入点；无持续推进动力',
+    '', '', 0, '',
+    '[{"date":"2026-07-01","event":"攻坚","note":"定位攻坚目标"},{"date":"2026-08-01","event":"停滞","note":"攻坚后无后续更新"}]',
+    '机器人/酒店科技攻坚后停滞，未找到场景切入点。复活条件：找到酒店/机器人场景切入点。',
+    '攻坚后停滞。"部署≠使用"/开通后沉寂类别。复活条件：找到酒店/机器人场景切入点。'
+  );
+
+  -- 35. 北京破圈：放弃/内部BU停滞
+  INSERT INTO accounts (company_name, industry, scale, region, source, tier,
+    first_touch_date, last_touch_date, touch_count, needs_summary,
+    assigned_to, follow_up_status, octo_status,
+    customer_stage, deal_amount, deal_stage, lead_source,
+    key_contacts_count, key_departments, competitors, customer_recognition,
+    deployment_type, product_solutions_detail, core_painpoint, blockers,
+    next_step, next_deadline, ceo_involvement, ecosystem_lock,
+    key_events, lessons_learned, notes) VALUES (
+    '北京破圈', '营销/代运营', '内部BU', '北京', '内部BU(明略)', 'D',
+    '2026-05-01', '2026-05-09', 3, '明略内部BU(营销/代运营)，非外部客户，价值待验证停滞，最后活跃5/9',
+    '贾金良(贾叔)/孙方超', '已放弃', '内部BU非外部客户，缺乏商务驱动力，子区最后活跃5/9超4个月无消息',
+    '放弃', 0, '内部BU无商务驱动力', '内部BU',
+    1, '', '', '',
+    '', '', '内部营销代运营BU AI工具',
+    '1.内部BU定位尴尬，不是真正外部客户，推进缺乏商务驱动力，内部协调成本高；2.子区最后活跃5/9已超4个月无消息，内部使用推动力完全消失',
+    '', '', 0, '',
+    '[{"date":"2026-05-01","event":"建子区","note":"创建子区"},{"date":"2026-05-09","event":"最后活跃","note":"子区20条消息后停滞，最后活跃5/9"}]',
+    '内部BU不是真正外部客户，缺乏商务驱动力。教训：内部BU需明确业务价值和管理层推动才能推进。复活概率低，需新的内部战略方向。',
+    '明略内部BU(营销/代运营)非外部客户，缺乏商务驱动力停滞。贾叔/孙方超负责。最后活跃5/9。复活概率低。'
+  );
+
+  -- 36. 香港中企：放弃/需求未建立信息不足
+  INSERT INTO accounts (company_name, industry, scale, region, source, tier,
+    first_touch_date, last_touch_date, touch_count, needs_summary,
+    assigned_to, follow_up_status, octo_status,
+    customer_stage, deal_amount, deal_stage, lead_source,
+    key_contacts_count, key_departments, competitors, customer_recognition,
+    deployment_type, product_solutions_detail, core_painpoint, blockers,
+    next_step, next_deadline, ceo_involvement, ecosystem_lock,
+    key_events, lessons_learned, notes) VALUES (
+    '香港中企', '多行业/香港', '', '香港', '第三梯队SaaS试用', 'D',
+    '2026-07-01', '2026-08-01', 2, '香港中资企业，第三梯队SaaS试用，信息极少需求不明',
+    'Amy', '已放弃', '第三梯队SaaS试用，信息极少需求不明，无实质进展',
+    '放弃', 0, '需求未建立', 'SaaS试用',
+    0, '', '', '',
+    'SaaS', '', '',
+    '信息极少，客户未提出明确需求，SaaS试用后无实质进展',
+    '', '', 0, '',
+    '[{"date":"2026-07-01","event":"SaaS试用","note":"第三梯队SaaS试用"},{"date":"2026-08-01","event":"放弃","note":"信息极少无实质进展"}]',
+    '需求未建立/信息不足：SaaS试用后无反馈无进展。复活条件：客户主动提出明确需求。教训：第三梯队客户不过度投入资源。',
+    '第三梯队SaaS试用，信息极少需求不明。Amy负责。复活概率低。'
+  );
+
+  -- 37. 海归爸爸：放弃/需求未建立
+  INSERT INTO accounts (company_name, industry, scale, region, source, tier,
+    first_touch_date, last_touch_date, touch_count, needs_summary,
+    assigned_to, follow_up_status, octo_status,
+    customer_stage, deal_amount, deal_stage, lead_source,
+    key_contacts_count, key_departments, competitors, customer_recognition,
+    deployment_type, product_solutions_detail, core_painpoint, blockers,
+    next_step, next_deadline, ceo_involvement, ecosystem_lock,
+    key_events, lessons_learned, notes) VALUES (
+    '海归爸爸', '教育', '', '', '第三梯队SaaS', 'D',
+    '2026-07-01', '2026-08-01', 1, '教育行业，第三梯队SaaS试用，无实质进展需求未建立',
+    '', '已放弃', '第三梯队SaaS，无实质进展',
+    '放弃', 0, '需求未建立', 'SaaS试用',
+    0, '', '', '',
+    'SaaS', '', '教育行业AI需求',
+    '无实质进展，客户未提出明确需求',
+    '', '', 0, '',
+    '[{"date":"2026-07-01","event":"SaaS试用","note":"第三梯队SaaS"}]',
+    '需求未建立/信息不足，无实质进展。复活条件：客户主动提出明确需求。',
+    '教育行业第三梯队SaaS，无实质进展。复活概率低。'
+  );
+
+  -- 38. 51World：放弃/需求未建立
+  INSERT INTO accounts (company_name, industry, scale, region, source, tier,
+    first_touch_date, last_touch_date, touch_count, needs_summary,
+    assigned_to, follow_up_status, octo_status,
+    customer_stage, deal_amount, deal_stage, lead_source,
+    key_contacts_count, key_departments, competitors, customer_recognition,
+    deployment_type, product_solutions_detail, core_painpoint, blockers,
+    next_step, next_deadline, ceo_involvement, ecosystem_lock,
+    key_events, lessons_learned, notes) VALUES (
+    '51World', '数字孪生/元宇宙', '中型', '', '冷接触', 'D',
+    '2026-07-01', '2026-07-15', 1, '数字孪生/元宇宙公司，冷接触无后续',
+    '', '已放弃', '冷，无后续接触',
+    '放弃', 0, '需求未建立', '冷接触',
+    0, '', '', '',
+    '', '', '数字孪生行业AI协同',
+    '冷接触无后续，客户未表达明确需求；数字孪生/元宇宙行业本身遇冷',
+    '', '', 0, '',
+    '[{"date":"2026-07-01","event":"冷接触","note":"初步接触无反馈"}]',
+    '需求未建立/信息不足+行业遇冷。复活条件：行业回暖+客户有AI协作需求。',
+    '数字孪生/元宇宙冷接触无后续。复活概率低(需行业回暖)。'
+  );
+
+  -- 39. 西门子：放弃/关系型线索未转化
+  INSERT INTO accounts (company_name, industry, scale, region, source, tier,
+    first_touch_date, last_touch_date, touch_count, needs_summary,
+    assigned_to, follow_up_status, octo_status,
+    customer_stage, deal_amount, deal_stage, lead_source,
+    key_contacts_count, key_departments, competitors, customer_recognition,
+    deployment_type, product_solutions_detail, core_painpoint, blockers,
+    next_step, next_deadline, ceo_involvement, ecosystem_lock,
+    key_events, lessons_learned, notes) VALUES (
+    '西门子', '工业/制造', '全球工业巨头', '中国', '杨三角关系线索', 'D',
+    '2026-07-01', '2026-07-15', 2, '全球工业巨头，杨三角(杨国安教授)人脉圈关系型引荐(沙龙邀请函)，非销售驱动2周内未建商务接触即流失',
+    '孙方超', '已放弃', '杨三角关系沙龙邀请层面，非销售驱动，未建立有效商务接触',
+    '放弃', 0, '关系型线索未转化为商务机会', '杨三角关系/沙龙邀请函',
+    1, '', '', '西门子体量巨大一旦切入价值极高',
+    '', '', '工业巨头AI协同需求待挖掘',
+    '1.非销售驱动：线索来自学术/人脉圈(杨三角关系)是关系型邀请而非客户主动需求；2.未建立有效对接：仅群里发邀请函辉哥问"谁去讲课"后无下文，未进入实质性商务接触',
+    '', '', 0, '',
+    '[{"date":"2026-07-01","event":"沙龙邀请","note":"孙方超群发西门子沙龙邀请函PDF，辉哥问谁去讲课"},{"date":"2026-07-15","event":"流失","note":"2周内未建商务接触，自然流失"}]',
+    '关系型线索2周内不建立商务接触就流失！西门子教训：人脉引荐≠销售机会，需在关系窗口期快速建立商务对接。体量巨大一旦切入价值极高，但需找到对的人和对的场景。',
+    '杨三角(杨国安教授)关系线索，孙方超引入。沙龙邀请函层面非销售驱动，2周未建商务接触即流失。教训：关系型线索2周窗口期。复活条件：西门子中国区有明确AI协作需求通过杨三角重新搭线。'
+  );
+
   -- Speeches
   INSERT INTO speeches (date, location, event_name, topic, speech_type, audience_count, leads_count,
     business_design, story_line, audience_profile, follow_up_plan) VALUES
@@ -755,7 +1236,6 @@ const insertSampleData = db.transaction(() => {
   insertContact.run(5, '淦家阅', 'CEO', '管理层', '决策层', '', '', 0, '吉利集团CEO，辉哥7/18给其团队40+人做AI分享');
   insertContact.run(5, '刘昊', 'CDO(首席数字官)', '数字化中心(3DM)', '决策层', '', '', 1, 'CDO，3DM核心铁三角之首，自写《OCTO产品第一性原理》，最强champion🔥');
   insertContact.run(5, '乔帅', 'AI运营部长', 'AI运营部(3DM)', '管理层', '', '', 0, '3DM成员，POC执行层面负责人');
-  insertContact.run(6, '张名全', 'HR总监', '人力资源部', '管理层', '', '', 0, 'AI转型牵头人，HR场景对接人');
   insertContact.run(5, '陈勇', 'AIC负责人', 'AI中心(3DM)', '管理层', '', '', 0, '3DM成员，技术架构和AIC对接，极光湾尾随其团队copy');
   insertContact.run(5, '吉利HR VP', 'HR VP', '人力资源', '决策层', '', '', 0, '元动力平台HR决策人');
   insertContact.run(5, 'CC', '对接人', '项目对接', '执行层', '', '', 0, '日常项目对接人，刘静统筹下的执行窗口');
@@ -912,6 +1392,241 @@ const insertSampleData = db.transaction(() => {
   insertContact.run(17, '方里市场负责人', '市场负责人', '市场部', '管理层', '', '', 0, '最初对接人，Onboarding积极但最终因飞书锁定无法推进');
   insertContact.run(17, '方里IT负责人', 'IT负责人', 'IT部', '决策层', '', '', 0, 'IT决策人，明确表示飞书Aily已满足需求');
   insertContact.run(17, '贾金良(贾叔)', 'SDR线索(明略)', 'SDR', '执行层', '', '', 0, '明略方跟进');
+
+  // ===== 5家重点客户补充联系人(来自全景报告) =====
+
+  // --- 4. 宇通客车 补充联系人(全景报告提取) ---
+  insertContact.run(4, '朱光海', '设计院副院长', '研发/设计', '管理层', '', '', 1, 'AI工作推进筹备组组长，deepminer/Octo深度用户');
+  insertContact.run(4, '孙宇', '数据管理科科长', '数据管理', '管理层', '', '', 0, '数据管理条线对接人');
+  insertContact.run(4, '费华', '底盘车间主任', '生产制造', '管理层', '', '', 0, '生产制造条线对接人');
+  insertContact.run(4, '赵国力', 'IT技术管理科科长', 'IT部', '管理层', '', '', 0, 'IT执行层，参与招标评估');
+  insertContact.run(4, '闫亚州', '研发数智化科科长', '研发中心', '管理层', '', '', 0, '研发数字化对接人');
+  insertContact.run(4, '姚鑫鑫(博士)', '云端产品设计主管', '云端研发', '执行层', '', '', 0, '云端产品设计');
+  insertContact.run(4, '邵玉龙(博士)', '电池管理系统技术组长', '研发中心', '执行层', '', '', 0, '电池管理系统技术');
+  insertContact.run(4, '李海翔', '云端研发工程师', '云端研发', '执行层', '13700789673', '', 0, '云端研发');
+  insertContact.run(4, '张文海', '云端软件工程师', '云端研发', '执行层', '15638088029', '', 0, '云端软件');
+  insertContact.run(4, '叶雷', '控制策略技术研究工程师', '研发中心', '执行层', '18238279229', '', 0, '控制策略技术');
+  insertContact.run(4, '方浩', '车端软件工程师', '研发中心', '执行层', '13526721290', '', 0, '车端软件');
+  insertContact.run(4, '韩彬', '市场部科长', '市场部', '管理层', '', '', 0, '7/10加入，关注内容营销+GEO');
+  insertContact.run(4, '陶冶(陶老师)', '品牌营销', '品牌营销', '执行层', '13633805677', '', 0, '7/29线上会议对接人');
+  insertContact.run(4, '李思思', '港澳团队(明略)', '客户成功', '执行层', '', '', 0, '明略方9/18述标团队成员');
+  insertContact.run(4, '连永强', '技术支持(明略)', '技术部', '执行层', '', '', 0, '明略方9/18述标团队成员');
+
+  // 宇通 W37/W38 周报
+  insertReport.run(4, 'weekly', '2026-W37',
+    '宇通9/11贾祥轩主动拉明略入围招标！~200万项目"AI+企业智能体建设平台"，姜平定调"即使亏本也要拿"',
+    '1. 回顾历程：5/9贾祥轩官网主动联系→5/27景宏源CIO带9人高管团来访→6/1内网部署Octo两大场景跑通(车联网产品设计+会议纪要)→7月营销侧韩彬/陶冶加入→8月私有化完成超20人使用→9/7周会曾因营销线预算极低决定降级\n2. 9/11重大翻转：贾祥轩主动拉明略入围IT线CIO景宏源主导的正式招标，项目"AI+企业智能体建设平台"约200万\n3. 9/14周会定调战略级：预算≤200万+二三期各200万，姜平"即使亏本也要拿"\n4. 竞品：酷开/浙江实在/联想/腾讯WorkBuddy/阿里QoderWork 5家同台\n5. Amy推进供应商入库，标书当日发出',
+    '需要姜平定调资源投入优先级(亏本也拿=最高优先级)',
+    '需Amy带队郑州述标，威少方案，贾金良/叶佳/连永强/李思思团队支持',
+    '客户尚未做过Octo集团级私有化部署(仅开源SaaS环境)，9/18速标时间紧',
+    '9/18郑州现场述标，纯技术打分，务必展示Octo AI原生平台差异化优势');
+  insertReport.run(4, 'weekly', '2026-W38',
+    '宇通9/18郑州述标完成，纯技术打分，等9/25前出结果。16+联系人覆盖10条线，客户认可Octo是AI原生平台',
+    '1. 9/15-17 Amy推进供应商入库\n2. 关键发现：客户未做过Octo集团级私有化(仅开源部署在SaaS环境)，集团私有化需庞大内部审批短期做不了\n3. 9/18 Amy带队郑州现场述标(Amy+李思思+贾金良+叶佳+连永强)\n4. 述标现场较轻松纯技术打分(无采购在场)，通过后才进采购谈价\n5. 客户尚未想清楚AI板块具体做什么，更在意供应商案例及内部大量数据+系统集成问题\n6. 景宏源CIO对Octo AI原生定位认可\n7. 贾祥轩持续作为内部champion全程支持',
+    '',
+    '',
+    '等9/25结果是唯一卡点',
+    '9/25前跟进景宏源获取结果信号，做好中标后24h启动交付准备');
+
+  // --- 5. 吉利汽车 补充联系人(全景报告提取) ---
+  insertContact.run(5, '刘浩(浩总)', '高层/数字化负责人', '数字化中心', '决策层', '', '', 1, '高层数字化负责人，高度重视反复追问后续动作');
+  insertContact.run(5, '康执玺', '项目管理与执行', '3DM', '执行层', '', '', 0, '场景选择/优先级/落地节奏把控');
+  insertContact.run(5, '李先强', '平台AI部门', '平台AI部', '执行层', '', '', 0, 'SaaS试用对接人');
+  insertContact.run(5, '杨毅', '营销场景POC对接', '营销中心', '执行层', '', '', 0, '营销场景POC对接');
+  insertContact.run(5, '杨曌', '商务对接', '商务部', '执行层', '', '', 0, '与威少对接商务条款');
+  insertContact.run(5, '李岩(Ethan)', '商务对接', '商务部', '执行层', '', '', 0, '与威少对接商务条款');
+  insertContact.run(5, '郭一鸣', '项目参与', '项目组', '执行层', '', '', 0, '项目参与');
+  insertContact.run(5, 'Catherine(邱凌燕)', '营销/社媒专家(明略)', '方案部', '执行层', '', '', 0, '明略方社媒数据驱动洞察场景评估');
+  insertContact.run(5, '黄楠', 'FDE团队(明略)', 'FDE', '执行层', '', '', 0, '明略方FDE团队架构讨论');
+  insertContact.run(5, '李梦林', '技术(明略)', '技术部', '执行层', '', '', 0, '辉哥指定参与研发POC');
+
+  // 吉利 W37/W38 周报
+  insertReport.run(5, 'weekly', '2026-W37',
+    '吉利8/31最新测算锁定908人天/390万！产品路线确认融合客户统一工作台不新增入口，POC 9月底有条件结项',
+    '1. 8/14私有化部署完成超20人使用\n2. 8/23精简实施方案到v2.52(1057人天/803.4万折后)；CIO汇报deck完成(Swiss IKB风格10页)；Octo环境全部调通外网地址公布\n3. 8/31重大里程碑：最新测算锁定908人天/390万；产品路线确认融合客户现有统一工作台不新增入口；POC 9月底有条件结项\n4. 4场景持续推进：营销内容生成+HR智能助手+周例会Loop+AI Coding\n5. 6个Bot(艾娃/毕达哥拉拉/Kotter/Brooks/杨贵妃/吉利项目助手)深度参与\n6. 刘昊(CDO)持续高频互动，自写《OCTO产品第一性原理》内部推广',
+    '390万/908人天报价已提交，需客户确认商务流程',
+    '常晓飞继续部署支持，徐浩驻场日会，飞书插件开发需排期',
+    '飞书插件集成是POC结项前提',
+    '9月底POC有条件结项，推动正式合同签署');
+  insertReport.run(5, 'weekly', '2026-W38',
+    '吉利9/15元动力里程碑节点已过，结果待客户确认；9/22周会决策资源聚焦吉利(致远/金智降级搁置)',
+    '1. 9/15元动力平台里程碑节点(覆盖~1500高管至2027.9)\n2. 9/22周会重要决策：致远互联和金智被降级搁置，资源集中到吉利等重点客户\n3. 目标10月份发布吉利PR案例，姜平已向威少传达要求，刘静负责追踪\n4. 徐浩日会持续，飞书集成方案推进中\n5. 框架协议签署中\n6. 刘昊/乔帅/陈勇铁三角持续高频互动',
+    '需要客户确认元动力里程碑结果；需要刘静对接PR案例推进',
+    '资源聚焦后全力确保9月底POC结项',
+    '元动力结果未确认影响后续节奏',
+    '确认元动力里程碑结果，9月底POC有条件结项，推动390万合同签署');
+
+  // --- 6. 三一重工 补充联系人(全景报告提取) ---
+  // 注：张名全在原数据中错挂在id=5吉利下，这里正确挂在id=6
+  insertContact.run(6, '联席总裁团队', '联席总裁', '最高决策层', '决策层', '', '', 0, '口头支持AI转型，实际行动力待验证(梁在中牵头后有望突破)');
+  insertContact.run(6, '王华', '流程信息化总部总监', '流程信息化总部', '管理层', '', '', 0, '技术平台负责人，700+老系统改造挑战');
+  insertContact.run(6, '傅杰', '流程信息化总部AI工程部部长', 'AI工程部', '管理层', '', '', 0, '关注跨session记忆安全边界');
+  insertContact.run(6, '丛洋', '流程信息化总部架构师', 'IT架构', '执行层', '', '', 0, 'IT架构设计');
+  insertContact.run(6, '苏曙', '流程信息化总部算法工程师', '算法部', '执行层', '', '', 0, '算法与AI技术');
+  insertContact.run(6, '张汝珊', '人力资源总部产品经理', 'HR部', '执行层', '', '', 0, 'AI产品对接，探讨龙虾配置逻辑');
+  insertContact.run(6, '毛导钦', '三一重能人力资源本部总监', '三一重能HR', '管理层', '', '', 0, '重能HR负责人');
+  insertContact.run(6, '刘强', '重能人资人才发展部部长', '三一重能HR', '管理层', '', '', 0, '组织发展与人才');
+  insertContact.run(6, '王志奎', '重能人资人才发展高级经理', '三一重能HR', '执行层', '', '', 0, '人才发展管理');
+  insertContact.run(6, '可乐', 'AI超级玩家(前阿里)', '内部布道者', '执行层', '', '', 0, '内部AI布道者，主力工具Claude Code，提出token归属问题');
+  insertContact.run(6, '孟超峰', '树根互联高级产品专家', '树根互联', '执行层', '', '', 0, '工业互联网产品(外部伙伴)');
+  insertContact.run(6, '刘静(Elva)', '大客户负责人(明略)', '客户成功', '管理层', '', '', 0, '8/26交流会主持，整体策略把控');
+  insertContact.run(6, '叶佳', 'AI Coding(明略)', '技术部', '执行层', '', '', 0, '8/26交流会参会(OctoPush演示)');
+
+  // 三一 W37/W38 周报
+  insertReport.run(6, 'weekly', '2026-W37',
+    '三一8/26首次深度交流5.5h成果显著！张名全(HR总监)明确三步走AI转型计划，龙瑶(SSC部长)主导发薪端到端试点',
+    '1. 8/26深度交流会5h37min：明略刘静主持+徐浩HR一号位+辉哥11点后到场+叶佳+玉平；三一张名全/龙瑶/王华/傅杰等约11人\n2. 完整展示Octo平台+AI组织转型理论(L0-L5)+吉利/宇通案例\n3. 张名全明确三步走：①数字员工建设(个人经验→组织资产)②AI嵌入业务(端到端流程改造，龙瑶主导发薪试点)③经营体AI化转型(AI原生5万人)\n4. 张名全关键判断："脊背发凉的紧迫感，若落后未来5-10年可能被淘汰"\n5. 客户提出5项产研交流诉求：产品架构/记忆管理/Agent鉴权/Agent协作/系统集成\n6. 客户现状：700+老系统，仅几百人用AI月均Token30万，点状应用省力未省人',
+    '需要威少+梦林10月安排产研交流回复5项技术议题',
+    '徐浩HR线持续跟进，叶佳AI Coding支持',
+    '5项技术议题暂无正式回复，计划10月吉利案例出结果后以实战数据支撑回答',
+    '9月维持联系不主动推进，10月初辉哥培训待确认，准备吉利POC结果作为案例支撑');
+  insertReport.run(6, 'weekly', '2026-W38',
+    '三一9/2-9/14：确认10月邀辉哥做半天培训→9/17🔥重大升级梁在中(总监事长/创始人之子)亲自牵头！从50人培训→几百人广州分享',
+    '1. 9/2三一提出5项产研交流诉求，明略表态10月推进\n2. 9/7周会确认9月暂缓主动推进等吉利POC结果\n3. 9/14周会更新：确认10月邀辉哥做半天培训(原定50人高管培训)\n4. 🔥9/17重大升级：梁在中(集团总监事长/创始人梁稳根之子/集团实际决策核心)亲自牵头！10月第一周邀辉哥去广州做分享，参会规模升级为各部门一把手+核心人员几百人\n5. 从"张名全HR线推动"→"集团最高层亲自牵头"，规模从50人→几百人\n6. 龙瑶已主导发薪全流程端到端试点\n7. 多语言Agent分身是三一全球化差异化亮点',
+    '需要辉哥确认10月广州分享日期和材料准备方向(AI原生转型+吉利/三一案例+Octo愿景)',
+    '玉平协调辉哥行程和分享材料(章鱼烧协助)；威少+梦林准备5项技术议题回复',
+    '5项技术议题若10月不能给出答复，窗口期可能浪费',
+    '本周确认辉哥广州分享具体日期/议程/材料需求；9月底前准备好分享材料；10月安排产研交流');
+
+  // --- 7. 极光湾 补充联系人(全景报告提取) ---
+  insertContact.run(7, '鹏飞', '研发AI专项牵头人', '研发AI', '管理层', '', '', 1, '"夹心层"上承领导要求下接工程师需求，与杭总密切配合，8/27出席');
+  insertContact.run(7, '陶总', '数字化中心负责人', '数字化中心', '管理层', '', '', 0, 'AI运营官/浩思集团AI大旗负责人，要求团队80人看辉哥视频');
+  insertContact.run(7, '杭渝峰(Tony/杭总)', 'CIO', 'IT部', '决策层', '', '', 0, 'CIO，公司级数据治理专项负责人，直汇赵福成');
+  insertContact.run(7, '张进科(金科)', 'AI大数据团队负责人', 'AI大数据', '执行层', '', '', 0, '陶总直属偏技术脑，在极光湾Octo群');
+  insertContact.run(7, '汪明月', '副院长', '研究院', '管理层', '', '', 0, '在极光湾Octo群');
+  insertContact.run(7, '郝玉坤(郝总)', '研发高管', '研发部', '管理层', '', '', 0, '研发相关高管，8/27出席');
+  insertContact.run(7, '郝林', '高管', '管理层', '管理层', '', '', 0, '8/27出席(职位待确认)');
+  insertContact.run(7, '任杰', '研发人员', '研发部', '执行层', '', '', 0, '8/27会议中途13:12到场');
+  insertContact.run(7, '孙芳', '研发人员', '研发部', '执行层', '', '', 0, '研发人员');
+  insertContact.run(7, '孙建兵', '新能源电控系统开发专家', '数据治理项目组', '执行层', '', '', 0, '杭总下属数据治理项目组');
+  insertContact.run(7, '李梦林/王怡琳/辛毅', '技术团队(明略)', '技术部', '执行层', '', '', 0, '9月整月长驻四期工位');
+
+  // 极光湾 W37/W38 周报
+  insertReport.run(7, 'weekly', '2026-W37',
+    '极光湾8/27首次深度交流2h确认：必须私有化+7场景+尾随AIC战术+原动力9月切入口+技术负责人9月整月长驻',
+    '1. 起点：赵福成看了晚点关于明略AI native组织的文章后认同理念\n2. 8/27首次深度交流(13:08-14:54)四期极客空间，明略刘静早班机+威少+技术负责人；极光湾鹏飞/陶总/杭渝峰/张进科/郝玉坤/郝林/任杰/孙芳出席\n3. 核心确认：①必须私有化部署(研发数据红线)②每人配数字分身③工作全程在Octo发生(知识留存于己)④原动力(敏态协作)为9月重点切入口⑤尾随AIC战术(AIC击穿什么就copy什么)⑥技术负责人9月整月长驻\n4. 7大场景确认：原动力/会议Agent/研发AI/数据治理/BPM/端侧模型COA-BOA/数字员工商品化\n5. 赵福成(一把手)要求40+管理层全员打卡辉哥领航班视频；陶总要求团队80人也看完',
+    '需确认吉利POC结项时间线，极光湾完全依赖吉利AIC进展',
+    '技术团队9月长驻四期工位做方案细化',
+    '吉利POC未结项前方案无法最终定稿',
+    '技术负责人驻场细化原动力方案，等吉利POC复盘后10月正式启动');
+  insertReport.run(7, 'weekly', '2026-W38',
+    '极光湾技术负责人9月驻场准备推进中，赵福成40+管理层打卡辉哥视频持续进行，Octo空间6用户(鹏飞+Tony)0agent待推进',
+    '1. 技术团队(李梦林/王怡琳/辛毅)9月整月长驻四期工位\n2. 与数字化团队+研发AI专项组细化原动力场景方案\n3. 杭总(CIO)推进数据治理AI化专项\n4. 陈博(AIC负责人)团队co-work中，尾随吉利AIC路径\n5. 当前Octo空间6用户(含鹏飞和Tony/杭总)，0个agent待推进\n6. 明确"不做先行探索"策略——AIC击穿什么就copy什么',
+    '需要吉利POC结项复盘输出，作为极光湾方案基础',
+    '刘静统筹吉利-极光湾资源，威少方案复用吉利材料',
+    '0个agent说明尚未进入实际使用阶段，需原动力场景上线激活',
+    '完成吉利POC复盘后10月正式启动，推动首批agent上线');
+
+  // --- 2. 南孚电池 补充联系人(全景报告提取) ---
+  insertContact.run(2, '南孚CMO', 'CMO', '管理层', '决策层', '', '', 1, '二号位，前宝洁背景，辉哥已沟通认可度高');
+  insertContact.run(2, '梁红莹', '总经理', '管理层', '决策层', '', '', 0, '总经理，曾拍板PR但未直接接触明略');
+  insertContact.run(2, '雷佳乐', 'AI高级工程师(数字化部门)', '数字化部', '执行层', '', '', 0, '当前对接人，8/31接替离职的宋志平，偏技术背景');
+  insertContact.run(2, '宋志平', '原对接人(已离职)', '数字化部', '执行层', '', '', 0, '原对接人已离职，曾用线下物流项目测试Octo');
+  insertContact.run(2, '杨小天', '项目参与', '项目组', '执行层', '', '', 0, '客户架构表记录');
+  insertContact.run(2, 'Nicole(徐孝敏)', '华东销售(明略)', '销售部', '执行层', '', '', 0, '合同商务侧跟进');
+  insertContact.run(2, '贾彤', '场景引导(明略)', '场景方案', '执行层', '', '', 0, '产出场景引导文档');
+  insertContact.run(2, '刘静(Elva)', 'PR推进(明略)', '市场部', '管理层', '', '', 0, '9/22起直接对接推进PR事项');
+
+  // 南孚 W37/W38 周报
+  insertReport.run(2, 'weekly', '2026-W37',
+    '南孚9/7合同双方盖章归档！两年20万合同正式生效，部署窗口9/7-9/18，首批场景确认3C研发+600人销售知识问答',
+    '1. 9/3姜平在主群催合同"紧点"\n2. 9/7合同双方盖章归档，两年20万合同正式生效\n3. 部署窗口确定9/7-9/18\n4. 首批场景确认：①3C团队产品研发(深圳)②600人销售知识问答(产品管家调用自研知识库)\n5. 客户对octic私有化也感兴趣，已同步Nicole和孔老师\n6. 回顾：6/9建区→6/17常晓飞首次现场→7/3法务审核通过→7/22姜平升级推动辉哥对接CEO/CMO→8/31对接人变更雷佳乐接替离职宋志平',
+    '需要部署资源到位确保9/7-9/18窗口',
+    '常晓飞驻场部署，Nicole合同跟进，贾彤场景引导',
+    '',
+    '9/18前完成部署，首批3C研发+销售知识问答场景上线');
+  insertReport.run(2, 'weekly', '2026-W38',
+    '南孚9/14收到资源清单+账户权限部署进行中，9/22刘静介入推进PR案例，姜平风险提示"预期过高年底功能补不全"',
+    '1. 9/14收到南孚资源清单+账户权限，测试环境搭建中\n2. 9/14-20部署进行中，预计本周完成部署下周调试\n3. 9/22确认Octo暂不提供会议功能客户已知晓\n4. 刘静9/22起直接对接南孚推进PR事项，快速转化案例为可发布内容\n5. 10个场景识别完成：首批3C研发+销售知识问答；潜力AtoA石墨烯案例；待激活龙虾管理/L0-L3分级/Skill Hub/非技术引导/秒针MCP电商/octic会议/项目看板\n6. ⚠️姜平风险研判："南孚预期过高，年底功能都补不全"——客户愿景是替代三套协同工具(钉钉/飞书/企微)统一入口，现阶段产品能力无法全面支撑需引导聚焦可落地场景',
+    '需要引导客户聚焦可落地场景(3C研发+销售问答)，不要过度承诺替代三套协同工具',
+    '刘静PR推进，常晓飞部署，贾彤场景引导文档',
+    '客户预期过高(替代钉飞企微)vs产品能力有差距；腾讯Hermes是竞品',
+    '完成首批2场景上线调试，AtoA石墨烯案例开发，PR案例材料准备');
+
+  // ===== 22家新客户的报告和联系人 =====
+
+  // 18. 曼伦
+  insertReport.run(18, 'weekly', '2026-W39', '曼伦S级客户on hold，信息极少待叶佳补充客户全貌，明确on hold原因后制定激活策略', 'S级评级(高付费潜力)但当前on hold，客户行业/规模/核心需求/联系人等关键信息均缺失。需叶佳补充完整信息。', '需要叶佳补充客户完整信息', '', '信息极少+on hold原因不明', 'P0叶佳补充客户完整信息；P1明确on hold原因制定激活策略；S级客户每月至少一次主动触达');
+  insertContact.run(18, '叶佳', '客户对接(明略)', '客户成功', '执行层', '', '', 0, '明略方负责人');
+
+  // 19. PPIO
+  insertReport.run(19, 'weekly', '2026-W39', 'PPIO攻坚后停滞，11人+2Agent但无活跃使用，刘静需重新接触了解AI协同实际需求，探索算力+Agent平台生态合作', '边缘计算/分布式GPU云平台，11人+2Agent开通后缺乏杀手级场景。核心业务与Octo协同定位场景交叉点不清晰。潜在机会：PPIO提供算力+Octo提供Agent平台有互补可能。', '', '', '攻坚后无实质性进展；场景匹配度待验证；11人+2Agent无使用惯性', '刘静重新接触客户，探索算力+Agent生态合作可能，识别1个高价值场景做Demo激活');
+  insertContact.run(19, '刘静(Elva)', '大客户经理(明略)', '客户成功', '管理层', '', '', 0, '明略方负责人');
+
+  // 20. 联合影像
+  insertReport.run(20, 'weekly', '2026-W39', '联合影像(Kickers.ai)飞书迁移策略确定(新项目Octo/老项目飞书)，使用深度极浅需推动Octopush安装+新项目落地', '医疗AI 10+人团队，对接人刘应龙/新意/青山。7/15仅3条人类消息0条bot协作。竞品在用飞书/OpenClaw/Cloud Code/CodeBuddy。潜在商机：统一模型网关(5%模型调用差价)。', '', '贾叔推动Octopush重新安装', '飞书使用惯性极大；使用深度不足；多工具并行分散注意力', '推动Octopush重新安装→发吉利分享录屏→推动产研用Octo跑新项目→模型网关商务方案');
+  insertContact.run(20, '刘应龙', '客户对接人', 'AI研发', '执行层', '', '', 0, '客户对接人');
+  insertContact.run(20, '新意', '客户对接人', 'AI研发', '执行层', '', '', 0, '客户对接人');
+  insertContact.run(20, '青山', '客户对接人', 'AI研发', '执行层', '', '', 0, '客户对接人');
+  insertContact.run(20, '贾金良(贾叔)', 'SDR(明略)', 'SDR', '执行层', '', '', 0, '明略方负责人');
+
+  // 21. 中金公司
+  insertReport.run(21, 'weekly', '2026-W39', '中金公司卉子资本市场渠道引入早期试用，跟进使用情况了解场景需求，鹏扬合同审核跑通后可复制', '金融证券行业，卉子引入早期试用阶段。公募基金合同审核场景(鹏扬)跑通后可复制到中金等同类金融客户。', '', '', '早期试用阶段场景待明确', '跟进使用情况，了解投研/证券场景需求');
+  insertContact.run(21, '卉子', '资本市场渠道(明略)', '渠道部', '执行层', '', '', 0, '明略方资本市场渠道负责人');
+
+  // 22. 华泰研究所
+  insertReport.run(22, 'weekly', '2026-W39', '华泰研究所卉子引入，研报/分析场景方向早期试用，跟进使用情况', '券商研究所研报AI辅助方向，卉子引入早期试用。鹏扬合同审核跑通后可复制。', '', '', '早期试用阶段场景需求待深入了解', '跟进使用情况，明确研报场景具体需求');
+  insertContact.run(22, '卉子', '资本市场渠道(明略)', '渠道部', '执行层', '', '', 0, '明略方资本市场渠道负责人');
+
+  // 23. 鹏扬基金
+  insertReport.run(23, 'weekly', '2026-W39', '🔥鹏扬基金升温中：8/18产品沟通会确认专家团+webhook方案，8/23刘静建子区，合同审核数字化需求清晰，多群webhook待验证', '对接人黄梦成(技术部)对产品理解快推动执行力强。方案确认：专家团(法务+财务+AI Bot编排)+webhook推送，SOP写在专家团指引，运行时云上2核2G虚拟机。卡点：私有化无Loop、多群webhook精准匹配待验证、商务模式未定。公募基金合同审核跑通可复制到中金/华泰。', '需要明确商务模式(SaaS按量or私有化)，注意私有化无Loop问题', '玉平完成多群webhook测试；贾叔跟进专家团试用', '多群webhook技术方案未跑通；私有化无Loop；商务模式未定', 'P0玉平完成多群webhook匹配测试→P1跟进黄梦成试用反馈→P2明确商务模式');
+  insertContact.run(23, '黄梦成', '技术部', '技术部', '执行层', '', '', 1, '客户对接人，技术部对产品理解快执行力强');
+  insertContact.run(23, '赵玉平', 'BD(明略)', '市场部', '执行层', '', '', 0, '明略方BD，对接卉子拉群');
+  insertContact.run(23, '卉子', '资本市场渠道(明略)', '渠道部', '执行层', '', '', 0, '渠道引入');
+
+  // 24. 卓望
+  insertReport.run(24, 'weekly', '2026-W38', '卓望(中国移动子公司)SaaS接入问题已解决但后续停滞，贾彤需联系李奕诺了解停滞原因安排培训', 'Onboarding B级客户，对接人李奕诺。客户对产品感兴趣想培训+产品合作，SaaS版bot接入困难已远程解决。', '', '', '解决问题后客户未推进；央企决策链长', '贾彤联系李奕诺了解停滞原因→安排培训→明确合作模式');
+  insertContact.run(24, '李奕诺', '客户对接人', '', '执行层', '', '', 0, '客户对接人');
+  insertContact.run(24, '贾彤', '早期客户(明略)', '销售部', '执行层', '', '', 0, '明略方负责人');
+
+  // 25. 祥承
+  insertReport.run(25, 'weekly', '2026-W38', '祥承pending angelclaw尚未开始，等客户侧明确需求', 'pending状态，叶佳负责，信息极少尚未开始推进。', '', '', '尚未开始无信息', '等待客户侧明确需求');
+  insertContact.run(25, '叶佳', '客户对接(明略)', '技术对接', '执行层', '', '', 0, '明略方负责人');
+
+  // 26. 欢瑞世纪
+  insertReport.run(26, 'weekly', '2026-W38', '欢瑞世纪51只虾仅2活跃，9月从C类降级D类，预算有限+场景空泛+飞书阻力，评估是否继续投入', '200+员工上市影视公司，私有化部署+培训完成。董秘Agent/CEO全景/录音豆三个方向停在概念阶段。若继续投入聚焦董秘Agent单场景做MVP。郭颂解决安装问题。', '', '', '预算有限；场景空泛；飞书迁移阻力大；51虾仅2活跃', '评估投入产出比→如继续聚焦董秘Agent单场景MVP');
+  insertContact.run(26, '郭颂', '技术支持(明略)', '技术部', '执行层', '', '', 0, '明略方技术支持，解决安装问题');
+  insertContact.run(26, '赵玉平', 'BD(明略)', '市场部', '执行层', '', '', 0, '明略方负责人');
+
+  // 27. 青钜科技
+  insertReport.run(27, 'weekly', '2026-W38', '青钜科技私有化完成但Loop未用，"部署≠使用"教训，待安排Loop培训', '咨询/工程公司，私有化已完成但Loop未使用，客户对核心功能认知不足。与我思科技同类案例。', '', '', 'Loop未用=核心功能未体验；使用深度未知', '安排Loop培训→了解使用情况→明确商务方向');
+  insertContact.run(27, '郭松', '技术支持(明略)', '技术部', '执行层', '', '', 0, '明略方技术支持');
+  insertContact.run(27, '赵玉平', 'BD(明略)', '市场部', '执行层', '', '', 0, '明略方负责人');
+
+  // 28. 卓越教育
+  insertReport.run(28, 'weekly', '2026-W38', '卓越教育8/17周会新增商机，建群阶段待深入了解需求', '教育行业新商机，建群阶段，需求待确认。', '', '', '新商机需求未明确', '建群后深入了解客户需求');
+
+  // 29. 新世纪医疗
+  insertReport.run(29, 'weekly', '2026-W38', '新世纪医疗8/17周会新增，AI架构转型意向待确认具体需求', '医疗健康集团AI转型意向，与卓正/健主任形成医疗行业客户群。', '', '', 'AI转型意向但具体需求场景待确认', '跟进确认AI架构转型具体需求和场景');
+
+  // 30-39 战败/放弃客户报告
+  insertReport.run(30, 'weekly', '2026-W35', '得到确认放弃：飞书+自研AI成熟，Octo无法提供飞书生态内增量价值，对接人忙于新产品', '内部深度使用飞书+自研AI体系成熟，B级Onboarding客户放弃。飞书生态锁定无法突破。', '', '', '飞书生态+自研AI强锁定', '不继续投入，等飞书Aily无法满足多Agent时再考虑');
+  insertContact.run(30, '贾金良(贾叔)', 'SDR(明略)', 'SDR', '执行层', '', '', 0, '明略方负责人');
+
+  insertReport.run(31, 'weekly', '2026-W35', '流利说放弃：内网限制严格SaaS无法顺畅使用+部署方式不统一，试用后搁置', '内网对外部工具限制多，SaaS版无法顺畅使用；客户内部SaaS vs私有化没有明确决策。复活条件：标准化企业级部署方案解决内网兼容。', '', '', '内网限制+部署不统一', '等私有化方案成熟度提升后可重新推');
+  insertContact.run(31, '叶佳', '客户对接(明略)', '技术对接', '执行层', '', '', 0, '明略方负责人');
+
+  insertReport.run(32, 'weekly', '2026-W36', '我思科技放弃：私有化部署完成但使用停滞，"部署≠使用"典型案例', '私有化完成后客户内部未真正使用，缺乏内部推动力和场景。升级需求未推进自然搁置。教训：需建立"部署后30天激活"机制。', '', '', '私有化后无场景引导和使用培训', '客户主动提出升级需求时可跟进，已有私有化基础复活门槛低');
+  insertContact.run(32, '贾金良(贾叔)', 'SDR(明略)', 'SDR', '执行层', '', '', 0, '明略方负责人');
+
+  insertReport.run(33, 'weekly', '2026-W34', '元梦灵境放弃：开通后完全沉寂无任何使用', '开通账号后完全无使用，无内部推动者无明确需求。', '', '', '开通后完全沉寂', '不投入资源，等客户主动激活');
+  insertContact.run(33, '贾金良(贾叔)', 'SDR(明略)', 'SDR', '执行层', '', '', 0, '明略方负责人');
+
+  insertReport.run(34, 'weekly', '2026-W34', '云迹科技放弃：攻坚后停滞，未找到酒店/机器人场景切入点', '机器人/酒店科技公司，攻坚后无后续进展。', '', '', '场景匹配度不足，未找到切入点', '找到酒店/机器人场景切入点时可重新接触');
+
+  insertReport.run(35, 'weekly', '2026-W20', '北京破圈放弃：内部BU非外部客户，缺乏商务驱动力停滞(最后活跃5/9)', '明略内部BU(营销/代运营)非外部客户，推进缺乏商务驱动力，内部协调成本高。子区最后活跃5/9超4个月无消息。教训：内部BU需明确业务价值和管理层推动。', '', '', '内部BU无商务驱动力', '不继续投入，除非有新内部战略方向');
+  insertContact.run(35, '孙方超', '内部引荐(明略)', '内部', '执行层', '', '', 0, '杨三角关系/沙龙邀请函引入');
+  insertContact.run(35, '贾金良(贾叔)', 'SDR(明略)', 'SDR', '执行层', '', '', 0, '明略方跟进');
+
+  insertReport.run(36, 'weekly', '2026-W34', '香港中企放弃：第三梯队SaaS试用信息极少需求不明无实质进展', '第三梯队SaaS试用后无反馈无进展，信息极少。教训：第三梯队客户不过度投入资源。', '', '', '信息极少需求不明', '不投入资源，客户主动提出明确需求时再接触');
+  insertContact.run(36, '张晓(Amy)', '大客户经理(明略)', '客户成功', '执行层', '', '', 0, '明略方负责人');
+
+  insertReport.run(37, 'weekly', '2026-W34', '海归爸爸放弃：教育行业第三梯队SaaS无实质进展需求未建立', '第三梯队SaaS试用后无反馈。', '', '', '需求未建立', '不投入资源');
+
+  insertReport.run(38, 'weekly', '2026-W34', '51World放弃：数字孪生/元宇宙冷接触无后续，行业遇冷', '冷接触无反馈，数字孪生/元宇宙行业本身遇冷。', '', '', '冷接触无需求+行业遇冷', '不投入资源，行业回暖+客户有需求时再接触');
+
+  insertReport.run(39, 'weekly', '2026-W30', '西门子放弃：杨三角关系线索(沙龙邀请函)非销售驱动，2周未建商务接触即流失', '7/1孙方超群发西门子沙龙邀请函，辉哥问"谁去讲课"后无下文。仅停留在沙龙邀请层面，未建立任何实质性商务接触。教训：关系型线索2周内必须建立商务对接否则流失！', '', '', '关系型引荐非客户主动需求；未建立有效对接', '通过杨三角关系搭线需找到对的人和对的场景，西门子体量巨大价值极高');
+  insertContact.run(39, '孙方超', '关系引荐(明略)', '内部', '执行层', '', '', 0, '杨三角关系引入，发沙龙邀请函');
 });
 insertSampleData();
 
