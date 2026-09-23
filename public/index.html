@@ -382,6 +382,22 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .stage-dist-link:hover{color:var(--accent-light)}
 .stage-dist-link .sdl-arrow{font-size:11px;color:var(--text-muted);transition:transform .15s}
 .stage-dist-link:hover .sdl-arrow{color:var(--accent-light);transform:translateX(2px)}
+
+/* Contact org chart grouping */
+.contact-group{margin-bottom:16px}
+.contact-group-header{padding:8px 12px;font-weight:600;font-size:13px;border-radius:6px 6px 0 0;display:flex;align-items:center;gap:8px}
+.contact-group-header.cg-decision{background:rgba(239,68,68,.1);border-left:3px solid var(--danger);color:#f87171}
+.contact-group-header.cg-management{background:rgba(245,158,11,.1);border-left:3px solid var(--warning);color:#fbbf24}
+.contact-group-header.cg-execution{background:rgba(59,130,246,.1);border-left:3px solid var(--accent);color:#60a5fa}
+.contact-group-body{background:var(--bg-card);border:1px solid var(--border);border-top:none;border-radius:0 0 6px 6px;padding:8px}
+.contact-person-card{padding:10px 12px;border-bottom:1px solid rgba(51,65,85,.3);display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.contact-person-card:last-child{border-bottom:none}
+.cpc-name{font-weight:600;font-size:14px;display:flex;align-items:center;gap:6px}
+.cpc-champion{color:#fbbf24;font-size:12px}
+.cpc-title{font-size:12px;color:var(--text-secondary)}
+.cpc-contact{font-size:11px;color:var(--text-muted);margin-left:auto}
+.cpc-notes{width:100%;font-size:11px;color:var(--text-muted);margin-top:4px}
+.cpc-actions{display:flex;gap:4px}
 </style>
 </head>
 <body>
@@ -1699,22 +1715,50 @@ function renderArContactsTab(){
   const tc=document.getElementById('ar-tab-content');
   const ha=document.getElementById('header-actions');
   ha.innerHTML=`<button class="btn btn-secondary" onclick="navigate('octo-summary')">← 返回</button><button class="btn btn-primary" onclick="openContactForm(null,${_accountReportData.id})">+ 新增联系人</button>`;
-  const roleColor={'决策层':'tag-red','管理层':'tag-yellow','执行层':'tag-blue'};
-  tc.innerHTML=`<div style="margin-bottom:16px"><button class="btn btn-primary" onclick="openContactForm(null,${_accountReportData.id})">+ 新增联系人</button></div>
-    <div class="card"><div class="table-wrap"><table>
-      <tr><th>姓名</th><th>职位</th><th>部门</th><th>级别</th><th>电话</th><th>邮箱</th><th>标记</th><th>备注</th><th>操作</th></tr>
-      <tbody>${_accountContacts.length?_accountContacts.map(c=>`<tr>
-        <td><strong>${esc(c.name)}</strong></td>
-        <td>${esc(c.title)||'—'}</td>
-        <td>${esc(c.department)||'—'}</td>
-        <td>${c.role_level?`<span class="tag ${roleColor[c.role_level]||'tag-gray'}">${esc(c.role_level)}</span>`:'—'}</td>
-        <td style="font-size:12px">${esc(c.phone)||'—'}</td>
-        <td style="font-size:12px">${esc(c.email)||'—'}</td>
-        <td>${c.is_champion?'<span class="champion-tag">⭐ Champion</span>':''}</td>
-        <td style="font-size:12px;color:var(--text-secondary);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.notes)||''}</td>
-        <td style="white-space:nowrap"><button class="btn btn-sm btn-secondary" onclick="openContactForm(${c.id},${c.account_id})">编辑</button> <button class="btn btn-sm btn-danger" onclick="if(confirm('确定删除？'))deleteContact(${c.id})">删除</button></td>
-      </tr>`).join(''):'<tr><td colspan="9"><div class="empty-state"><p>暂无联系人</p></div></td></tr>'}</tbody>
-    </table></div></div>`;
+  const contacts=_accountContacts||[];
+  const groups=[
+    {key:'决策层',icon:'👑',cls:'cg-decision'},
+    {key:'管理层',icon:'💼',cls:'cg-management'},
+    {key:'执行层',cls:'cg-execution',icon:'⚙️'}
+  ];
+  let html=`<div style="margin-bottom:16px"><button class="btn btn-primary" onclick="openContactForm(null,${_accountReportData.id})">+ 新增联系人</button></div>`;
+  if(!contacts.length){
+    html+=`<div class="card"><div class="empty-state"><p>暂无联系人</p></div></div>`;
+  }else{
+    groups.forEach(g=>{
+      const list=contacts.filter(c=>c.role_level===g.key);
+      if(!list.length) return;
+      html+=`<div class="contact-group">
+        <div class="contact-group-header ${g.cls}">${g.icon} ${g.key} (${list.length}人)</div>
+        <div class="contact-group-body">
+          ${list.map(c=>`<div class="contact-person-card">
+            <div class="cpc-name">${esc(c.name)}${c.is_champion?'<span class="cpc-champion">⭐</span>':''}</div>
+            <div class="cpc-title">${esc(c.title)||''}${c.department?' · '+esc(c.department):''}</div>
+            <div class="cpc-contact">${c.phone?esc(c.phone):''}${c.email?' · '+esc(c.email):''}</div>
+            ${c.notes?`<div class="cpc-notes">${esc(c.notes)}</div>`:''}
+            <div class="cpc-actions" style="margin-left:auto"><button class="btn btn-sm btn-secondary" onclick="openContactForm(${c.id},${c.account_id})">编辑</button> <button class="btn btn-sm btn-danger" onclick="if(confirm('确定删除？'))deleteContact(${c.id})">删除</button></div>
+          </div>`).join('')}
+        </div>
+      </div>`;
+    });
+    // Ungrouped (no role_level set)
+    const ungrouped=contacts.filter(c=>!c.role_level);
+    if(ungrouped.length){
+      html+=`<div class="contact-group">
+        <div class="contact-group-header" style="background:rgba(100,116,139,.1);border-left:3px solid var(--text-muted);color:var(--text-muted)">📋 未分级 (${ungrouped.length}人)</div>
+        <div class="contact-group-body">
+          ${ungrouped.map(c=>`<div class="contact-person-card">
+            <div class="cpc-name">${esc(c.name)}${c.is_champion?'<span class="cpc-champion">⭐</span>':''}</div>
+            <div class="cpc-title">${esc(c.title)||''}${c.department?' · '+esc(c.department):''}</div>
+            <div class="cpc-contact">${c.phone?esc(c.phone):''}${c.email?' · '+esc(c.email):''}</div>
+            ${c.notes?`<div class="cpc-notes">${esc(c.notes)}</div>`:''}
+            <div class="cpc-actions" style="margin-left:auto"><button class="btn btn-sm btn-secondary" onclick="openContactForm(${c.id},${c.account_id})">编辑</button> <button class="btn btn-sm btn-danger" onclick="if(confirm('确定删除？'))deleteContact(${c.id})">删除</button></div>
+          </div>`).join('')}
+        </div>
+      </div>`;
+    }
+  }
+  tc.innerHTML=html;
 }
 
 // Report CRUD
