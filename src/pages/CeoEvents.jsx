@@ -10,8 +10,10 @@ export default function CeoEvents() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    setHeader('🎤 活动和CEO获客',
-      <button className="btn btn-primary" onClick={() => navigate('/ceo-events/new')}>+ 新建活动</button>);
+    setHeader('🎤 活动和CEO获客', <>
+      <button className="btn btn-secondary" onClick={() => navigate('/ceo-events/data-logic')}>📐 取数逻辑</button>
+      <button className="btn btn-primary" onClick={() => navigate('/ceo-events/new')}>+ 新建活动</button>
+    </>);
     api('/api/events').then(d => setData(d)).catch(e => setError(e));
   }, []);
 
