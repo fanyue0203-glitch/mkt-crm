@@ -8,7 +8,7 @@ const dbPath = join(__dirname, 'data', 'mkt-crm.db');
 mkdirSync(join(__dirname, 'data'), { recursive: true });
 
 // Fresh schema — delete old db if exists
-if (existsSync(dbPath)) { try { unlinkSync(dbPath); } catch(e) {} }
+if (process.env.RESET_DB === '1' && existsSync(dbPath)) { try { unlinkSync(dbPath); } catch(e) {} }
 
 const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
