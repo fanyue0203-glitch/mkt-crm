@@ -174,26 +174,28 @@ db.exec(`
     UNIQUE(speech_id, account_id)
   );
 
-  -- SDR线索（漏斗数据）
+  -- SDR线索（漏斗数据）—— 字段对齐千寻SDR字段表
   CREATE TABLE IF NOT EXISTS leads (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    contact_name TEXT DEFAULT '',
+    company_name TEXT NOT NULL DEFAULT '',
+    contact_name TEXT NOT NULL DEFAULT '',
     contact_title TEXT DEFAULT '',
-    company TEXT DEFAULT '',
     phone TEXT DEFAULT '',
-    email TEXT DEFAULT '',
-    source_type TEXT DEFAULT '' CHECK(source_type IN ('event','speech','inbound','outbound','referral','')),
-    source_id INTEGER DEFAULT NULL,
-    source_name TEXT DEFAULT '',
-    account_id INTEGER DEFAULT NULL REFERENCES accounts(id) ON DELETE SET NULL,
-    stage TEXT DEFAULT 'raw' CHECK(stage IN ('raw','mql','sql','opportunity','won','lost')),
-    score INTEGER DEFAULT 0,
+    source_channel TEXT DEFAULT '',
+    source_detail TEXT DEFAULT '',
+    status TEXT DEFAULT 'new',
+    product TEXT DEFAULT '',
+    industry TEXT DEFAULT '',
+    team TEXT DEFAULT '',
     assigned_to TEXT DEFAULT '',
-    follow_up_status TEXT DEFAULT '待跟进',
-    next_action TEXT DEFAULT '',
-    next_action_date TEXT DEFAULT '',
-    ai_suggestion TEXT DEFAULT '',
-    notes TEXT DEFAULT '',
+    inbound_date TEXT DEFAULT '',
+    transfer_date TEXT DEFAULT '',
+    opportunity_id TEXT DEFAULT '',
+    opportunity_stage TEXT DEFAULT '',
+    deal_amount REAL DEFAULT 0,
+    lost_reason TEXT DEFAULT '',
+    requirement TEXT DEFAULT '',
+    account_id INTEGER DEFAULT NULL REFERENCES accounts(id) ON DELETE SET NULL,
     created_at TEXT DEFAULT (datetime('now','localtime')),
     updated_at TEXT DEFAULT (datetime('now','localtime')),
     created_by TEXT DEFAULT ''
@@ -295,13 +297,13 @@ db.exec(`
      '机器人行业从业者+投资人+媒体+政府官员',
      '技术社区内容二次分发（6篇+问答运营），把演讲观点转译成技术社区语言');
 
-  INSERT INTO leads (contact_name, company, source_type, source_name, stage, notes) VALUES
-    ('张经理', '嘉顿食品', 'event', '媒介力学·广州场', 'sql', '本周约产品会议，DOMO+微伴，预期PPL 10万'),
-    ('李总', '莲藕健康', 'event', '媒介力学·广州场', 'mql', 'GEO优化，预期PPL 20万'),
-    ('王总', '维他奶', 'event', '媒介力学·广州场', 'mql', 'AIGC需求，预期PPL 10万'),
-    ('刘经理', '徕芬', 'event', '媒介力学·广州场', 'raw', 'DOMO+妙啊，预期PPL 5万'),
-    ('赵总', '分众传媒', 'event', '媒介力学·广州场', 'raw', 'AdEff广告创意前测'),
-    ('陈经理', '玛氏箭牌', 'event', '媒介力学·广州场', 'raw', 'CVB数据方案+AI数字人');
+  INSERT INTO leads (company_name, contact_name, source_channel, source_detail, status, product, industry, inbound_date, requirement) VALUES
+    ('嘉顿食品', '张经理', '下午茶活动', '媒介力学·广州场', 'qualified', 'DOMO', '饮料', '2026-09-03', '本周约产品会议，DOMO+微伴，预期PPL 10万'),
+    ('莲藕健康', '李总', '下午茶活动', '媒介力学·广州场', 'contacted', 'GEO', '医药大健康', '2026-09-03', 'GEO优化，预期PPL 20万'),
+    ('维他奶', '王总', '下午茶活动', '媒介力学·广州场', 'contacted', 'AIGC', '食品饮料', '2026-09-03', 'AIGC需求，预期PPL 10万'),
+    ('徕芬', '刘经理', '下午茶活动', '媒介力学·广州场', 'new', 'DOMO', '美妆个护', '2026-09-03', 'DOMO+妙啊，预期PPL 5万'),
+    ('分众传媒', '赵总', '下午茶活动', '媒介力学·广州场', 'new', 'AdEff', '互联网', '2026-09-03', 'AdEff广告创意前测'),
+    ('玛氏箭牌', '陈经理', '下午茶活动', '媒介力学·广州场', 'new', 'CVB', '食品饮料', '2026-09-03', 'CVB数据方案+AI数字人');
 `);
 
 export default db;

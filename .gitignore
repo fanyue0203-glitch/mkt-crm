@@ -1,7 +1,6 @@
 node_modules/
-data/*.db
+*.log
+mkt-crm.db-shm
+mkt-crm.db-wal
 uploads/*
 !uploads/.gitkeep
-.env
-*.log
-.DS_Store

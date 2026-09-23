@@ -393,8 +393,8 @@ async function renderDashboard(){
           ${stats.recentLeads.length?`<table>
             <tr><th>姓名</th><th>公司</th><th>来源</th><th>阶段</th></tr>
             ${stats.recentLeads.map(l=>`<tr>
-              <td>${esc(l.contact_name)||'—'}</td><td>${esc(l.company)||'—'}</td>
-              <td>${sourceTag(l.source_type)}</td><td>${stageTag(l.stage)}</td>
+              <td>${esc(l.contact_name)||'—'}</td><td>${esc(l.company_name)||'—'}</td>
+              <td>${sourceTag(l.source_channel)}</td><td>${leadStatusTag(l.status)}</td>
             </tr>`).join('')}
           </table>`:'<div class="empty-state" style="padding:32px"><div class="icon">🔄</div><p>暂无线索</p><button class="btn btn-primary" onclick="navigate(\'import\')">📥 导入数据</button></div>'}
         </div>
@@ -402,10 +402,10 @@ async function renderDashboard(){
     </div>
   `;
 
-  if(stats.leads.byStage.length){
-    const so=['raw','mql','sql','opportunity','won','lost'];
-    const sd=so.map(s=>(stats.leads.byStage.find(x=>x.stage===s)||{c:0}).c);
-    charts.funnel=new Chart(document.getElementById('chart-funnel'),{type:'bar',data:{labels:so.map(stageName),datasets:[{label:'线索数',data:sd,backgroundColor:['#475569','#3b82f6','#8b5cf6','#f59e0b','#10b981','#ef4444'],borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0,color:'#64748b'},grid:{color:'rgba(51,65,85,.3)'}},x:{ticks:{color:'#64748b'},grid:{display:false}}}}});
+  if(stats.leads.byStatus&&stats.leads.byStatus.length){
+    const so=['new','contacted','qualified','opportunity','closed_won','closed_lost'];
+    const sd=so.map(s=>(stats.leads.byStatus.find(x=>x.status===s)||{c:0}).c);
+    charts.funnel=new Chart(document.getElementById('chart-funnel'),{type:'bar',data:{labels:so.map(leadStatusName),datasets:[{label:'线索数',data:sd,backgroundColor:['#475569','#3b82f6','#8b5cf6','#f59e0b','#10b981','#ef4444'],borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0,color:'#64748b'},grid:{color:'rgba(51,65,85,.3)'}},x:{ticks:{color:'#64748b'},grid:{display:false}}}}});
   }
   if(stats.accounts.byTier.length){
     charts.tiers=new Chart(document.getElementById('chart-tiers'),{type:'doughnut',data:{labels:stats.accounts.byTier.map(t=>t.tier+' 级'),datasets:[{data:stats.accounts.byTier.map(t=>t.c),backgroundColor:stats.accounts.byTier.map(t=>({'S':'#ef4444','A':'#f97316','B':'#3b82f6','C':'#64748b'}[t.tier])),borderWidth:0,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#94a3b8',padding:16}}}}});
@@ -801,36 +801,236 @@ async function saveAccount(ev,id){
 }
 
 // ===== FUNNEL =====
+let funnelSubTab='overview';
 async function renderFunnel(){
   const content=document.getElementById('content');
-  let data;try{data=await api('/api/leads/funnel')}catch(e){content.innerHTML=err(e);return}
+  const ha=document.getElementById('header-actions');
+  ha.innerHTML=`<button class="btn btn-secondary" onclick="if(confirm('确定清空所有线索数据？清空后需重新导入。'))clearAllLeads()">🗑️ 清空线索</button><button class="btn btn-sm btn-primary" onclick="openLeadForm()">+ 新建线索</button><button class="btn btn-primary" onclick="navigate('import')">📥 导入数据</button>`;
+  content.innerHTML='<div class="tabs" id="funnel-tabs"><div class="tab '+(funnelSubTab==='overview'?'active':'')+' " onclick="switchFunnelTab(this,\'overview\')">📊 漏斗概览</div><div class="tab '+(funnelSubTab==='leads'?'active':'')+' " onclick="switchFunnelTab(this,\'leads\')">📋 Leads 明细</div></div><div id="funnel-content"></div>';
+  if(funnelSubTab==='leads'){renderLeadsDetail();return}
+  const fc=document.getElementById('funnel-content');
+  let data;try{data=await api('/api/leads/funnel')}catch(e){fc.innerHTML=err(e);return}
+  const k=data.kpi||{};
   const maxC=Math.max(...data.funnel.map(s=>s.count),1);
-  const totalActive=data.funnel.filter(s=>s.stage!=='lost').reduce((a,s)=>a+s.count,0);
-  const colors={raw:'#475569',mql:'#3b82f6',sql:'#8b5cf6',opportunity:'#f59e0b',won:'#10b981',lost:'#ef4444'};
+  const mainFunnel=data.funnel.filter(s=>s.status!=='closed_lost');
+  const lostCount=(data.funnel.find(s=>s.status==='closed_lost')||{count:0}).count;
+  const colors={new:'#475569',contacted:'#3b82f6',qualified:'#8b5cf6',opportunity:'#f59e0b',closed_won:'#10b981',closed_lost:'#ef4444'};
+  const srcColors=['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ec4899','#ef4444','#06b6d4','#84cc16','#f97316','#6366f1'];
 
-  content.innerHTML=`
-    <div class="stats-grid" style="margin-bottom:20px">
-      ${[{v:totalActive,l:'活跃线索',c:'var(--accent)'},{v:(data.funnel.find(s=>s.stage==='mql')||{count:0}).count,l:'MQL',c:'var(--info)'},{v:(data.funnel.find(s=>s.stage==='sql')||{count:0}).count,l:'SQL',c:'var(--warning)'},{v:(data.funnel.find(s=>s.stage==='won')||{count:0}).count,l:'成交',c:'var(--success)'}].map(s=>`<div class="stat-card"><div class="accent-bar" style="background:${s.c}"></div><div class="stat-value" style="color:${s.c}">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('')}
+  fc.innerHTML=`
+    <div class="stats-grid" style="margin-bottom:20px;grid-template-columns:repeat(6,1fr)">
+      ${[{v:fmtNum(k.total),l:'总进线量',c:'var(--accent)'},{v:fmtNum(k.qualifiedCount),l:'转出线索数',c:'var(--info)'},{v:k.transferRate+'%',l:'转出率',c:'#8b5cf6'},{v:fmtNum(k.total-(lostCount||0)),l:'有效线索数',c:'var(--success)'},{v:fmtNum(k.opportunityCount),l:'商机数',c:'var(--warning)'},{v:k.totalDeal?k.totalDeal+'万':'0',l:'成单金额',c:'#ec4899'}].map(s=>`<div class="stat-card"><div class="accent-bar" style="background:${s.c}"></div><div class="stat-value" style="color:${s.c}">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('')}
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-      <div class="card"><div class="card-header"><h3>漏斗视图</h3></div><div class="card-body">
-        <div class="funnel">${data.funnel.filter(s=>s.stage!=='lost').map(s=>{
+      <div class="card"><div class="card-header"><h3>🔄 漏斗视图</h3></div><div class="card-body">
+        <div class="funnel">${mainFunnel.map(s=>{
           const pct=Math.max(s.count/maxC*100,4);
-          return `<div class="funnel-stage"><div class="funnel-label">${s.name}</div><div style="flex:1"><div class="funnel-bar" style="width:${pct}%;background:${colors[s.stage]}"></div></div><div class="funnel-count" style="color:${colors[s.stage]}">${s.count}</div><div class="funnel-pct">${totalActive>0?(s.count/totalActive*100).toFixed(0)+'%':'—'}</div></div>`;
+          const convRate=k.total>0?(s.count/k.total*100).toFixed(1)+'%':'—';
+          return `<div class="funnel-stage"><div class="funnel-label">${s.name}</div><div style="flex:1"><div class="funnel-bar" style="width:${pct}%;background:${colors[s.status]}"></div></div><div class="funnel-count" style="color:${colors[s.status]}">${s.count}</div><div class="funnel-pct">${convRate}</div></div>`;
         }).join('')}</div>
-        ${(data.funnel.find(s=>s.stage==='lost')||{count:0}).count?`<div style="margin-top:16px;padding:12px;background:var(--danger-bg);border:1px solid rgba(239,68,68,.2);border-radius:var(--radius);font-size:13px;color:var(--danger)">❌ 流失: ${data.funnel.find(s=>s.stage==='lost').count} 条</div>`:''}
+        ${lostCount?`<div style="margin-top:16px;padding:12px;background:var(--danger-bg,rgba(239,68,68,.08));border:1px solid rgba(239,68,68,.2);border-radius:var(--radius);font-size:13px;color:var(--danger,#ef4444)">❌ 无效/丢单: ${lostCount} 条</div>`:''}
       </div></div>
-      <div class="card"><div class="card-header"><h3>来源分布</h3></div><div class="card-body">
-        ${data.bySource.length?'<div class="chart-container"><canvas id="chart-source"></canvas></div>':'<div class="empty-state" style="padding:24px"><p>暂无来源数据</p></div>'}
+      <div class="card"><div class="card-header"><h3>📊 来源渠道分布</h3></div><div class="card-body">
+        ${data.bySource&&data.bySource.length?'<div class="chart-container"><canvas id="chart-source"></canvas></div>':'<div class="empty-state" style="padding:24px"><p>暂无来源数据</p></div>'}
       </div></div>
     </div>
-    <div class="card" style="margin-top:16px"><div class="card-header"><h3>📋 说明</h3></div><div class="card-body" style="font-size:13px;color:var(--text-secondary);line-height:1.8">
-      SDR漏斗的数据来源于三个业务板块的留资：<strong>Event活动</strong>、<strong>辉哥演讲获客</strong>、<strong>Octo大客户拓展</strong>。每条线索通过 account_id 与目标客户关联，形成完整客户旅程追踪。
+    <div class="card" style="margin-top:16px"><div class="card-header"><h3>📈 月度趋势（进线 vs 转出）</h3></div><div class="card-body">
+      ${data.monthlyTrend&&data.monthlyTrend.length?'<div class="chart-container" style="height:280px"><canvas id="chart-monthly"></canvas></div>':'<div class="empty-state" style="padding:24px"><p>暂无月度数据（需要 inbound_date 字段）</p></div>'}
+    </div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+      <div class="card"><div class="card-header"><h3>🏷️ 需求产品 Top10</h3></div><div class="card-body">
+        ${data.byProduct&&data.byProduct.length?renderHBars(data.byProduct,'#3b82f6'):'<div class="empty-state" style="padding:24px"><p>暂无产品数据</p></div>'}
+      </div></div>
+      <div class="card"><div class="card-header"><h3>🗺️ 区域/团队分布</h3></div><div class="card-body">
+        ${data.byTeam&&data.byTeam.length?renderHBars(data.byTeam,'#8b5cf6'):'<div class="empty-state" style="padding:24px"><p>暂无区域数据</p></div>'}
+      </div></div>
+    </div>
+    <div class="card" style="margin-top:16px"><div class="card-header"><h3>📋 最近线索</h3></div><div class="card-body" style="padding:0">
+      ${data.recentLeads&&data.recentLeads.length?`<div class="table-wrap"><table><tr><th>公司</th><th>联系人</th><th>来源渠道</th><th>需求产品</th><th>分配人</th><th>进线日期</th><th>状态</th></tr>
+        ${data.recentLeads.map(l=>`<tr><td>${esc(l.company_name)||'—'}</td><td>${esc(l.contact_name)||'—'}</td><td>${sourceTag(l.source_channel)}</td><td>${esc(l.product)||'—'}</td><td>${esc(l.assigned_to)||'—'}</td><td>${l.inbound_date||'—'}</td><td>${leadStatusTag(l.status)}</td></tr>`).join('')}
+      </table></div>`:'<div class="empty-state" style="padding:32px"><div class="icon">🔄</div><p>暂无线索数据</p><button class="btn btn-primary" onclick="navigate(\'import\')">📥 导入数据</button></div>'}
     </div></div>`;
-  if(data.bySource.length){
-    const sn={event:'活动',speech:'演讲',inbound:'自然流入',outbound:'主动拓展',referral:'转介绍'};
-    charts.source=new Chart(document.getElementById('chart-source'),{type:'doughnut',data:{labels:data.bySource.map(s=>sn[s.source_type]||s.source_type),datasets:[{data:data.bySource.map(s=>s.c),backgroundColor:['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ec4899'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#94a3b8',padding:12}}}}});
+
+  // Source channel doughnut chart
+  if(data.bySource&&data.bySource.length){
+    charts.source=new Chart(document.getElementById('chart-source'),{type:'doughnut',data:{labels:data.bySource.map(s=>s.name),datasets:[{data:data.bySource.map(s=>s.count),backgroundColor:srcColors.slice(0,data.bySource.length),borderWidth:0,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#94a3b8',padding:12}}}}});
   }
+  // Monthly trend line chart
+  if(data.monthlyTrend&&data.monthlyTrend.length){
+    const months=data.monthlyTrend.map(m=>m.month);
+    const totals=data.monthlyTrend.map(m=>m.total);
+    const transferred=data.monthlyTrend.map(m=>m.transferred);
+    const rates=data.monthlyTrend.map(m=>m.total>0?(m.transferred/m.total*100).toFixed(1):0);
+    charts.monthly=new Chart(document.getElementById('chart-monthly'),{type:'bar',data:{labels:months,datasets:[{type:'bar',label:'进线量',data:totals,backgroundColor:'rgba(59,130,246,.6)',borderRadius:4,order:2},{type:'bar',label:'转出量',data:transferred,backgroundColor:'rgba(139,92,246,.6)',borderRadius:4,order:2},{type:'line',label:'转出率%',data:rates,borderColor:'#10b981',backgroundColor:'rgba(16,185,129,.1)',tension:.3,yAxisID:'y1',pointRadius:4,pointBackgroundColor:'#10b981',order:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#94a3b8'}}},scales:{y:{beginAtZero:true,ticks:{color:'#64748b',precision:0},grid:{color:'rgba(51,65,85,.3)'}},y1:{position:'right',beginAtZero:true,max:100,ticks:{color:'#10b981',callback:v=>v+'%'},grid:{display:false}},x:{ticks:{color:'#64748b'},grid:{display:false}}}}});
+  }
+}
+function renderHBars(items,color){
+  const max=Math.max(...items.map(i=>i.count),1);
+  return `<div style="display:flex;flex-direction:column;gap:8px">${items.map(i=>{
+    const pct=(i.count/max*100).toFixed(0);
+    return `<div style="display:flex;align-items:center;gap:10px"><div style="min-width:90px;font-size:13px;font-weight:500;text-align:right;color:var(--text-secondary)">${esc(i.name)}</div><div style="flex:1;background:var(--bg-surface,rgba(51,65,85,.3));border-radius:4px;height:22px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${color};border-radius:4px;transition:width .6s"></div></div><div style="min-width:40px;font-size:13px;font-weight:700;color:${color}">${i.count}</div></div>`;
+  }).join('')}</div>`;
+}
+async function clearAllLeads(){
+  try{const r=await api('/api/leads/all',{method:'DELETE'});toast(r.message);renderFunnel()}catch(e){toast(e.message,'error')}
+}
+function switchFunnelTab(el,tab){
+  funnelSubTab=tab;
+  document.querySelectorAll('#funnel-tabs .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  destroyCharts();
+  if(tab==='leads')renderLeadsDetail();
+  else{const fc=document.getElementById('funnel-content');fc.innerHTML='<div style="text-align:center;padding:40px;color:var(--text-muted)">⏳ 加载...</div>';renderFunnelOverview()}
+}
+async function renderFunnelOverview(){
+  const fc=document.getElementById('funnel-content');
+  let data;try{data=await api('/api/leads/funnel')}catch(e){fc.innerHTML=err(e);return}
+  const k=data.kpi||{};
+  const maxC=Math.max(...data.funnel.map(s=>s.count),1);
+  const mainFunnel=data.funnel.filter(s=>s.status!=='closed_lost');
+  const lostCount=(data.funnel.find(s=>s.status==='closed_lost')||{count:0}).count;
+  const colors={new:'#475569',contacted:'#3b82f6',qualified:'#8b5cf6',opportunity:'#f59e0b',closed_won:'#10b981',closed_lost:'#ef4444'};
+  const srcColors=['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ec4899','#ef4444','#06b6d4','#84cc16','#f97316','#6366f1'];
+  fc.innerHTML=`
+    <div class="stats-grid" style="margin-bottom:20px;grid-template-columns:repeat(6,1fr)">
+      ${[{v:fmtNum(k.total),l:'总进线量',c:'var(--accent)'},{v:fmtNum(k.qualifiedCount),l:'转出线索数',c:'var(--info)'},{v:k.transferRate+'%',l:'转出率',c:'#8b5cf6'},{v:fmtNum(k.total-(lostCount||0)),l:'有效线索数',c:'var(--success)'},{v:fmtNum(k.opportunityCount),l:'商机数',c:'var(--warning)'},{v:k.totalDeal?k.totalDeal+'万':'0',l:'成单金额',c:'#ec4899'}].map(s=>`<div class="stat-card"><div class="accent-bar" style="background:${s.c}"></div><div class="stat-value" style="color:${s.c}">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="card"><div class="card-header"><h3>🔄 漏斗视图</h3></div><div class="card-body">
+        <div class="funnel">${mainFunnel.map(s=>{const pct=Math.max(s.count/maxC*100,4);const convRate=k.total>0?(s.count/k.total*100).toFixed(1)+'%':'—';return '<div class="funnel-stage"><div class="funnel-label">'+s.name+'</div><div style="flex:1"><div class="funnel-bar" style="width:'+pct+'%;background:'+colors[s.status]+'"></div></div><div class="funnel-count" style="color:'+colors[s.status]+'">'+s.count+'</div><div class="funnel-pct">'+convRate+'</div></div>';}).join('')}</div>
+        ${lostCount?'<div style="margin-top:16px;padding:12px;background:var(--danger-bg,rgba(239,68,68,.08));border:1px solid rgba(239,68,68,.2);border-radius:var(--radius);font-size:13px;color:var(--danger,#ef4444)">❌ 无效/丢单: '+lostCount+' 条</div>':''}
+      </div></div>
+      <div class="card"><div class="card-header"><h3>📊 来源渠道分布</h3></div><div class="card-body">
+        ${data.bySource&&data.bySource.length?'<div class="chart-container"><canvas id="chart-source"></canvas></div>':'<div class="empty-state" style="padding:24px"><p>暂无来源数据</p></div>'}
+      </div></div>
+    </div>
+    <div class="card" style="margin-top:16px"><div class="card-header"><h3>📈 月度趋势（进线 vs 转出）</h3></div><div class="card-body">
+      ${data.monthlyTrend&&data.monthlyTrend.length?'<div class="chart-container" style="height:280px"><canvas id="chart-monthly"></canvas></div>':'<div class="empty-state" style="padding:24px"><p>暂无月度数据</p></div>'}
+    </div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+      <div class="card"><div class="card-header"><h3>🏷️ 需求产品 Top10</h3></div><div class="card-body">
+        ${data.byProduct&&data.byProduct.length?renderHBars(data.byProduct,'#3b82f6'):'<div class="empty-state" style="padding:24px"><p>暂无产品数据</p></div>'}
+      </div></div>
+      <div class="card"><div class="card-header"><h3>🗺️ 区域/团队分布</h3></div><div class="card-body">
+        ${data.byTeam&&data.byTeam.length?renderHBars(data.byTeam,'#8b5cf6'):'<div class="empty-state" style="padding:24px"><p>暂无区域数据</p></div>'}
+      </div></div>
+    </div>`;
+  if(data.bySource&&data.bySource.length){charts.source=new Chart(document.getElementById('chart-source'),{type:'doughnut',data:{labels:data.bySource.map(s=>s.name),datasets:[{data:data.bySource.map(s=>s.count),backgroundColor:srcColors.slice(0,data.bySource.length),borderWidth:0,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#94a3b8',padding:12}}}}})}
+  if(data.monthlyTrend&&data.monthlyTrend.length){const months=data.monthlyTrend.map(m=>m.month);const totals=data.monthlyTrend.map(m=>m.total);const transferred=data.monthlyTrend.map(m=>m.transferred);const rates=data.monthlyTrend.map(m=>m.total>0?(m.transferred/m.total*100).toFixed(1):0);charts.monthly=new Chart(document.getElementById('chart-monthly'),{type:'bar',data:{labels:months,datasets:[{type:'bar',label:'进线量',data:totals,backgroundColor:'rgba(59,130,246,.6)',borderRadius:4,order:2},{type:'bar',label:'转出量',data:transferred,backgroundColor:'rgba(139,92,246,.6)',borderRadius:4,order:2},{type:'line',label:'转出率%',data:rates,borderColor:'#10b981',backgroundColor:'rgba(16,185,129,.1)',tension:.3,yAxisID:'y1',pointRadius:4,pointBackgroundColor:'#10b981',order:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#94a3b8'}}},scales:{y:{beginAtZero:true,ticks:{color:'#64748b',precision:0},grid:{color:'rgba(51,65,85,.3)'}},y1:{position:'right',beginAtZero:true,max:100,ticks:{color:'#10b981',callback:v=>v+'%'},grid:{display:false}},x:{ticks:{color:'#64748b'},grid:{display:false}}}}})}
+}
+
+// ===== LEADS DETAIL (二级分类) =====
+let _leadsSearch='',_leadsStatus='',_leadsSource='',_leadsPage=1;
+async function renderLeadsDetail(){
+  const fc=document.getElementById('funnel-content');
+  fc.innerHTML='<div style="text-align:center;padding:40px;color:var(--text-muted)">⏳ 加载明细...</div>';
+  const params=new URLSearchParams();
+  if(_leadsSearch)params.set('search',_leadsSearch);
+  if(_leadsStatus)params.set('status',_leadsStatus);
+  if(_leadsSource)params.set('source_channel',_leadsSource);
+  params.set('page',_leadsPage);params.set('limit',50);
+  let data;try{data=await api('/api/leads?'+params)}catch(e){fc.innerHTML=err(e);return}
+  const totalPages=Math.ceil(data.total/data.limit)||1;
+  fc.innerHTML=`
+    <div class="search-bar" style="margin-bottom:16px;flex-wrap:wrap">
+      <input type="text" placeholder="搜索公司/联系人/产品..." id="leads-search" value="${esc(_leadsSearch)}" onkeyup="if(event.key==='Enter'){_leadsSearch=this.value;_leadsPage=1;renderLeadsDetail()}">
+      <select id="leads-status" onchange="_leadsStatus=this.value;_leadsPage=1;renderLeadsDetail()">
+        <option value="">全部状态</option>
+        <option value="new" ${_leadsStatus==='new'?'selected':''}>新进线</option>
+        <option value="contacted" ${_leadsStatus==='contacted'?'selected':''}>已联系</option>
+        <option value="qualified" ${_leadsStatus==='qualified'?'selected':''}>已转出</option>
+        <option value="opportunity" ${_leadsStatus==='opportunity'?'selected':''}>商机</option>
+        <option value="closed_won" ${_leadsStatus==='closed_won'?'selected':''}>成单</option>
+        <option value="closed_lost" ${_leadsStatus==='closed_lost'?'selected':''}>无效/丢单</option>
+      </select>
+      <button class="btn btn-sm btn-secondary" onclick="_leadsSearch=document.getElementById('leads-search').value;_leadsPage=1;renderLeadsDetail()">🔍 搜索</button>
+      <button class="btn btn-sm btn-primary" onclick="openLeadForm()">+ 新建</button>
+      <span style="margin-left:auto;font-size:12px;color:var(--text-muted)">共 ${data.total} 条 · 第 ${_leadsPage}/${totalPages} 页</span>
+    </div>
+    <div class="card"><div class="table-wrap"><table>
+      <tr><th>ID</th><th>公司名称</th><th>联系人</th><th>来源渠道</th><th>需求产品</th><th>状态</th><th>进线日期</th><th>团队</th><th>分配人</th><th>操作</th></tr>
+      <tbody>${data.data.length?data.data.map(leadDetailRow).join(''):'<tr><td colspan="10"><div class="empty-state" style="padding:24px"><p>暂无数据</p></div></td></tr>'}</tbody>
+    </table></div></div>
+    ${totalPages>1?'<div style="display:flex;justify-content:center;gap:8px;margin-top:16px;align-items:center"><button class="btn btn-sm btn-secondary" '+(+_leadsPage<=1?'disabled':'')+' onclick="_leadsPage='+(_leadsPage-1)+';renderLeadsDetail()">← 上页</button><span style="font-size:13px;color:var(--text-secondary)">第 '+_leadsPage+'/'+totalPages+' 页</span><button class="btn btn-sm btn-secondary" '+(+_leadsPage>=totalPages?'disabled':'')+' onclick="_leadsPage='+(_leadsPage+1)+';renderLeadsDetail()">下页 →</button></div>':''}
+    <div class="highlight-box" style="margin-top:16px">
+      <strong>🤖 CLI 编辑指南</strong>（Bot可通过curl命令直接增删改查）<br><br>
+      <code style="font-size:11px;color:var(--accent-light);line-height:2">
+      查询列表: curl HOST/api/leads?search=大疆&amp;status=qualified&amp;page=1&amp;limit=50<br>
+      单条详情: curl HOST/api/leads/ID<br>
+      新增线索: curl -X POST HOST/api/leads -H "Content-Type: application/json" -d '{"company_name":"xxx","status":"new"}'<br>
+      编辑线索: curl -X PUT HOST/api/leads/ID -H "Content-Type: application/json" -d '{"status":"qualified"}'<br>
+      删除单条: curl -X DELETE HOST/api/leads/ID<br>
+      清空全部: curl -X DELETE HOST/api/leads/all
+      </code>
+    </div>`;
+}
+function leadDetailRow(l){
+  return '<tr>'+
+    '<td style="font-size:11px;color:var(--text-muted)">'+l.id+'</td>'+
+    '<td><strong>'+esc(l.company_name||'—')+'</strong></td>'+
+    '<td>'+esc(l.contact_name||'—')+'</td>'+
+    '<td>'+sourceTag(l.source_channel)+'</td>'+
+    '<td>'+esc(l.product||'—')+'</td>'+
+    '<td>'+leadStatusTag(l.status)+'</td>'+
+    '<td>'+(l.inbound_date||'—')+'</td>'+
+    '<td>'+esc(l.team||'—')+'</td>'+
+    '<td>'+esc(l.assigned_to||'—')+'</td>'+
+    '<td style="white-space:nowrap"><button class="btn btn-sm btn-secondary" onclick="openLeadForm('+l.id+')">编辑</button> <button class="btn btn-sm btn-danger" onclick="if(confirm(\'确定删除？\'))deleteLead('+l.id+')">删除</button></td>'+
+  '</tr>';
+}
+async function openLeadForm(id){
+  let l={};if(id){try{l=await api('/api/leads/'+id)}catch(e){toast(e.message,'error');return}}
+  const title=id?'编辑线索 #'+id:'新建线索';
+  const statusOpts=['new','contacted','qualified','opportunity','closed_won','closed_lost'];
+  openModal(`
+    <div class="modal-header"><h3>${title}</h3><button onclick="closeModal()" style="font-size:20px">✕</button></div>
+    <div class="modal-body"><form id="lead-form" onsubmit="saveLead(event,${id||'null'})">
+      <div class="form-row">
+        <div class="form-group"><label>公司名称 *</label><input name="company_name" required value="${esc(l.company_name||'')}"></div>
+        <div class="form-group"><label>联系人</label><input name="contact_name" value="${esc(l.contact_name||'')}"></div>
+      </div>
+      <div class="form-row-3">
+        <div class="form-group"><label>职位</label><input name="contact_title" value="${esc(l.contact_title||'')}"></div>
+        <div class="form-group"><label>电话</label><input name="phone" value="${esc(l.phone||'')}"></div>
+        <div class="form-group"><label>状态</label><select name="status">${statusOpts.map(s=>'<option value="'+s+'" '+(l.status===s?'selected':'')+'>'+leadStatusName(s)+'</option>').join('')}</select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>来源渠道</label><input name="source_channel" value="${esc(l.source_channel||'')}" placeholder="400电话/官方微信/Octo体验..."></div>
+        <div class="form-group"><label>来源子渠道</label><input name="source_detail" value="${esc(l.source_detail||'')}"></div>
+      </div>
+      <div class="form-row-3">
+        <div class="form-group"><label>需求产品</label><input name="product" value="${esc(l.product||'')}"></div>
+        <div class="form-group"><label>行业</label><input name="industry" value="${esc(l.industry||'')}"></div>
+        <div class="form-group"><label>团队</label><input name="team" value="${esc(l.team||'')}"></div>
+      </div>
+      <div class="form-row-3">
+        <div class="form-group"><label>分配销售</label><input name="assigned_to" value="${esc(l.assigned_to||'')}"></div>
+        <div class="form-group"><label>进线日期</label><input type="date" name="inbound_date" value="${l.inbound_date||''}"></div>
+        <div class="form-group"><label>转出日期</label><input type="date" name="transfer_date" value="${l.transfer_date||''}"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>商机号</label><input name="opportunity_id" value="${esc(l.opportunity_id||'')}"></div>
+        <div class="form-group"><label>成单金额(万)</label><input type="number" step="0.01" name="deal_amount" value="${l.deal_amount||''}"></div>
+      </div>
+      <div class="form-group"><label>需求描述/跟进记录</label><textarea name="requirement" rows="3">${esc(l.requirement||'')}</textarea></div>
+      <div class="form-group"><label>丢单原因</label><input name="lost_reason" value="${esc(l.lost_reason||'')}"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+        <button type="submit" class="btn btn-primary">💾 保存</button>
+      </div>
+    </form></div>`);
+}
+async function saveLead(ev,id){
+  ev.preventDefault();const form=new FormData(document.getElementById('lead-form'));const body=Object.fromEntries(form);
+  body.deal_amount=+body.deal_amount||0;
+  try{
+    if(id){await api('/api/leads/'+id,{method:'PUT',body});toast('线索更新成功')}
+    else{await api('/api/leads',{method:'POST',body});toast('线索创建成功')}
+    closeModal();renderLeadsDetail();
+  }catch(e){toast(e.message,'error')}
+}
+async function deleteLead(id){
+  try{await api('/api/leads/'+id,{method:'DELETE'});toast('删除成功');renderLeadsDetail()}catch(e){toast(e.message,'error')}
 }
 
 // ===== IMPORT =====
@@ -865,15 +1065,18 @@ async function switchImportTab(el,tab){
   document.querySelectorAll('.tabs .tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
   const c=document.getElementById('import-content');
   if(tab==='history'){try{const logs=await api('/api/import/logs');c.innerHTML=logs.length?`<div class="card"><div class="table-wrap"><table><tr><th>文件</th><th>目标</th><th>总行</th><th>成功</th><th>失败</th><th>时间</th></tr>${logs.map(l=>`<tr><td>${esc(l.filename)}</td><td>${l.target_table}</td><td>${l.total_rows}</td><td style="color:var(--success)">${l.success_rows}</td><td style="color:${l.error_rows?'var(--danger)':'inherit'}">${l.error_rows}</td><td>${l.imported_at}</td></tr>`).join('')}</table></div></div>`:'<div class="empty-state"><p>暂无导入记录</p></div>'}catch(e){c.innerHTML=err(e)}}
-  else if(tab==='guide'){c.innerHTML=`<div class="card"><div class="card-body" style="line-height:2"><h3 style="margin-bottom:12px">数据导入指南</h3><p>1. 准备Excel文件，第一行为表头（中文或英文均可）</p><p>2. 选择导入目标：活动/演讲/客户/线索</p><p>3. 上传文件，系统自动识别列名匹配字段</p><hr style="border:none;border-top:1px solid var(--border);margin:12px 0"><p><strong>注意：</strong>日期格式YYYY-MM-DD · 客户等级S/A/B/C · 线索阶段raw/mql/sql/opportunity/won/lost</p></div></div>`}
+  else if(tab==='guide'){c.innerHTML=`<div class="card"><div class="card-body" style="line-height:2"><h3 style="margin-bottom:12px">数据导入指南</h3><p>1. 准备Excel文件，第一行为表头（中文或英文均可）</p><p>2. 选择导入目标：活动/演讲/客户/线索</p><p>3. 上传文件，系统自动识别列名匹配字段</p><hr style="border:none;border-top:1px solid var(--border);margin:12px 0"><p><strong>SDR线索字段说明：</strong></p><p>日期格式YYYY-MM-DD · 客户等级S/A/B/C</p><p>线索状态：new(新进线)/contacted(已联系)/qualified(已转出)/opportunity(商机)/closed_won(成单)/closed_lost(无效)</p><p>来源渠道：直接传中文原值（400电话/官方微信/Octo体验等）</p><p>成单金额：单位万元</p></div></div>`}
   else renderImport();
 }
 
 // ===== HELPERS =====
-function stageName(s){return{raw:'原始线索',mql:'MQL',sql:'SQL',opportunity:'商机',won:'成交',lost:'流失'}[s]||s}
-function stageTag(s){const m={raw:'gray',mql:'blue',sql:'purple',opportunity:'yellow',won:'green',lost:'red'};return `<span class="tag tag-${m[s]||'gray'}">${stageName(s)}</span>`}
-function statusTag(s){const m={'筹备中':'blue','进行中':'yellow','已结束':'green','已取消':'gray'};return `<span class="tag tag-${m[s]||'gray'}">${esc(s)}</span>`}
-function sourceTag(s){if(!s)return'—';const m={event:['blue','活动'],speech:['purple','演讲'],inbound:['green','自然流入'],outbound:['yellow','主动拓展'],referral:['gray','转介绍']};const[c,n]=m[s]||['gray',s];return `<span class="tag tag-${c}">${n}</span>`}
+function leadStatusName(s){return{new:'新进线',contacted:'已联系',qualified:'已转出',opportunity:'商机',closed_won:'成单',closed_lost:'无效/丢单'}[s]||s}
+function leadStatusTag(s){const m={new:'gray',contacted:'blue',qualified:'purple',opportunity:'yellow',closed_won:'green',closed_lost:'red'};return `<span class="tag tag-${m[s]||'gray'}">${leadStatusName(s)}</span>`}
+function stageName(s){return leadStatusName(s)}
+function stageTag(s){return leadStatusTag(s)}
+function eventStatusTag(s){const m={'筹备中':'blue','进行中':'yellow','已结束':'green','已取消':'gray'};return `<span class="tag tag-${m[s]||'gray'}">${esc(s)}</span>`}
+function statusTag(s){return eventStatusTag(s)}
+function sourceTag(s){if(!s)return'—';return `<span class="tag tag-blue">${esc(s)}</span>`}
 function followUpTag(s){if(!s)return'—';const m={'待跟进':'yellow','跟进中':'blue','已完成':'green','已放弃':'gray'};return `<span class="tag tag-${m[s]||'gray'}">${esc(s)}</span>`}
 function fmtNum(n){if(!n||n===0)return'0';if(n>=10000)return(n/10000).toFixed(1)+'万';if(n>=1000)return n.toLocaleString();return n}
 function tryParse(s){try{return JSON.parse(s)||[]}catch{return[]}}

@@ -64,14 +64,14 @@ app.get('/api/stats', (req, res) => {
   const accountCount = db.prepare('SELECT COUNT(*) as c FROM accounts').get().c;
   const accountsByTier = db.prepare("SELECT tier, COUNT(*) as c FROM accounts GROUP BY tier").all();
   const leadCount = db.prepare('SELECT COUNT(*) as c FROM leads').get().c;
-  const leadsByStage = db.prepare("SELECT stage, COUNT(*) as c FROM leads GROUP BY stage").all();
+  const leadsByStatus = db.prepare("SELECT status, COUNT(*) as c FROM leads GROUP BY status").all();
   const recentEvents = db.prepare("SELECT id, name, date, status, leads_count FROM events ORDER BY date DESC LIMIT 5").all();
-  const recentLeads = db.prepare("SELECT id, contact_name, company, stage, source_type, created_at FROM leads ORDER BY created_at DESC LIMIT 10").all();
+  const recentLeads = db.prepare("SELECT id, contact_name, company_name, status, source_channel, created_at FROM leads ORDER BY created_at DESC LIMIT 10").all();
   res.json({
     events: { total: eventCount, byStatus: eventsByStatus },
     speeches: { total: speechCount, totalAudience },
     accounts: { total: accountCount, byTier: accountsByTier },
-    leads: { total: leadCount, byStage: leadsByStage },
+    leads: { total: leadCount, byStatus: leadsByStatus },
     recentEvents, recentLeads
   });
 });
@@ -272,12 +272,12 @@ app.delete('/api/accounts/:id', (req, res) => {
 
 // ===== Leads CRUD =====
 app.get('/api/leads', (req, res) => {
-  const { stage, source_type, search, page = 1, limit = 50 } = req.query;
+  const { status, source_channel, search, page = 1, limit = 50 } = req.query;
   let sql = 'SELECT * FROM leads WHERE 1=1';
   const params = {};
-  if (stage) { sql += ' AND stage = @stage'; params.stage = stage; }
-  if (source_type) { sql += ' AND source_type = @source_type'; params.source_type = source_type; }
-  if (search) { sql += ' AND (contact_name LIKE @s OR company LIKE @s)'; params.s = `%${search}%`; }
+  if (status) { sql += ' AND status = @status'; params.status = status; }
+  if (source_channel) { sql += ' AND source_channel = @source_channel'; params.source_channel = source_channel; }
+  if (search) { sql += ' AND (contact_name LIKE @s OR company_name LIKE @s OR product LIKE @s)'; params.s = `%${search}%`; }
   sql += ' ORDER BY created_at DESC';
   const total = db.prepare(sql.replace('SELECT *', 'SELECT COUNT(*) as c')).get(params).c;
   sql += ` LIMIT @limit OFFSET @offset`;
@@ -288,29 +288,64 @@ app.get('/api/leads', (req, res) => {
 });
 
 app.get('/api/leads/funnel', (req, res) => {
-  const stages = ['raw', 'mql', 'sql', 'opportunity', 'won', 'lost'];
-  const stageNames = { raw: '原始线索', mql: 'MQL', sql: 'SQL', opportunity: '商机', won: '成交', lost: '流失' };
-  const funnel = stages.map(s => {
-    const c = db.prepare('SELECT COUNT(*) as c FROM leads WHERE stage = ?').get(s).c;
-    return { stage: s, name: stageNames[s], count: c };
+  const statuses = ['new', 'contacted', 'qualified', 'opportunity', 'closed_won', 'closed_lost'];
+  const statusNames = { new: '新进线', contacted: '已联系', qualified: '已转出', opportunity: '商机', closed_won: '成单', closed_lost: '无效/丢单' };
+  const funnel = statuses.map(s => {
+    const c = db.prepare('SELECT COUNT(*) as c FROM leads WHERE status = ?').get(s).c;
+    return { status: s, name: statusNames[s], count: c };
   });
-  const bySource = db.prepare(`SELECT source_type, COUNT(*) as c FROM leads WHERE source_type != '' GROUP BY source_type`).all();
-  res.json({ funnel, bySource });
+  const total = db.prepare('SELECT COUNT(*) as c FROM leads').get().c;
+  const qualifiedCount = funnel.find(s => s.status === 'qualified')?.count || 0;
+  const opportunityCount = funnel.find(s => s.status === 'opportunity')?.count || 0;
+  const wonCount = funnel.find(s => s.status === 'closed_won')?.count || 0;
+  const totalDeal = db.prepare("SELECT COALESCE(SUM(deal_amount),0) as c FROM leads WHERE status = 'closed_won'").get().c;
+  const transferRate = total > 0 ? (qualifiedCount / total * 100).toFixed(1) : '0.0';
+  const bySource = db.prepare(`SELECT source_channel as name, COUNT(*) as count FROM leads WHERE source_channel != '' GROUP BY source_channel ORDER BY count DESC`).all();
+  const byProduct = db.prepare(`SELECT product as name, COUNT(*) as count FROM leads WHERE product != '' GROUP BY product ORDER BY count DESC LIMIT 10`).all();
+  const byTeam = db.prepare(`SELECT team as name, COUNT(*) as count FROM leads WHERE team != '' GROUP BY team ORDER BY count DESC`).all();
+  const monthlyTrend = db.prepare(`
+    SELECT strftime('%Y-%m', inbound_date) as month,
+           COUNT(*) as total,
+           SUM(CASE WHEN status IN ('qualified','opportunity','closed_won') THEN 1 ELSE 0 END) as transferred
+    FROM leads WHERE inbound_date != '' AND inbound_date IS NOT NULL
+    GROUP BY month ORDER BY month
+  `).all();
+  const recentLeads = db.prepare(`SELECT id, company_name, contact_name, source_channel, product, assigned_to, status, inbound_date
+    FROM leads ORDER BY created_at DESC LIMIT 20`).all();
+  res.json({
+    funnel,
+    kpi: { total, qualifiedCount, opportunityCount, wonCount, totalDeal, transferRate },
+    bySource, byProduct, byTeam, monthlyTrend, recentLeads
+  });
+});
+
+app.get('/api/leads/:id', (req, res) => {
+  const row = db.prepare('SELECT * FROM leads WHERE id = ?').get(req.params.id);
+  if (!row) return res.status(404).json({ error: '线索不存在' });
+  res.json(row);
 });
 
 app.post('/api/leads', (req, res) => {
-  const { contact_name, contact_title, company, phone, email, source_type,
-    source_id, source_name, account_id, stage, assigned_to, notes } = req.body;
-  const stmt = db.prepare(`INSERT INTO leads (contact_name, contact_title, company, phone, email,
-    source_type, source_id, source_name, account_id, stage, assigned_to, notes)
-    VALUES (@contact_name, @contact_title, @company, @phone, @email,
-    @source_type, @source_id, @source_name, @account_id, @stage, @assigned_to, @notes)`);
+  const { company_name, contact_name, contact_title, phone, source_channel, source_detail,
+    status, product, industry, team, assigned_to, inbound_date, transfer_date,
+    opportunity_id, opportunity_stage, deal_amount, lost_reason, requirement, account_id } = req.body;
+  if (!company_name && !contact_name) return res.status(400).json({ error: '客户名称或联系人不能为空' });
+  const stmt = db.prepare(`INSERT INTO leads (company_name, contact_name, contact_title, phone, source_channel, source_detail,
+    status, product, industry, team, assigned_to, inbound_date, transfer_date,
+    opportunity_id, opportunity_stage, deal_amount, lost_reason, requirement, account_id)
+    VALUES (@company_name, @contact_name, @contact_title, @phone, @source_channel, @source_detail,
+    @status, @product, @industry, @team, @assigned_to, @inbound_date, @transfer_date,
+    @opportunity_id, @opportunity_stage, @deal_amount, @lost_reason, @requirement, @account_id)`);
   const r = stmt.run({
-    contact_name: contact_name || '', contact_title: contact_title || '',
-    company: company || '', phone: phone || '', email: email || '',
-    source_type: source_type || '', source_id: source_id || null,
-    source_name: source_name || '', account_id: account_id || null,
-    stage: stage || 'raw', assigned_to: assigned_to || '', notes: notes || ''
+    company_name: company_name || '', contact_name: contact_name || '',
+    contact_title: contact_title || '', phone: phone || '',
+    source_channel: source_channel || '', source_detail: source_detail || '',
+    status: status || 'new', product: product || '', industry: industry || '',
+    team: team || '', assigned_to: assigned_to || '',
+    inbound_date: inbound_date || '', transfer_date: transfer_date || '',
+    opportunity_id: opportunity_id || '', opportunity_stage: opportunity_stage || '',
+    deal_amount: +deal_amount || 0, lost_reason: lost_reason || '',
+    requirement: requirement || '', account_id: account_id || null
   });
   res.json({ id: r.lastInsertRowid, message: '创建成功' });
 });
@@ -321,6 +356,13 @@ app.put('/api/leads/:id', (req, res) => {
   logEdit('leads', +req.params.id, old, req.body, req.body._editedBy || '');
   buildUpdate('leads', +req.params.id, req.body);
   res.json({ message: '更新成功' });
+});
+
+// 清空全部线索（千寻重灌用）—— 必须在 :id 路由之前
+app.delete('/api/leads/all', (req, res) => {
+  const count = db.prepare('SELECT COUNT(*) as c FROM leads').get().c;
+  db.prepare('DELETE FROM leads').run();
+  res.json({ message: `已清空 ${count} 条线索`, deleted: count });
 });
 
 app.delete('/api/leads/:id', (req, res) => {
@@ -347,7 +389,7 @@ app.post('/api/import/:table', upload.single('file'), async (req, res) => {
       events: { '活动名称': 'name', '日期': 'date', '截止日期': 'end_date', '地点': 'location', '规模': 'scale', '预算': 'budget', '状态': 'status', '主题': 'theme', '目标客户群': 'target_audience', '业务设计': 'business_design', '主办方': 'host', '承办方': 'organizer', '备注': 'notes' },
       speeches: { '日期': 'date', '地点': 'location', '活动名称': 'event_name', '演讲主题': 'topic', '听众人数': 'audience_count', '听众画像': 'audience_profile', '故事线': 'story_line', '业务设计': 'business_design', '反馈': 'feedback', '跟进计划': 'follow_up_plan', '备注': 'notes' },
       accounts: { '公司名称': 'company_name', '行业': 'industry', '规模': 'scale', '地区': 'region', '来源': 'source', '等级': 'tier', '首次触达日期': 'first_touch_date', '需求摘要': 'needs_summary', '预估预算': 'estimated_budget', 'Octo状态': 'octo_status', '负责人': 'assigned_to', '备注': 'notes' },
-      leads: { '姓名': 'contact_name', '职位': 'contact_title', '公司': 'company', '手机': 'phone', '邮箱': 'email', '来源类型': 'source_type', '来源名称': 'source_name', '阶段': 'stage', '负责人': 'assigned_to', '备注': 'notes' }
+      leads: { '客户名称': 'company_name', '联系人': 'contact_name', '职位': 'contact_title', '电话': 'phone', '来源渠道': 'source_channel', '来源子渠道': 'source_detail', '线索状态': 'status', '需求产品': 'product', '行业': 'industry', '分配区域/团队': 'team', '团队': 'team', '分配销售': 'assigned_to', '进线日期': 'inbound_date', '转出日期': 'transfer_date', '商机号': 'opportunity_id', '商机阶段': 'opportunity_stage', '成单金额': 'deal_amount', '丢单原因': 'lost_reason', '需求描述/跟进记录': 'requirement', '需求描述': 'requirement', '跟进记录': 'requirement', '备注': 'requirement' }
     };
 
     const cmap = columnMaps[table];
@@ -368,7 +410,7 @@ app.post('/api/import/:table', upload.single('file'), async (req, res) => {
       }
 
       // Validate required field
-      const requiredField = { events: 'name', speeches: 'topic', accounts: 'company_name', leads: 'contact_name' }[table];
+      const requiredField = { events: 'name', speeches: 'topic', accounts: 'company_name', leads: 'company_name' }[table];
       if (!mapped[requiredField]) throw new Error(`缺少必填字段: ${requiredField}`);
 
       // Build INSERT
@@ -434,13 +476,20 @@ app.get('/api/import/fields/:table', (req, res) => {
       { cn: '备注', en: 'notes' }
     ],
     leads: [
-      { cn: '姓名', en: 'contact_name', required: true },
-      { cn: '职位', en: 'contact_title' }, { cn: '公司', en: 'company' },
-      { cn: '手机', en: 'phone' }, { cn: '邮箱', en: 'email' },
-      { cn: '来源类型', en: 'source_type', note: 'event/speech/inbound/outbound/referral' },
-      { cn: '来源名称', en: 'source_name' },
-      { cn: '阶段', en: 'stage', note: 'raw/mql/sql/opportunity/won/lost' },
-      { cn: '负责人', en: 'assigned_to' }, { cn: '备注', en: 'notes' }
+      { cn: '客户名称', en: 'company_name', required: true },
+      { cn: '联系人', en: 'contact_name', required: true },
+      { cn: '职位', en: 'contact_title' }, { cn: '电话', en: 'phone' },
+      { cn: '来源渠道', en: 'source_channel', note: '400电话/官方微信/Octo体验/Octo·晚点头条/下午茶活动/EMP培训班/活动/其他' },
+      { cn: '来源子渠道', en: 'source_detail' },
+      { cn: '线索状态', en: 'status', note: 'new/contacted/qualified/opportunity/closed_won/closed_lost' },
+      { cn: '需求产品', en: 'product' }, { cn: '行业', en: 'industry' },
+      { cn: '分配区域/团队', en: 'team' }, { cn: '分配销售', en: 'assigned_to' },
+      { cn: '进线日期', en: 'inbound_date', note: 'YYYY-MM-DD' },
+      { cn: '转出日期', en: 'transfer_date', note: 'YYYY-MM-DD' },
+      { cn: '商机号', en: 'opportunity_id' }, { cn: '商机阶段', en: 'opportunity_stage' },
+      { cn: '成单金额', en: 'deal_amount', note: '万元' },
+      { cn: '丢单原因', en: 'lost_reason' },
+      { cn: '需求描述/跟进记录', en: 'requirement' }
     ]
   };
   res.json(fieldMaps[table] || []);
