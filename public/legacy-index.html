@@ -1,0 +1,2045 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MKT-CRM · 市场部 AI-Native 工作台</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --primary:#0f172a;--primary-light:#1e293b;
+  --accent:#3b82f6;--accent-light:#60a5fa;--accent-dark:#1d4ed8;
+  --accent-glow:rgba(59,130,246,.15);
+  --bg:#0f172a;--bg-card:#1e293b;--bg-card-hover:#263548;--bg-surface:#162032;
+  --border:#334155;--border-light:#475569;
+  --text:#f1f5f9;--text-secondary:#94a3b8;--text-muted:#64748b;--text-bright:#fff;
+  --success:#10b981;--success-bg:rgba(16,185,129,.12);
+  --warning:#f59e0b;--warning-bg:rgba(245,158,11,.12);
+  --danger:#ef4444;--danger-bg:rgba(239,68,68,.12);
+  --info:#8b5cf6;--info-bg:rgba(139,92,246,.12);
+  --pink:#ec4899;--cyan:#06b6d4;--orange:#f97316;
+  --shadow:0 1px 3px rgba(0,0,0,.3);
+  --shadow-md:0 4px 12px rgba(0,0,0,.3);
+  --shadow-lg:0 10px 25px rgba(0,0,0,.4);
+  --shadow-glow:0 0 20px rgba(59,130,246,.15);
+  --radius:8px;--radius-lg:12px;--radius-xl:16px;
+  --sidebar-w:240px;--header-h:56px;
+  --tier-s:#ef4444;--tier-a:#f97316;--tier-b:#3b82f6;--tier-c:#64748b;
+  --gradient-hero:linear-gradient(135deg,#0f172a 0%,#1e1b4b 50%,#0c1426 100%);
+  --gradient-accent:linear-gradient(135deg,#3b82f6,#8b5cf6);
+  --gradient-green:linear-gradient(135deg,#10b981,#06b6d4);
+  --gradient-pink:linear-gradient(135deg,#ec4899,#f97316);
+  --gradient-orange:linear-gradient(135deg,#f97316,#eab308);
+}
+html{font-size:14px;-webkit-font-smoothing:antialiased}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+a{color:var(--accent-light);text-decoration:none}
+button{cursor:pointer;font-family:inherit;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit;font-size:inherit;border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;outline:none;transition:border-color .2s;background:var(--bg-surface);color:var(--text)}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:80px}
+select option{background:var(--bg-card);color:var(--text)}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* Layout */
+.layout{display:flex;min-height:100vh}
+.sidebar{width:var(--sidebar-w);background:linear-gradient(180deg,#0c1220 0%,#0a0f1a 100%);color:#fff;position:fixed;top:0;left:0;bottom:0;z-index:100;display:flex;flex-direction:column;overflow-y:auto;border-right:1px solid rgba(255,255,255,.06)}
+.sidebar-logo{padding:20px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sidebar-logo h1{font-size:15px;font-weight:700;color:#fff;display:flex;align-items:center;gap:8px}
+.sidebar-logo small{display:block;font-size:11px;color:var(--text-muted);font-weight:400;margin-top:4px;letter-spacing:.5px}
+.sidebar-nav{flex:1;padding:12px 0}
+.nav-section{padding:0 10px;margin-bottom:4px}
+.nav-section-title{font-size:10px;text-transform:uppercase;color:var(--text-muted);padding:12px 12px 4px;letter-spacing:1px;font-weight:600}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius);color:var(--text-secondary);font-size:13px;cursor:pointer;transition:all .15s;margin:1px 0;position:relative}
+.nav-item:hover{background:rgba(255,255,255,.05);color:var(--text)}
+.nav-item.active{background:var(--accent-glow);color:var(--accent-light);font-weight:600}
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:20px;background:var(--accent);border-radius:0 2px 2px 0}
+.nav-item .icon{font-size:16px;width:20px;text-align:center}
+.nav-item .badge{margin-left:auto;background:rgba(59,130,246,.2);color:var(--accent-light);padding:1px 7px;border-radius:10px;font-size:11px;font-weight:600}
+
+.main{margin-left:var(--sidebar-w);flex:1;min-width:0}
+.header{height:var(--header-h);background:rgba(15,23,42,.8);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:50}
+.header h2{font-size:15px;font-weight:600;color:var(--text)}
+.header-actions{display:flex;gap:8px;align-items:center}
+.content{padding:24px}
+
+/* Cards */
+.card{background:var(--bg-card);border-radius:var(--radius-lg);border:1px solid var(--border);box-shadow:var(--shadow);transition:border-color .2s}
+.card:hover{border-color:var(--border-light)}
+.card-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-header h3{font-size:13px;font-weight:600;color:var(--text)}
+.card-body{padding:20px}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius);font-size:13px;font-weight:500;transition:all .15s;border:1px solid transparent}
+.btn-primary{background:var(--gradient-accent);color:#fff;border:none;box-shadow:0 2px 8px rgba(59,130,246,.3)}
+.btn-primary:hover{box-shadow:0 4px 12px rgba(59,130,246,.4);transform:translateY(-1px)}
+.btn-secondary{background:var(--bg-surface);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--bg-card-hover);border-color:var(--border-light)}
+.btn-danger{background:var(--danger-bg);color:var(--danger);border:1px solid rgba(239,68,68,.2)}
+.btn-danger:hover{background:rgba(239,68,68,.2)}
+.btn-sm{padding:5px 10px;font-size:12px}
+
+/* Hero Stats (Dashboard) */
+.hero{background:var(--gradient-hero);border-radius:var(--radius-xl);padding:32px;margin-bottom:24px;position:relative;overflow:hidden;border:1px solid rgba(59,130,246,.1)}
+.hero::before{content:'';position:absolute;top:-50%;right:-20%;width:400px;height:400px;background:radial-gradient(circle,rgba(59,130,246,.08) 0%,transparent 70%);pointer-events:none}
+.hero::after{content:'';position:absolute;bottom:-30%;left:10%;width:300px;height:300px;background:radial-gradient(circle,rgba(139,92,246,.06) 0%,transparent 70%);pointer-events:none}
+.hero-title{font-size:20px;font-weight:700;color:var(--text-bright);margin-bottom:4px;position:relative}
+.hero-sub{font-size:12px;color:var(--text-muted);margin-bottom:24px;position:relative}
+.hero-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;position:relative}
+.hero-stat{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius-lg);padding:20px;text-align:center;cursor:pointer;transition:all .2s}
+.hero-stat:hover{background:rgba(255,255,255,.07);transform:translateY(-2px);box-shadow:var(--shadow-glow)}
+.hero-stat .icon{font-size:28px;margin-bottom:8px;display:block}
+.hero-stat .value{font-size:36px;font-weight:800;background:var(--gradient-accent);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1.1}
+.hero-stat .value.green{background:var(--gradient-green);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero-stat .value.pink{background:var(--gradient-pink);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero-stat .value.orange{background:var(--gradient-orange);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero-stat .label{font-size:12px;color:var(--text-secondary);margin-top:4px}
+.hero-stat .sub{font-size:11px;color:var(--text-muted);margin-top:6px}
+
+/* Stats Grid */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:var(--bg-card);border-radius:var(--radius-lg);padding:16px 20px;border:1px solid var(--border);cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.stat-card:hover{border-color:var(--accent);box-shadow:var(--shadow-glow);transform:translateY(-1px)}
+.stat-card .accent-bar{position:absolute;top:0;left:0;right:0;height:2px}
+.stat-card .stat-value{font-size:24px;font-weight:800;margin:4px 0 2px}
+.stat-card .stat-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
+.stat-card .stat-sub{font-size:11px;color:var(--text-secondary);margin-top:6px}
+
+/* Tables */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
+td{padding:10px 12px;font-size:13px;border-bottom:1px solid rgba(51,65,85,.5);vertical-align:top}
+tr:hover td{background:rgba(255,255,255,.02)}
+.clickable-row{cursor:pointer}
+.clickable-row:hover td{background:var(--accent-glow)}
+
+/* Tags */
+.tag{display:inline-flex;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500}
+.tag-blue{background:rgba(59,130,246,.15);color:#60a5fa}
+.tag-green{background:rgba(16,185,129,.15);color:#34d399}
+.tag-yellow{background:rgba(245,158,11,.15);color:#fbbf24}
+.tag-red{background:rgba(239,68,68,.15);color:#f87171}
+.tag-gray{background:rgba(100,116,139,.15);color:#94a3b8}
+.tag-purple{background:rgba(139,92,246,.15);color:#a78bfa}
+.tag-pink{background:rgba(236,72,153,.15);color:#f472b6}
+.tag-cyan{background:rgba(6,182,212,.15);color:#22d3ee}
+.tier-badge{display:inline-flex;width:26px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff}
+.tier-S{background:var(--tier-s);box-shadow:0 0 8px rgba(239,68,68,.3)}
+.tier-A{background:var(--tier-a);box-shadow:0 0 8px rgba(249,115,22,.3)}
+.tier-B{background:var(--tier-b);box-shadow:0 0 8px rgba(59,130,246,.3)}
+.tier-C{background:var(--tier-c)}
+
+/* Forms */
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:4px}
+.form-group input,.form-group select,.form-group textarea{width:100%;display:block}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+
+/* Funnel */
+.funnel{display:flex;flex-direction:column;gap:6px;max-width:600px}
+.funnel-stage{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:var(--radius);background:var(--bg-card);border:1px solid var(--border);transition:all .15s}
+.funnel-stage:hover{border-color:var(--accent);box-shadow:var(--shadow-glow)}
+.funnel-bar{height:28px;border-radius:4px;min-width:4px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.funnel-label{font-size:13px;font-weight:500;min-width:80px}
+.funnel-count{font-size:20px;font-weight:800;min-width:50px;text-align:right}
+.funnel-pct{font-size:11px;color:var(--text-muted);min-width:40px}
+
+/* Detail */
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.detail-field{margin-bottom:12px}
+.detail-field .label{font-size:11px;color:var(--text-muted);margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px}
+.detail-field .value{font-size:14px;color:var(--text)}
+.detail-field .value:empty::after{content:'—';color:var(--text-muted)}
+
+/* Metric Ring */
+.metric-ring{display:flex;align-items:center;gap:16px;padding:16px;background:var(--bg-surface);border-radius:var(--radius-lg);border:1px solid var(--border)}
+.metric-ring .ring{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;border:3px solid var(--accent);position:relative}
+.metric-ring .ring-label{font-size:12px;color:var(--text-secondary)}
+.metric-ring .ring-sub{font-size:11px;color:var(--text-muted)}
+
+/* Data Bar (horizontal bar chart in HTML) */
+.data-bars{display:flex;flex-direction:column;gap:6px}
+.data-bar-row{display:flex;align-items:center;gap:8px;font-size:12px}
+.data-bar-label{min-width:100px;color:var(--text-secondary);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.data-bar{flex:1;height:20px;background:var(--bg-surface);border-radius:3px;overflow:hidden}
+.data-bar-fill{height:100%;border-radius:3px;transition:width .6s ease;min-width:2px}
+.data-bar-value{min-width:50px;font-weight:600;font-size:11px;color:var(--text-muted)}
+
+/* Tabs */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px;overflow-x:auto}
+.tab{padding:10px 20px;font-size:13px;font-weight:500;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;white-space:nowrap}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent-light);border-bottom-color:var(--accent);font-weight:600}
+
+/* Search */
+.search-bar{display:flex;gap:8px;margin-bottom:16px;align-items:center}
+.search-bar input{flex:1;max-width:320px}
+.search-bar select{min-width:120px}
+
+/* Upload */
+.upload-area{border:2px dashed var(--border);border-radius:var(--radius-xl);padding:40px;text-align:center;cursor:pointer;transition:all .2s}
+.upload-area:hover,.upload-area.dragover{border-color:var(--accent);background:var(--accent-glow)}
+.upload-area .icon{font-size:36px;margin-bottom:8px}
+.upload-area p{color:var(--text-secondary);font-size:13px}
+
+/* Empty state */
+.empty-state{text-align:center;padding:48px 24px;color:var(--text-muted)}
+.empty-state .icon{font-size:48px;margin-bottom:12px}
+.empty-state p{font-size:14px;margin-bottom:16px}
+
+/* Opportunity table */
+.opp-level{display:inline-flex;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:.3px}
+.opp-商机{background:rgba(239,68,68,.15);color:#f87171}
+.opp-高潜{background:rgba(249,115,22,.15);color:#fb923c}
+.opp-战略{background:rgba(139,92,246,.15);color:#a78bfa}
+.opp-关注{background:rgba(59,130,246,.15);color:#60a5fa}
+.opp-待分配{background:rgba(100,116,139,.15);color:#94a3b8}
+
+/* Signal chips */
+.signal-chip{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;background:var(--bg-surface);border:1px solid var(--border);border-radius:20px;font-size:12px;margin:3px}
+.signal-chip .count{background:var(--accent);color:#fff;border-radius:10px;padding:0 6px;font-size:10px;font-weight:700}
+
+/* Chart container */
+.chart-container{position:relative;height:260px}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.active{opacity:1;pointer-events:all}
+.modal{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-xl);width:90%;max-width:640px;max-height:85vh;overflow-y:auto;box-shadow:var(--shadow-lg)}
+.modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-body{padding:20px}
+.modal-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+
+/* Toast */
+.toast-container{position:fixed;top:16px;right:16px;z-index:300;display:flex;flex-direction:column;gap:8px}
+.toast{padding:12px 16px;border-radius:var(--radius);background:var(--bg-card);border:1px solid var(--border);box-shadow:var(--shadow-lg);font-size:13px;animation:slideIn .3s ease}
+.toast-success{border-left:3px solid var(--success)}
+.toast-error{border-left:3px solid var(--danger)}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* Highlight box */
+.highlight-box{background:var(--bg-surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius);padding:16px;margin-bottom:12px;font-size:13px;line-height:1.7}
+.highlight-box.insight{border-left-color:var(--warning)}
+.highlight-box.danger{border-left-color:var(--danger)}
+.highlight-box.success{border-left-color:var(--success)}
+
+/* Responsive */
+@media(max-width:768px){
+  .sidebar{display:none}.main{margin-left:0}
+  .hero-stats{grid-template-columns:1fr 1fr}
+  .form-row,.form-row-3,.detail-grid{grid-template-columns:1fr}
+}
+
+/* Animate counter */
+@keyframes countUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.animate-in{animation:countUp .4s ease both}
+
+/* Octo 大客户模块 */
+.timeline{display:flex;flex-direction:column;gap:16px}
+.report-card{position:relative}
+.report-card .report-meta{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.report-card .report-period{font-size:15px;font-weight:700;color:var(--accent-light)}
+.report-card .report-type-badge{padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.report-type-weekly{background:rgba(59,130,246,.15);color:#60a5fa}
+.report-type-monthly{background:rgba(139,92,246,.15);color:#a78bfa}
+.report-card .report-field{margin-bottom:10px}
+.report-card .report-field-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;display:flex;align-items:center;gap:4px}
+.report-card .report-field-value{font-size:13px;line-height:1.7;white-space:pre-wrap}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.decision-card{background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--warning);border-radius:var(--radius);padding:14px 18px;margin-bottom:8px;cursor:pointer;transition:all .15s}
+.decision-card:hover{border-color:var(--warning);background:var(--bg-card-hover)}
+.decision-card .dc-company{font-size:12px;color:var(--accent-light);font-weight:600;margin-bottom:4px}
+.decision-card .dc-period{font-size:11px;color:var(--text-muted);margin-left:8px}
+.decision-card .dc-content{font-size:13px;line-height:1.6}
+.timeline-item{display:flex;gap:14px;position:relative;padding-bottom:14px;border-bottom:1px solid rgba(51,65,85,.3)}
+.timeline-item:last-child{border-bottom:none;padding-bottom:0}
+.timeline-dot{width:10px;height:10px;border-radius:50%;background:var(--accent);margin-top:6px;flex-shrink:0;box-shadow:0 0 0 3px var(--accent-glow)}
+.timeline-content{flex:1;min-width:0}
+.timeline-item .ti-header{display:flex;gap:8px;align-items:center;margin-bottom:4px;flex-wrap:wrap}
+.timeline-item .ti-company{font-weight:600;font-size:13px;cursor:pointer;color:var(--accent-light)}
+.timeline-item .ti-company:hover{text-decoration:underline}
+.timeline-item .ti-period{font-size:11px;color:var(--text-muted);background:var(--bg-surface);padding:1px 6px;border-radius:3px}
+.timeline-item .ti-most{font-size:12px;color:var(--text-secondary);line-height:1.5;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.champion-tag{background:linear-gradient(135deg,#f59e0b,#ec4899);color:#fff;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.3px}
+.account-header{display:flex;align-items:center;gap:16px;margin-bottom:20px;padding:20px 24px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg)}
+.account-header .ah-name{font-size:20px;font-weight:700}
+.account-header .ah-meta{display:flex;gap:12px;margin-top:6px;flex-wrap:wrap;font-size:12px;color:var(--text-secondary)}
+.sub-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px}
+
+/* 大客户复盘新增样式 */
+.stage-tag{display:inline-flex;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:.2px}
+.stage-已签约{background:rgba(16,185,129,.15);color:#34d399}
+.stage-交付中{background:rgba(6,182,212,.15);color:#22d3ee}
+.stage-投标中{background:rgba(245,158,11,.15);color:#fbbf24}
+.stage-POC中{background:rgba(139,92,246,.15);color:#a78bfa}
+.stage-重点推进{background:rgba(59,130,246,.15);color:#60a5fa}
+.stage-B类重点推进{background:rgba(59,130,246,.15);color:#60a5fa}
+.stage-跟进中{background:rgba(100,116,139,.15);color:#94a3b8}
+.stage-C类跟进{background:rgba(100,116,139,.15);color:#94a3b8}
+.stage-观察{background:rgba(100,116,139,.1);color:#94a3b8}
+.stage-D类观察{background:rgba(100,116,139,.1);color:#94a3b8}
+.stage-战败{background:rgba(239,68,68,.15);color:#f87171}
+.stage-放弃{background:rgba(239,68,68,.15);color:#f87171}
+.amount-hero{font-size:28px;font-weight:800;background:var(--gradient-accent);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1.2}
+.amount-hero.green{background:var(--gradient-green);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.pipeline-bar{display:flex;height:32px;border-radius:8px;overflow:hidden;margin:12px 0;box-shadow:inset 0 1px 3px rgba(0,0,0,.2)}
+.pipeline-seg{display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;transition:width .6s ease;min-width:30px;white-space:nowrap;padding:0 4px}
+.pipeline-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px}
+.pipeline-legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-secondary)}
+.pipeline-legend-dot{width:10px;height:10px;border-radius:3px}
+.blocker-card{background:var(--bg-card);border:1px solid rgba(239,68,68,.25);border-left:3px solid var(--danger);border-radius:var(--radius);padding:14px 18px;margin-bottom:8px;transition:all .15s;cursor:pointer}
+.blocker-card:hover{background:var(--bg-card-hover);border-color:rgba(239,68,68,.4)}
+.blocker-card .bc-company{font-size:12px;font-weight:600;color:#f87171;margin-bottom:4px}
+.blocker-card .bc-blocker{font-size:13px;line-height:1.6;color:var(--text)}
+.deadline-card{background:var(--bg-card);border:1px solid rgba(245,158,11,.2);border-left:3px solid var(--warning);border-radius:var(--radius);padding:12px 16px;margin-bottom:6px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all .15s}
+.deadline-card:hover{background:var(--bg-card-hover);border-color:rgba(245,158,11,.35)}
+.deadline-card .dl-date{font-size:11px;font-weight:700;color:var(--warning);min-width:80px}
+.deadline-card .dl-content{flex:1}
+.deadline-card .dl-company{font-size:12px;font-weight:600;color:var(--accent-light)}
+.deadline-card .dl-step{font-size:12px;color:var(--text-secondary)}
+.lesson-card{background:var(--bg-card);border:1px solid var(--border);border-left:4px solid var(--danger);border-radius:var(--radius);padding:16px 20px;margin-bottom:10px}
+.lesson-card .lc-company{font-size:12px;font-weight:700;color:var(--danger);margin-bottom:6px}
+.lesson-card .lc-content{font-size:13px;line-height:1.7;color:var(--text-secondary)}
+
+/* ===== Panoramic Report (全景报告) ===== */
+.panorama{display:flex;flex-direction:column;gap:20px}
+.section-card{background:var(--bg-card);border-radius:var(--radius-lg);border:1px solid var(--border);box-shadow:var(--shadow-md);overflow:hidden}
+.section-card.highlight-red{border-color:rgba(239,68,68,.5);box-shadow:0 0 20px rgba(239,68,68,.12)}
+.section-card.highlight-red .section-header{background:linear-gradient(90deg,rgba(239,68,68,.08),transparent)}
+.section-header{padding:16px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.section-header h3{font-size:15px;font-weight:700;color:var(--text-bright);display:flex;align-items:center;gap:8px}
+.section-header .section-count{margin-left:auto;font-size:12px;color:var(--text-muted);background:var(--bg-surface);padding:2px 10px;border-radius:10px}
+.section-body{padding:20px 22px}
+
+/* Strategy section */
+.strategy-quotes{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:20px}
+.strategy-quote{background:var(--bg-surface);border-left:3px solid var(--accent);padding:12px 16px;border-radius:0 var(--radius) var(--radius) 0;font-size:13px;line-height:1.6}
+.strategy-quote .sq-who{font-size:11px;color:var(--accent-light);font-weight:600;margin-bottom:3px}
+.strategy-quote .sq-text{color:var(--text);font-style:italic}
+.strategy-overview{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px}
+.overview-item{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;text-align:center}
+.overview-item .ov-value{font-size:22px;font-weight:800}
+.overview-item .ov-label{font-size:11px;color:var(--text-muted);margin-top:3px}
+.funnel-strip{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;margin-bottom:12px}
+.funnel-strip h4{font-size:12px;color:var(--text-secondary);margin-bottom:10px;font-weight:600}
+.funnel-row{display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:6px}
+.funnel-row .fl-label{min-width:80px;color:var(--text-secondary)}
+.funnel-row .fl-bar{flex:1;height:18px;background:var(--bg);border-radius:3px;overflow:hidden}
+.funnel-row .fl-fill{height:100%;background:var(--gradient-accent);border-radius:3px}
+.funnel-row .fl-val{min-width:60px;font-weight:700;color:var(--text-bright);font-size:13px}
+.conclusion-box{background:linear-gradient(135deg,rgba(139,92,246,.1),rgba(59,130,246,.1));border:1px solid rgba(139,92,246,.3);border-radius:var(--radius);padding:14px 18px;font-size:13px;line-height:1.7;color:var(--text)}
+.conclusion-box strong{color:#c4b5fd}
+
+/* Signed / Bidding cards */
+.client-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.signed-card{background:var(--bg-surface);border:1px solid rgba(16,185,129,.25);border-radius:var(--radius-lg);padding:18px;transition:all .15s}
+.signed-card:hover{border-color:var(--success);box-shadow:0 0 16px rgba(16,185,129,.12);transform:translateY(-2px)}
+.signed-card .sc-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.signed-card .sc-name{font-size:15px;font-weight:700;color:var(--text-bright);cursor:pointer}
+.signed-card .sc-name:hover{color:var(--accent-light)}
+.signed-card .sc-amount{font-size:26px;font-weight:800;color:var(--success);margin:8px 0}
+.signed-card .sc-amount small{font-size:12px;color:var(--text-muted);font-weight:400;margin-left:4px}
+.signed-card .sc-owner{font-size:11px;color:var(--text-secondary);margin-bottom:8px}
+.signed-card .sc-status{font-size:13px;color:var(--text);line-height:1.6;margin-bottom:6px}
+.signed-card .sc-next{font-size:12px;color:var(--text-muted);padding-top:8px;border-top:1px solid var(--border)}
+
+/* Bidding (red highlight) */
+.bidding-card{background:linear-gradient(135deg,rgba(239,68,68,.08),rgba(245,158,11,.08));border:2px solid rgba(239,68,68,.5);border-radius:var(--radius-lg);padding:20px;position:relative}
+.bidding-card .countdown{display:inline-flex;align-items:center;gap:6px;background:var(--danger);color:#fff;font-size:12px;font-weight:700;padding:4px 12px;border-radius:12px;animation:pulse-red 2s infinite}
+@keyframes pulse-red{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5)}50%{box-shadow:0 0 0 8px rgba(239,68,68,0)}}
+.bidding-card .bc-name{font-size:20px;font-weight:800;color:var(--text-bright);cursor:pointer}
+.bidding-card .bc-name:hover{color:var(--danger)}
+.bidding-card .bc-amount{font-size:32px;font-weight:800;color:#f87171;margin:8px 0}
+.bidding-card .bc-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.bidding-card .bc-meta-item{background:rgba(0,0,0,.2);border-radius:var(--radius);padding:8px 12px}
+.bidding-card .bc-meta-label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
+.bidding-card .bc-meta-value{font-size:13px;color:var(--text-bright);font-weight:600;margin-top:2px}
+.bidding-card .bc-quote{background:rgba(239,68,68,.15);border-left:3px solid var(--danger);padding:10px 14px;border-radius:0 var(--radius) var(--radius) 0;font-size:13px;font-style:italic;color:#fca5a5;margin-top:10px}
+
+/* B class cards */
+.bclass-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.bclass-card{background:var(--bg-surface);border:1px solid rgba(59,130,246,.2);border-radius:var(--radius);padding:14px 16px;transition:all .15s;cursor:pointer}
+.bclass-card:hover{border-color:var(--accent);background:var(--bg-card-hover)}
+.bclass-card .bcc-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.bclass-card .bcc-name{font-size:14px;font-weight:700;color:var(--text-bright)}
+.bclass-card .bcc-amount{font-size:13px;color:var(--accent-light);font-weight:700}
+.bclass-card .bcc-owner{font-size:11px;color:var(--text-secondary);margin-bottom:6px}
+.bclass-card .bcc-status{font-size:12px;color:var(--text);line-height:1.5;margin-bottom:4px}
+.bclass-card .bcc-blocker{font-size:11px;color:#fbbf24;margin-top:4px;padding-top:4px;border-top:1px dashed rgba(245,158,11,.3)}
+
+/* C class compact list */
+.compact-list{display:flex;flex-direction:column;gap:6px}
+.compact-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg-surface);border-radius:var(--radius);font-size:12px;cursor:pointer;transition:background .15s}
+.compact-item:hover{background:var(--bg-card-hover)}
+.compact-item .ci-name{font-weight:600;color:var(--text-bright);min-width:100px}
+.compact-item .ci-name:hover{color:var(--accent-light)}
+.compact-item .ci-status{flex:1;color:var(--text-secondary)}
+.compact-item .ci-owner{font-size:11px;color:var(--text-muted)}
+
+/* Dead groups */
+.dead-group{margin-bottom:14px}
+.dead-group-header{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg-surface);border-radius:var(--radius) var(--radius) 0 0;border-bottom:1px solid var(--border);font-size:13px;font-weight:600}
+.dead-group-header .dg-desc{font-size:11px;font-weight:400;color:var(--text-muted);margin-left:8px}
+.dead-item{padding:8px 12px;background:rgba(0,0,0,.15);border-bottom:1px solid rgba(51,65,85,.3);font-size:12px;display:flex;gap:8px}
+.dead-item:last-child{border-radius:0 0 var(--radius) var(--radius);border-bottom:none}
+.dead-item .di-name{font-weight:600;color:var(--danger);min-width:90px}
+.dead-item .di-lesson{color:var(--text-secondary);flex:1;line-height:1.5}
+
+.lessons-summary{margin-top:16px;display:flex;flex-direction:column;gap:8px}
+.lesson-item{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;background:var(--danger-bg);border-left:3px solid var(--danger);border-radius:0 var(--radius) var(--radius) 0;font-size:12px;line-height:1.6;color:var(--text)}
+.lesson-item .li-num{background:var(--danger);color:#fff;font-size:10px;font-weight:700;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+
+/* Top concerns */
+.concern-list{display:flex;flex-direction:column;gap:8px}
+.concern-item{display:flex;gap:12px;padding:12px 16px;background:var(--bg-surface);border-radius:var(--radius);border:1px solid var(--border)}
+.concern-item .ci-rank{width:28px;height:28px;border-radius:50%;background:var(--gradient-accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0}
+.concern-item .ci-title{font-size:14px;font-weight:700;color:var(--text-bright);margin-bottom:3px}
+.concern-item .ci-desc{font-size:12px;color:var(--text-secondary);line-height:1.5}
+
+/* Action items */
+.action-list{display:flex;flex-direction:column;gap:6px}
+.action-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:var(--radius);border-left:3px solid;font-size:12px;line-height:1.6;cursor:pointer;transition:all .15s}
+.action-item:hover{filter:brightness(1.15)}
+.action-item.red{background:rgba(239,68,68,.08);border-left-color:var(--danger)}
+.action-item.yellow{background:rgba(245,158,11,.08);border-left-color:var(--warning)}
+.action-item.blue{background:rgba(59,130,246,.08);border-left-color:var(--accent)}
+.action-item .ai-prio{font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;flex-shrink:0;margin-top:1px}
+.action-item.red .ai-prio{background:var(--danger);color:#fff}
+.action-item.yellow .ai-prio{background:var(--warning);color:#000}
+.action-item.blue .ai-prio{background:var(--accent);color:#fff}
+.action-item .ai-company{font-weight:700;color:var(--text-bright);min-width:80px;flex-shrink:0}
+.action-item .ai-content{flex:1;color:var(--text)}
+.action-item .ai-owner{font-size:11px;color:var(--text-muted);flex-shrink:0}
+
+/* Tier D */
+.tier-D{background:#475569;box-shadow:0 0 4px rgba(100,116,139,.3)}
+/* 纵向时间线 */
+.vertical-timeline{position:relative;padding-left:24px}
+.vertical-timeline::before{content:'';position:absolute;left:7px;top:8px;bottom:8px;width:2px;background:var(--border)}
+.vt-item{position:relative;padding-bottom:20px}
+.vt-item:last-child{padding-bottom:0}
+.vt-dot{position:absolute;left:-24px;top:4px;width:16px;height:16px;border-radius:50%;background:var(--accent);border:3px solid var(--bg);z-index:1;box-shadow:0 0 0 2px var(--accent)}
+.vt-date{font-size:12px;font-weight:700;color:var(--accent-light);margin-bottom:2px}
+.vt-event{font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px}
+.vt-note{font-size:12px;color:var(--text-secondary);line-height:1.5}
+/* 客户详情大标题 */
+.account-hero{background:var(--gradient-hero);border-radius:var(--radius-xl);padding:28px 32px;margin-bottom:20px;position:relative;overflow:hidden;border:1px solid rgba(59,130,246,.1)}
+.account-hero::before{content:'';position:absolute;top:-30%;right:-10%;width:300px;height:300px;background:radial-gradient(circle,rgba(59,130,246,.08) 0%,transparent 70%);pointer-events:none}
+.account-hero-top{display:flex;align-items:center;gap:16px;position:relative}
+.account-hero-top .tier-badge{width:48px;height:48px;font-size:20px;border-radius:10px}
+.account-hero-name{font-size:24px;font-weight:800;color:var(--text-bright);position:relative}
+.account-hero-tags{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;position:relative}
+.account-hero-amount{margin-left:auto;text-align:right;position:relative}
+.account-hero-amount .amount-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
+.info-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+.info-grid .detail-field{margin-bottom:0}
+
+/* ===== 活动卡片列表 ===== */
+.event-list-cards{display:flex;flex-direction:column;gap:10px}
+.event-card{background:#2A2A3E;border:1px solid rgba(255,255,255,.06);border-radius:var(--radius-lg);padding:16px 20px;cursor:pointer;display:flex;align-items:center;gap:16px;transition:all .2s}
+.event-card:hover{background:#33334d;border-color:var(--accent);box-shadow:var(--shadow-glow);transform:translateY(-1px)}
+.event-card-left{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.event-card-left .ec-top{display:flex;align-items:center;gap:10px}
+.event-card-left .ec-name{font-size:15px;font-weight:700;color:var(--text-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.event-card-left .ec-theme{font-size:12px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.event-card-right{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.event-card .ec-meta{display:flex;flex-direction:column;gap:3px;margin-right:4px}
+.event-card .ec-meta-item{font-size:11px;color:var(--text-muted);white-space:nowrap}
+.event-card .ec-metrics{display:flex;gap:6px}
+.metric-pill{background:rgba(255,255,255,.06);border-radius:8px;padding:6px 10px;text-align:center;min-width:52px}
+.metric-pill .mp-value{font-size:15px;font-weight:700;color:#fff;line-height:1.2}
+.metric-pill .mp-label{font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.event-card .ec-status{margin-left:4px;flex-shrink:0}
+.event-card .ec-edit-btn{opacity:0;transition:opacity .15s}
+.event-card:hover .ec-edit-btn{opacity:1}
+.ec-type-tag{display:inline-flex;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;letter-spacing:.3px}
+.ec-type-论坛{background:rgba(139,92,246,.2);color:#a78bfa}
+.ec-type-展会{background:rgba(168,85,247,.2);color:#c084fc}
+.ec-type-参访{background:rgba(16,185,129,.15);color:#34d399}
+.ec-type-峰会{background:rgba(236,72,153,.15);color:#f472b6}
+.ec-type-沙龙{background:rgba(6,182,212,.15);color:#22d3ee}
+.ec-type-发布会{background:rgba(59,130,246,.15);color:#60a5fa}
+.ec-type-default{background:rgba(100,116,139,.15);color:#94a3b8}
+
+/* ===== Pipeline Kanban 看板 ===== */
+.kanban-board{display:flex;gap:12px;overflow-x:auto;padding:4px 0 16px;align-items:flex-start}
+.kanban-column{width:270px;flex-shrink:0;background:var(--bg-surface);border-radius:var(--radius-lg);display:flex;flex-direction:column;max-height:calc(100vh - 200px);border:1px solid var(--border);transition:border-color .3s,box-shadow .3s}
+.kanban-column.col-highlighted{border-color:var(--accent);box-shadow:0 0 16px rgba(59,130,246,.25)}
+.kanban-column-header{padding:12px 14px 10px;border-top:3px solid var(--accent);border-radius:var(--radius-lg) var(--radius-lg) 0 0;display:flex;align-items:center;gap:8px;position:sticky;top:0;background:var(--bg-surface);z-index:1}
+.kanban-column-header .kch-name{font-size:13px;font-weight:700;color:var(--text);flex:1}
+.kanban-column-header .kch-count{background:rgba(255,255,255,.08);color:var(--text-secondary);padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.kanban-cards{padding:8px 10px 12px;overflow-y:auto;flex:1}
+.pipeline-card{background:#2a2a3a;border:1px solid rgba(255,255,255,.04);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:all .15s}
+.pipeline-card:hover{border-color:var(--border-light);transform:translateY(-1px);box-shadow:var(--shadow-md);background:#353548}
+.pipeline-card:last-child{margin-bottom:0}
+.pipeline-card .pc-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.pipeline-card .pc-tier{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.pipeline-card .pc-tier-S{background:var(--tier-s);box-shadow:0 0 8px rgba(239,68,68,.3)}
+.pipeline-card .pc-tier-A{background:var(--tier-a);box-shadow:0 0 8px rgba(249,115,22,.3)}
+.pipeline-card .pc-tier-B{background:var(--tier-b);box-shadow:0 0 8px rgba(59,130,246,.3)}
+.pipeline-card .pc-tier-C{background:var(--tier-c)}
+.pipeline-card .pc-tier-D{background:#475569}
+.pipeline-card .pc-name{font-size:14px;font-weight:700;color:var(--text-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.pipeline-card .pc-industry{font-size:11px;color:var(--text-muted);margin-bottom:8px}
+.pipeline-card .pc-progress{height:4px;background:rgba(255,255,255,.06);border-radius:2px;margin-bottom:8px;overflow:hidden}
+.pipeline-card .pc-progress-fill{height:100%;border-radius:2px;transition:width .4s}
+.pipeline-card .pc-desc{font-size:11px;color:var(--text-secondary);line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-bottom:6px}
+.pipeline-card .pc-amount{font-size:12px;font-weight:700;color:var(--accent-light);margin-bottom:4px}
+.pipeline-card .pc-owner{font-size:10px;color:var(--text-muted)}
+
+/* Stage distribution clickable link */
+.stage-dist-link{display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--text);font-size:13px;font-weight:600;transition:color .15s}
+.stage-dist-link:hover{color:var(--accent-light)}
+.stage-dist-link .sdl-arrow{font-size:11px;color:var(--text-muted);transition:transform .15s}
+.stage-dist-link:hover .sdl-arrow{color:var(--accent-light);transform:translateX(2px)}
+
+/* Contact org chart grouping */
+.contact-group{margin-bottom:16px}
+.contact-group-header{padding:8px 12px;font-weight:600;font-size:13px;border-radius:6px 6px 0 0;display:flex;align-items:center;gap:8px}
+.contact-group-header.cg-decision{background:rgba(239,68,68,.1);border-left:3px solid var(--danger);color:#f87171}
+.contact-group-header.cg-management{background:rgba(245,158,11,.1);border-left:3px solid var(--warning);color:#fbbf24}
+.contact-group-header.cg-execution{background:rgba(59,130,246,.1);border-left:3px solid var(--accent);color:#60a5fa}
+.contact-group-body{background:var(--bg-card);border:1px solid var(--border);border-top:none;border-radius:0 0 6px 6px;padding:8px}
+.contact-person-card{padding:10px 12px;border-bottom:1px solid rgba(51,65,85,.3);display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.contact-person-card:last-child{border-bottom:none}
+.cpc-name{font-weight:600;font-size:14px;display:flex;align-items:center;gap:6px}
+.cpc-champion{color:#fbbf24;font-size:12px}
+.cpc-title{font-size:12px;color:var(--text-secondary)}
+.cpc-contact{font-size:11px;color:var(--text-muted);margin-left:auto}
+.cpc-notes{width:100%;font-size:11px;color:var(--text-muted);margin-top:4px}
+.cpc-actions{display:flex;gap:4px}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h1>🏢 MKT-CRM</h1>
+      <small>市场部 AI-Native 工作台</small>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <div class="nav-section-title">概览</div>
+        <div class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')">
+          <span class="icon">📊</span>Dashboard
+        </div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">业务板块</div>
+        <div class="nav-item" data-page="ceo-events" onclick="navigate('ceo-events')">
+          <span class="icon">🎤</span>活动和CEO获客<span class="badge" id="badge-speeches">0</span>
+        </div>
+        <div class="nav-item" data-page="octo-summary" onclick="navigate('octo-summary')">
+          <span class="icon">🐙</span>Octo 大客户复盘<span class="badge" id="badge-blockers" style="display:none">0</span>
+        </div>
+        <div class="nav-item" data-page="funnel" onclick="navigate('funnel')">
+          <span class="icon">🔄</span>SDR 漏斗<span class="badge" id="badge-leads">0</span>
+        </div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">数据管理</div>
+        <div class="nav-item" data-page="import" onclick="navigate('import')">
+          <span class="icon">📥</span>数据导入
+        </div>
+      </div>
+    </nav>
+    <div style="padding:16px;border-top:1px solid rgba(255,255,255,.06);font-size:10px;color:var(--text-muted)">
+      MKT-CRM v2.0 · 明略科技市场部
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="header">
+      <h2 id="page-title">Dashboard</h2>
+      <div class="header-actions" id="header-actions"></div>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modal"></div>
+</div>
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+const API='';
+async function api(path,opts={}){const url=API+path;const config={headers:{'Content-Type':'application/json'},...opts};if(config.body&&typeof config.body==='object'&&!(config.body instanceof FormData))config.body=JSON.stringify(config.body);if(config.body instanceof FormData)delete config.headers['Content-Type'];const res=await fetch(url,config);const data=await res.json();if(!res.ok)throw new Error(data.error||'请求失败');return data}
+function toast(msg,type='success'){const el=document.createElement('div');el.className=`toast toast-${type}`;el.textContent=msg;document.getElementById('toast-container').appendChild(el);setTimeout(()=>el.remove(),3000)}
+function esc(s){if(!s)return '';const d=document.createElement('div');d.textContent=String(s);return d.innerHTML}
+function err(e){return `<div class="empty-state"><div class="icon">⚠️</div><p>${esc(e.message||e)}</p></div>`}
+
+let currentPage='dashboard',stats={},charts={};
+
+function navigate(page,params={}){
+  currentPage=page;
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.page===page));
+  const content=document.getElementById('content');
+  const ha=document.getElementById('header-actions');
+  ha.innerHTML='';destroyCharts();
+  const titles={dashboard:'Dashboard','ceo-events':'🎤 活动和CEO获客','event-detail':'🎪 活动详情','event-form':'🎪 新建/编辑活动','ceo-event-detail':'🎤 演讲详情','ceo-event-form':'🎤 新建/编辑演讲','octo-summary':'🐙 Octo 大客户复盘','octo-pipeline':'🐙 Account Pipeline','account-report':'🐙 客户全景档案',accounts:'🏢 客户列表','account-detail':'🐙 客户 360° 视图','account-form':'🐙 新建/编辑客户',funnel:'🔄 SDR 漏斗',import:'📥 数据导入',pipeline:'📋 Account Pipeline'};
+  document.getElementById('page-title').textContent=titles[page]||page;
+  const r={dashboard:renderDashboard,'ceo-events':renderCeoEvents,'event-detail':()=>renderEventDetail(params.id),'event-form':()=>renderEventForm(params.id),'ceo-event-detail':()=>renderCeoEventDetail(params.id),'ceo-event-form':()=>renderCeoEventForm(params.id),'octo-summary':()=>renderOctoSummary(params.tab),'octo-pipeline':()=>renderOctoPipeline(params.stage),'account-report':()=>renderAccountReport(params.id),accounts:renderAccounts,'account-detail':()=>renderAccountDetail(params.id),'account-form':()=>renderAccountForm(params.id),funnel:renderFunnel,import:renderImport,pipeline:()=>renderOctoPipeline(params.stage)};
+  (r[page]||renderDashboard)();
+}
+function destroyCharts(){Object.values(charts).forEach(c=>c.destroy());charts={}}
+
+// ===== DASHBOARD =====
+async function renderDashboard(){
+  const content=document.getElementById('content');
+  content.innerHTML='<div style="text-align:center;padding:60px;color:var(--text-muted)">⏳ 加载数据...</div>';
+  try{stats=await api('/api/stats')}catch(e){content.innerHTML=err(e);return}
+  updateBadges();
+
+  content.innerHTML=`
+    <div class="hero">
+      <div class="hero-title">MKT-CRM · 市场部数据指挥中心</div>
+      <div class="hero-sub">明略科技 · 品牌与市场部 AI-Native 工作台 · 实时数据概览</div>
+      <div class="hero-stats">
+        <div class="hero-stat animate-in" onclick="navigate('ceo-events')" style="animation-delay:.1s">
+          <span class="icon">🎤</span>
+          <div class="value pink">${stats.speeches.total}</div>
+          <div class="label">活动和CEO获客</div>
+          <div class="sub">累计触达 ${fmtNum(stats.speeches.totalAudience)} 人</div>
+        </div>
+        <div class="hero-stat animate-in" onclick="navigate('octo-summary')" style="animation-delay:.2s">
+          <span class="icon">🐙</span>
+          <div class="value green">${stats.accounts.total}</div>
+          <div class="label">Octo 大客户</div>
+          <div class="sub">${stats.accounts.byTier.map(t=>t.tier+': '+t.c).join(' · ')||'等待导入'}</div>
+        </div>
+        <div class="hero-stat animate-in" onclick="navigate('funnel')" style="animation-delay:.3s">
+          <span class="icon">🔄</span>
+          <div class="value orange">${stats.leads.total}</div>
+          <div class="label">SDR 线索</div>
+          <div class="sub">${(stats.leads.byStatus||[]).map(s=>stageName(s.status)+' '+s.c).join(' · ')||'等待导入'}</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+      <div class="card">
+        <div class="card-header"><h3>📊 SDR 线索漏斗</h3></div>
+        <div class="card-body">${(stats.leads.byStatus||[]).length?'<div class="chart-container"><canvas id="chart-funnel"></canvas></div>':'<div class="empty-state" style="padding:24px"><p>导入线索数据后自动生成漏斗</p></div>'}</div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>🏢 客户等级分布</h3></div>
+        <div class="card-body">${stats.accounts.byTier.length?'<div class="chart-container"><canvas id="chart-tiers"></canvas></div>':'<div class="empty-state" style="padding:24px"><p>导入客户数据后自动生成分布图</p></div>'}</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="card">
+        <div class="card-header"><h3>🎤 活动和CEO获客</h3><button class="btn btn-sm btn-primary" onclick="navigate('ceo-event-form')">+ 新建</button></div>
+        <div class="card-body">
+          <div style="text-align:center;padding:16px">
+            <div style="font-size:36px;font-weight:800;background:var(--gradient-pink);-webkit-background-clip:text;-webkit-text-fill-color:transparent">${stats.speeches.total}</div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">累计场次 · 触达 ${fmtNum(stats.speeches.totalAudience)} 人</div>
+            <button class="btn btn-secondary" style="margin-top:16px" onclick="navigate('ceo-events')">查看全部 →</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>🔥 最新线索</h3></div>
+        <div class="card-body" style="padding:0">
+          ${stats.recentLeads.length?`<table>
+            <tr><th>姓名</th><th>公司</th><th>来源</th><th>阶段</th></tr>
+            ${stats.recentLeads.map(l=>`<tr>
+              <td>${esc(l.contact_name)||'—'}</td><td>${esc(l.company_name)||'—'}</td>
+              <td>${sourceTag(l.source_channel)}</td><td>${leadStatusTag(l.status)}</td>
+            </tr>`).join('')}
+          </table>`:'<div class="empty-state" style="padding:32px"><div class="icon">🔄</div><p>暂无线索</p><button class="btn btn-primary" onclick="navigate(\'import\')">📥 导入数据</button></div>'}
+        </div>
+      </div>
+    </div>
+  `;
+
+  if(stats.leads.byStatus&&stats.leads.byStatus.length){
+    const so=['new','contacted','qualified','opportunity','closed_won','closed_lost'];
+    const sd=so.map(s=>(stats.leads.byStatus.find(x=>x.status===s)||{c:0}).c);
+    charts.funnel=new Chart(document.getElementById('chart-funnel'),{type:'bar',data:{labels:so.map(leadStatusName),datasets:[{label:'线索数',data:sd,backgroundColor:['#475569','#3b82f6','#8b5cf6','#f59e0b','#10b981','#ef4444'],borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0,color:'#64748b'},grid:{color:'rgba(51,65,85,.3)'}},x:{ticks:{color:'#64748b'},grid:{display:false}}}}});
+  }
+  if(stats.accounts.byTier.length){
+    charts.tiers=new Chart(document.getElementById('chart-tiers'),{type:'doughnut',data:{labels:stats.accounts.byTier.map(t=>t.tier+' 级'),datasets:[{data:stats.accounts.byTier.map(t=>t.c),backgroundColor:stats.accounts.byTier.map(t=>({'S':'#ef4444','A':'#f97316','B':'#3b82f6','C':'#64748b'}[t.tier])),borderWidth:0,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#94a3b8',padding:16}}}}});
+  }
+}
+function updateBadges(){
+  document.getElementById('badge-speeches').textContent=stats.speeches?.total??0;
+  document.getElementById('badge-leads').textContent=stats.leads?.total??0;
+  // Load octo badges async
+  api('/api/octo/summary').then(d=>{
+    const blockerCount=(d.kpi?.blockers||0)+(d.kpi?.pendingDecisions||0);
+    const bb=document.getElementById('badge-blockers');
+    if(blockerCount>0){bb.style.display='';bb.textContent=blockerCount}else{bb.style.display='none'}
+  }).catch(()=>{})
+}
+
+// ===== EVENTS =====
+async function renderEvents(){
+  const content=document.getElementById('content');
+  const ha=document.getElementById('header-actions');
+  ha.innerHTML='<button class="btn btn-primary" style="background:linear-gradient(135deg,#06b6d4,#3b82f6);box-shadow:0 2px 8px rgba(6,182,212,.3)" onclick="navigate(\'event-form\')">+ New Event</button>';
+  let data;try{data=await api('/api/events')}catch(e){content.innerHTML=err(e);return}
+  content.innerHTML=`
+    <div class="search-bar">
+      <input type="text" placeholder="搜索活动名称/主题/地点..." id="ev-search" oninput="searchEvents()">
+      <select id="ev-status" onchange="searchEvents()"><option value="">全部状态</option><option value="筹备中">筹备中</option><option value="进行中">进行中</option><option value="已结束">已结束</option><option value="已取消">已取消</option></select>
+    </div>
+    <div class="event-list-cards" id="ev-cards">${data.data.length?data.data.map(evCard).join(''):'<div class="empty-state"><div class="icon">🎪</div><p>暂无活动</p></div>'}</div>`;
+}
+function evCard(e){
+  const typeCls=['论坛','展会','参访','峰会','沙龙','发布会'].includes(e.event_type)?e.event_type:'default';
+  return `<div class="event-card" onclick="navigate('event-detail',{id:${e.id}})">
+    <div class="event-card-left">
+      <div class="ec-top">
+        <span class="ec-type-tag ec-type-${typeCls}">${e.event_type||'—'}</span>
+        <span class="ec-name">${esc(e.name)}</span>
+      </div>
+      ${e.theme?`<div class="ec-theme">${esc(e.theme)}</div>`:''}
+    </div>
+    <div class="event-card-right">
+      <div class="ec-meta">
+        <div class="ec-meta-item">📅 ${e.date||'—'}</div>
+        <div class="ec-meta-item">📍 ${esc(e.location)||'—'}</div>
+      </div>
+      <div class="ec-metrics">
+        <div class="metric-pill"><div class="mp-value">${fmtNum(e.registration_count)}</div><div class="mp-label">REG</div></div>
+        <div class="metric-pill"><div class="mp-value">${fmtNum(e.attendance_count)}</div><div class="mp-label">ATTEND</div></div>
+        <div class="metric-pill"><div class="mp-value" style="color:var(--accent-light)">${e.leads_count||0}</div><div class="mp-label">LEADS</div></div>
+        <div class="metric-pill"><div class="mp-value">${e.mql_count||0}</div><div class="mp-label">MQL</div></div>
+      </div>
+      <div class="ec-status">${statusTag(e.status)}</div>
+      <button class="btn btn-sm btn-secondary ec-edit-btn" onclick="event.stopPropagation();navigate('event-form',{id:${e.id}})">编辑</button>
+    </div>
+  </div>`;
+}
+async function searchEvents(){
+  const q=document.getElementById('ev-search').value,st=document.getElementById('ev-status').value;
+  const p=new URLSearchParams();if(q)p.set('search',q);if(st)p.set('status',st);
+  try{const d=await api('/api/events?'+p);const c=document.getElementById('ev-cards');if(c)c.innerHTML=d.data.length?d.data.map(evCard).join(''):'<div class="empty-state"><p>无匹配结果</p></div>'}catch(e){toast(e.message,'error')}
+}
+
+// ===== EVENT DETAIL (对齐真实复盘报告) =====
+async function renderEventDetail(id){
+  const content=document.getElementById('content'),ha=document.getElementById('header-actions');
+  try{
+    const e=await api(`/api/events/${id}`);
+    document.getElementById('page-title').textContent=`🎪 ${e.name}`;
+
+    // ===== CEO获客活动专用明细（二级目录）=====
+    if(e.key_messages==='吴明辉(CEO)'){
+      const rate1=e.wechat_followers>0?((e.activations||0)/e.wechat_followers*100).toFixed(1)+'%':'—';
+      const rate2=e.registrations>0?((e.sql_count||0)/e.registrations*100).toFixed(1)+'%':'—';
+      ha.innerHTML=`<button class="btn btn-secondary" onclick="navigate('ceo-events')">← 返回看板</button><button class="btn btn-primary" onclick="navigate('event-form',{id:${id}})">编辑</button><button class="btn btn-danger" onclick="if(confirm('确定删除这场CEO获客活动？'))deleteEvent(${id})">删除</button>`;
+      const sfunnel=[['活码加微',e.wechat_followers||0,Math.max(e.wechat_followers,e.registrations||0,1)],['OCTO申请',e.registrations||0,Math.max(e.wechat_followers,e.registrations||0,1)],['审核开通',e.activations||0,Math.max(e.wechat_followers,e.registrations||0,1)],['转出销售',e.sql_count||0,Math.max(e.wechat_followers,e.registrations||0,1)]].map(([l,v,max])=>`<div class="funnel-row"><span class="fl-label">${l}</span><div class="fl-bar"><div class="fl-fill" style="width:${Math.max(v/max*100,2)}%"></div></div><span class="fl-val">${v}</span></div>`).join('');
+      content.innerHTML=`
+        <div class="stats-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:20px">
+          ${[{v:e.wechat_followers>0?fmtNum(e.wechat_followers):'无活码',l:'活码加微',c:'var(--accent)'},{v:e.registrations||0,l:'OCTO申请',c:'var(--info)'},{v:e.activations||0,l:'审核开通',c:'var(--success)'},{v:e.sql_count||0,l:'转出销售',c:'var(--warning)'},{v:rate1,l:'加微→开通',c:'var(--pink)'}].map(s=>`<div class="stat-card"><div class="accent-bar" style="background:${s.c}"></div><div class="stat-value" style="color:${s.c}">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('')}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <div class="card"><div class="card-header"><h3>基本信息</h3></div><div class="card-body"><div class="detail-grid">
+            <div><div class="detail-field"><div class="label">活动类型</div><div class="value"><span class="tag tag-blue">${e.event_type||'—'}</span></div></div></div>
+            <div><div class="detail-field"><div class="label">活码创建</div><div class="value">${e.date||'—'}</div></div></div>
+            <div><div class="detail-field"><div class="label">获客方式</div><div class="value">${e.wechat_followers>0?'企微活码扫码':'群内直接分享OCTO开通邀请链接'}</div></div></div>
+            <div><div class="detail-field"><div class="label">主讲</div><div class="value">${esc(e.key_messages)}</div></div></div>
+          </div></div></div>
+          <div class="card"><div class="card-header"><h3>漏斗</h3></div><div class="card-body">${sfunnel}<div style="margin-top:8px;font-size:12px;color:var(--text-muted)">申请→转出：${rate2}</div></div></div>
+        </div>
+        <div class="card"><div class="card-header"><h3>📋 获客明细与特点（报告原文）</h3></div><div class="card-body"><div style="white-space:pre-wrap;line-height:1.8">${esc(e.notes)}</div></div></div>`;
+      return;
+    }
+
+    ha.innerHTML=`<button class="btn btn-secondary" onclick="navigate('ceo-events')">← 返回看板</button><button class="btn btn-primary" onclick="navigate('event-form',{id:${id}})">编辑</button>`;
+
+    const indDist=tryParse(e.industry_distribution);
+    const jobDist=tryParse(e.job_level_distribution);
+    const deptDist=tryParse(e.dept_distribution);
+    const channels=tryParse(e.channel_sources);
+    const prodSigs=tryParse(e.product_signals);
+    const indSigs=tryParse(e.industry_signals);
+    const opps=tryParse(e.key_opportunities);
+    const actions=tryParse(e.action_items);
+    const attRate=e.registration_count>0?((e.attendance_count||0)/e.registration_count*100).toFixed(1):0;
+
+    content.innerHTML=`
+      <!-- 核心数据速览 -->
+      <div class="stats-grid" style="grid-template-columns:repeat(6,1fr);margin-bottom:20px">
+        ${[
+          {v:fmtNum(e.registration_count),l:'报名人数',c:'var(--accent)',bg:'var(--accent-glow)'},
+          {v:fmtNum(e.attendance_count),l:'到场人数',c:'var(--success)',bg:'var(--success-bg)'},
+          {v:attRate+'%',l:'到场率',c:attRate>50?'var(--success)':'var(--warning)',bg:attRate>50?'var(--success-bg)':'var(--warning-bg)'},
+          {v:e.vip_count||0,l:'VIP嘉宾',c:'var(--info)',bg:'var(--info-bg)'},
+          {v:e.leads_count||0,l:'留资数',c:'var(--pink)',bg:'rgba(236,72,153,.12)'},
+          {v:e.mql_count||0,l:'MQL',c:'var(--orange)',bg:'rgba(249,115,22,.12)'},
+        ].map(s=>`<div class="stat-card"><div class="accent-bar" style="background:${s.c}"></div><div class="stat-value" style="color:${s.c}">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('')}
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs" id="ev-tabs">
+        <div class="tab active" onclick="switchEvTab(this,'overview')">概览</div>
+        <div class="tab" onclick="switchEvTab(this,'analysis')">数据分析</div>
+        <div class="tab" onclick="switchEvTab(this,'leads')">线索漏斗</div>
+        <div class="tab" onclick="switchEvTab(this,'signals')">信号分析</div>
+        <div class="tab" onclick="switchEvTab(this,'feedback')">现场反馈</div>
+        <div class="tab" onclick="switchEvTab(this,'review')">复盘总结</div>
+      </div>
+      <div id="ev-tab-content">
+        <!-- Overview tab (default) -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <div class="card"><div class="card-header"><h3>基本信息</h3></div><div class="card-body">
+            <div class="detail-grid">
+              <div><div class="detail-field"><div class="label">活动类型</div><div class="value"><span class="tag tag-blue">${e.event_type||'—'}</span></div></div></div>
+              <div><div class="detail-field"><div class="label">日期</div><div class="value">${e.date||''}${e.end_date&&e.end_date!==e.date?' ~ '+e.end_date:''}</div></div></div>
+              <div><div class="detail-field"><div class="label">地点</div><div class="value">${esc(e.location)}</div></div></div>
+              <div><div class="detail-field"><div class="label">规模</div><div class="value">${fmtNum(e.scale)} 人</div></div></div>
+              <div><div class="detail-field"><div class="label">主办方</div><div class="value">${esc(e.host)}</div></div></div>
+              <div><div class="detail-field"><div class="label">目标客户群</div><div class="value">${esc(e.target_audience)}</div></div></div>
+            </div>
+          </div></div>
+          <div class="card"><div class="card-header"><h3>⭐ 业务设计（独有输入项）</h3></div><div class="card-body">
+            <div style="white-space:pre-wrap;line-height:1.8">${esc(e.business_design)||'<span style="color:var(--text-muted)">暂未填写。面对什么客户群？讲什么故事？Agenda是什么？</span>'}</div>
+            ${e.product_solutions?`<div style="margin-top:12px"><div class="detail-field"><div class="label">产品/方案</div><div class="value">${esc(e.product_solutions)}</div></div></div>`:''}
+            ${e.target_market?`<div><div class="detail-field"><div class="label">目标市场</div><div class="value">${esc(e.target_market)}</div></div></div>`:''}
+          </div></div>
+        </div>
+      </div>
+    `;
+
+    // Store event data for tab switching
+    window._evDetail={e,indDist,jobDist,deptDist,channels,prodSigs,indSigs,opps,actions,attRate};
+  }catch(e){content.innerHTML=err(e)}
+}
+
+function switchEvTab(el,tab){
+  document.querySelectorAll('#ev-tabs .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  const d=window._evDetail;if(!d)return;
+  const {e,indDist,jobDist,deptDist,channels,prodSigs,indSigs,opps,actions,attRate}=d;
+  const tc=document.getElementById('ev-tab-content');
+  destroyCharts();
+
+  if(tab==='overview'){
+    tc.innerHTML=`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="card"><div class="card-header"><h3>基本信息</h3></div><div class="card-body">
+          <div class="detail-grid">
+            <div><div class="detail-field"><div class="label">活动类型</div><div class="value"><span class="tag tag-blue">${e.event_type||'—'}</span></div></div></div>
+            <div><div class="detail-field"><div class="label">日期</div><div class="value">${e.date||''}${e.end_date&&e.end_date!==e.date?' ~ '+e.end_date:''}</div></div></div>
+            <div><div class="detail-field"><div class="label">地点</div><div class="value">${esc(e.location)}</div></div></div>
+            <div><div class="detail-field"><div class="label">规模</div><div class="value">${fmtNum(e.scale)} 人</div></div></div>
+            <div><div class="detail-field"><div class="label">主办方</div><div class="value">${esc(e.host)}</div></div></div>
+            <div><div class="detail-field"><div class="label">目标客户群</div><div class="value">${esc(e.target_audience)}</div></div></div>
+          </div>
+        </div></div>
+        <div class="card"><div class="card-header"><h3>⭐ 业务设计</h3></div><div class="card-body">
+          <div style="white-space:pre-wrap;line-height:1.8">${esc(e.business_design)||'<span style="color:var(--text-muted)">暂未填写</span>'}</div>
+          ${e.product_solutions?`<div style="margin-top:12px"><div class="detail-field"><div class="label">产品/方案</div><div class="value">${esc(e.product_solutions)}</div></div></div>`:''}
+        </div></div>
+      </div>`;
+  } else if(tab==='analysis'){
+    tc.innerHTML=`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="card"><div class="card-header"><h3>行业分布${indDist.length?' ('+indDist.length+')':''}</h3></div><div class="card-body">
+          ${indDist.length?renderBars(indDist,'#3b82f6'):'<div class="empty-state" style="padding:16px"><p>暂无行业数据</p></div>'}
+        </div></div>
+        <div class="card"><div class="card-header"><h3>职级分布</h3></div><div class="card-body">
+          ${jobDist.length?renderBars(jobDist,'#8b5cf6'):'<div class="empty-state" style="padding:16px"><p>暂无职级数据</p></div>'}
+        </div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="card"><div class="card-header"><h3>部门分布</h3></div><div class="card-body">
+          ${deptDist.length?renderBars(deptDist,'#10b981'):'<div class="empty-state" style="padding:16px"><p>暂无部门数据</p></div>'}
+        </div></div>
+        <div class="card"><div class="card-header"><h3>渠道来源</h3></div><div class="card-body">
+          ${channels.length?renderBars(channels,'#f59e0b'):'<div class="empty-state" style="padding:16px"><p>暂无渠道数据</p></div>'}
+        </div></div>
+      </div>`;
+  } else if(tab==='leads'){
+    tc.innerHTML=`
+      <div class="stats-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:16px">
+        ${[{v:e.leads_count,l:'综合留资',c:'var(--accent)'},{v:e.mql_count,l:'MQL·线索级',c:'var(--info)'},{v:e.sql_count,l:'SQL·商机级',c:'var(--success)'},{v:e.opportunity_count||0,l:'商机',c:'var(--warning)'},{v:e.estimated_ppl||'—',l:'预估PPL',c:'var(--pink)'}].map(s=>`<div class="stat-card"><div class="accent-bar" style="background:${s.c}"></div><div class="stat-value" style="color:${s.c}">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('')}
+      </div>
+      ${opps.length?`<div class="card"><div class="card-header"><h3>🔥 重点商机/线索</h3></div><div class="card-body" style="padding:0"><table>
+        <tr><th>等级</th><th>客户</th><th>行业</th><th>产品/需求</th><th>预期PPL</th><th>备注</th></tr>
+        ${opps.map(o=>`<tr>
+          <td><span class="opp-level opp-${o.level||'关注'}">${o.level||'—'}</span></td>
+          <td><strong>${esc(o.company)}</strong></td><td>${esc(o.industry)}</td>
+          <td>${esc(o.need||o.product_need)}</td><td style="font-weight:600">${esc(o.ppl)||'—'}</td>
+          <td style="font-size:12px;color:var(--text-secondary)">${esc(o.notes)}</td>
+        </tr>`).join('')}
+      </table></div></div>`:'<div class="empty-state"><p>暂无重点商机数据</p></div>'}`;
+  } else if(tab==='signals'){
+    tc.innerHTML=`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="card"><div class="card-header"><h3>📡 产品信号</h3></div><div class="card-body">
+          ${prodSigs.length?`<div style="display:flex;flex-wrap:wrap;gap:4px">${prodSigs.map(s=>`<div class="signal-chip"><span>${esc(s.name)}</span><span class="count">${s.count||0}</span>${s.note?'<span style="font-size:10px;color:var(--text-muted);margin-left:4px">'+esc(s.note)+'</span>':''}</div>`).join('')}</div>`:'<div class="empty-state" style="padding:16px"><p>暂无产品信号</p></div>'}
+        </div></div>
+        <div class="card"><div class="card-header"><h3>🏭 行业信号</h3></div><div class="card-body">
+          ${indSigs.length?`<div style="display:flex;flex-wrap:wrap;gap:4px">${indSigs.map(s=>`<div class="signal-chip"><span>${esc(s.name)}</span><span class="count">${s.count||0}</span>${s.note?'<span style="font-size:10px;color:var(--text-muted);margin-left:4px">'+esc(s.note)+'</span>':''}</div>`).join('')}</div>`:'<div class="empty-state" style="padding:16px"><p>暂无行业信号</p></div>'}
+        </div></div>
+      </div>
+      ${e.region_highlights?`<div class="card"><div class="card-header"><h3>🌍 区域亮点</h3></div><div class="card-body"><div class="highlight-box success" style="white-space:pre-wrap">${esc(e.region_highlights)}</div></div></div>`:''}`;
+  } else if(tab==='feedback'){
+    tc.innerHTML=`
+      ${e.customer_feedback?`<div class="card" style="margin-bottom:16px"><div class="card-header"><h3>👥 客户在问什么</h3></div><div class="card-body"><div class="highlight-box" style="white-space:pre-wrap">${esc(e.customer_feedback)}</div></div></div>`:''}
+      ${e.investor_feedback?`<div class="card" style="margin-bottom:16px"><div class="card-header"><h3>💰 投资人在问什么</h3></div><div class="card-body"><div class="highlight-box insight" style="white-space:pre-wrap">${esc(e.investor_feedback)}</div></div></div>`:''}
+      ${e.media_feedback?`<div class="card" style="margin-bottom:16px"><div class="card-header"><h3>📰 媒体反馈</h3></div><div class="card-body"><div style="white-space:pre-wrap">${esc(e.media_feedback)}</div></div></div>`:''}
+      ${!e.customer_feedback&&!e.investor_feedback&&!e.media_feedback?'<div class="empty-state"><div class="icon">💬</div><p>暂无现场反馈数据</p></div>':''}`;
+  } else if(tab==='review'){
+    tc.innerHTML=`
+      ${e.feedback_summary?`<div class="card" style="margin-bottom:16px"><div class="card-header"><h3>📋 市场反馈摘要</h3></div><div class="card-body"><div class="highlight-box" style="white-space:pre-wrap">${esc(e.feedback_summary)}</div></div></div>`:''}
+      ${e.structural_insights?`<div class="card" style="margin-bottom:16px"><div class="card-header"><h3>🧠 结构性洞察</h3></div><div class="card-body"><div class="highlight-box insight" style="white-space:pre-wrap">${esc(e.structural_insights)}</div></div></div>`:''}
+      ${e.lessons_learned?`<div class="card" style="margin-bottom:16px"><div class="card-header"><h3>💡 经验总结</h3></div><div class="card-body"><div style="white-space:pre-wrap">${esc(e.lessons_learned)}</div></div></div>`:''}
+      ${actions.length?`<div class="card" style="margin-bottom:16px"><div class="card-header"><h3>✅ 下一步行动</h3></div><div class="card-body" style="padding:0"><table>
+        <tr><th>行动</th><th>负责人</th><th>截止</th><th>详情</th></tr>
+        ${actions.map(a=>`<tr><td><strong>${esc(a.action)}</strong></td><td>${esc(a.owner)}</td><td>${esc(a.deadline)}</td><td style="font-size:12px;color:var(--text-secondary)">${esc(a.detail)}</td></tr>`).join('')}
+      </table></div></div>`:''}
+      ${e.long_tail_content?`<div class="card"><div class="card-header"><h3>📢 长尾传播计划</h3></div><div class="card-body"><div style="white-space:pre-wrap">${esc(e.long_tail_content)}</div></div></div>`:''}
+      ${!e.feedback_summary&&!e.structural_insights&&!actions.length?'<div class="empty-state"><div class="icon">📝</div><p>暂无复盘数据</p></div>':''}`;
+  }
+}
+
+function renderBars(data,color){
+  const max=Math.max(...data.map(d=>d.count||d.pct||0),1);
+  return `<div class="data-bars">${data.slice(0,12).map(d=>{
+    const val=d.count||0;const pct=d.pct||0;const w=Math.max((val||pct)/max*100,2);
+    return `<div class="data-bar-row"><div class="data-bar-label">${esc(d.name)}</div><div class="data-bar"><div class="data-bar-fill" style="width:${w}%;background:${color}"></div></div><div class="data-bar-value">${val?val+'人':''}${pct?' '+pct+'%':''}</div></div>`;
+  }).join('')}</div>`;
+}
+
+// ===== EVENT FORM =====
+async function renderEventForm(id){
+  const content=document.getElementById('content'),ha=document.getElementById('header-actions');
+  ha.innerHTML=`<button class="btn btn-secondary" onclick="navigate('ceo-events')">← 返回看板</button>`;
+  let e={};if(id){try{e=await api(`/api/events/${id}`)}catch(er){content.innerHTML=err(er);return}}
+  document.getElementById('page-title').textContent=id?'🎪 编辑活动':'🎪 新建活动';
+  content.innerHTML=`<div class="card"><div class="card-body">
+    <form id="ev-form" onsubmit="saveEvent(event,${id||'null'})">
+      <div class="form-row-3">
+        <div class="form-group"><label>活动名称 *</label><input name="name" required value="${esc(e.name||'')}"></div>
+        <div class="form-group"><label>活动类型</label><select name="event_type">${['论坛','展会','参访','峰会','沙龙','发布会','路演','其他'].map(t=>`<option ${e.event_type===t?'selected':''}>${t}</option>`).join('')}</select></div>
+        <div class="form-group"><label>状态</label><select name="status">${['筹备中','进行中','已结束','已取消'].map(s=>`<option ${e.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      </div>
+      <div class="form-row-3">
+        <div class="form-group"><label>开始日期</label><input type="date" name="date" value="${e.date||''}"></div>
+        <div class="form-group"><label>结束日期</label><input type="date" name="end_date" value="${e.end_date||''}"></div>
+        <div class="form-group"><label>地点</label><input name="location" value="${esc(e.location||'')}"></div>
+      </div>
+      <div class="form-row-3">
+        <div class="form-group"><label>预计规模</label><input type="number" name="scale" value="${e.scale||''}"></div>
+        <div class="form-group"><label>预算</label><input name="budget" value="${esc(e.budget||'')}"></div>
+        <div class="form-group"><label>主题</label><input name="theme" value="${esc(e.theme||'')}"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>目标客户群</label><input name="target_audience" value="${esc(e.target_audience||'')}"></div>
+        <div class="form-group"><label>主办方 / 承办方</label><div style="display:flex;gap:8px"><input name="host" placeholder="主办方" value="${esc(e.host||'')}" style="flex:1"><input name="organizer" placeholder="承办方" value="${esc(e.organizer||'')}" style="flex:1"></div></div>
+      </div>
+      <div class="form-group"><label>⭐ 业务设计（面对什么客户群？讲什么故事？Agenda是什么？）</label><textarea name="business_design" rows="4">${esc(e.business_design||'')}</textarea></div>
+      <div class="form-row"><div class="form-group"><label>产品/方案</label><textarea name="product_solutions" rows="2">${esc(e.product_solutions||'')}</textarea></div><div class="form-group"><label>目标市场</label><textarea name="target_market" rows="2">${esc(e.target_market||'')}</textarea></div></div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
+      <h3 style="font-size:14px;margin-bottom:16px;color:var(--accent-light)">📊 核心数据</h3>
+      <div class="form-row-3">
+        <div class="form-group"><label>报名人数</label><input type="number" name="registration_count" value="${e.registration_count||''}"></div>
+        <div class="form-group"><label>到场人数</label><input type="number" name="attendance_count" value="${e.attendance_count||''}"></div>
+        <div class="form-group"><label>VIP人数</label><input type="number" name="vip_count" value="${e.vip_count||''}"></div>
+      </div>
+      <div class="form-row-3">
+        <div class="form-group"><label>留资数</label><input type="number" name="leads_count" value="${e.leads_count||''}"></div>
+        <div class="form-group"><label>MQL</label><input type="number" name="mql_count" value="${e.mql_count||''}"></div>
+        <div class="form-group"><label>SQL</label><input type="number" name="sql_count" value="${e.sql_count||''}"></div>
+      </div>
+      <div class="form-row"><div class="form-group"><label>预估PPL</label><input name="estimated_ppl" value="${esc(e.estimated_ppl||'')}"></div><div class="form-group"><label>ROI</label><input name="roi" value="${esc(e.roi||'')}"></div></div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
+      <h3 style="font-size:14px;margin-bottom:16px;color:var(--warning)">💬 现场反馈</h3>
+      <div class="form-group"><label>客户在问什么</label><textarea name="customer_feedback" rows="3">${esc(e.customer_feedback||'')}</textarea></div>
+      <div class="form-group"><label>投资人在问什么</label><textarea name="investor_feedback" rows="3">${esc(e.investor_feedback||'')}</textarea></div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
+      <h3 style="font-size:14px;margin-bottom:16px;color:var(--success)">📝 复盘</h3>
+      <div class="form-group"><label>市场反馈摘要</label><textarea name="feedback_summary">${esc(e.feedback_summary||'')}</textarea></div>
+      <div class="form-group"><label>结构性洞察</label><textarea name="structural_insights">${esc(e.structural_insights||'')}</textarea></div>
+      <div class="form-group"><label>经验总结</label><textarea name="lessons_learned">${esc(e.lessons_learned||'')}</textarea></div>
+      <div class="form-group"><label>备注</label><textarea name="notes">${esc(e.notes||'')}</textarea></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+        <button type="button" class="btn btn-secondary" onclick="navigate('ceo-events')">取消</button>
+        <button type="submit" class="btn btn-primary">💾 保存</button>
+      </div>
+    </form></div></div>`;
+}
+async function saveEvent(ev,id){
+  ev.preventDefault();const form=new FormData(document.getElementById('ev-form'));const body=Object.fromEntries(form);
+  ['scale','registration_count','attendance_count','vip_count','leads_count','mql_count','sql_count'].forEach(f=>body[f]=+body[f]||0);
+  try{if(id){await api(`/api/events/${id}`,{method:'PUT',body});toast('活动更新成功')}else{const r=await api('/api/events',{method:'POST',body});id=r.id;toast('活动创建成功')}navigate('event-detail',{id})}catch(e){toast(e.message,'error')}
+}
+async function deleteEvent(id){
+  try{await api(`/api/events/${id}`,{method:'DELETE'});toast('删除成功');navigate('ceo-events')}catch(e){toast(e.message,'error')}
+}
+
+// ===== CEO-EVENTS (活动和CEO获客) =====
+async function renderCeoEvents(){
+  const content=document.getElementById('content'),ha=document.getElementById('header-actions');
+  ha.innerHTML='<button class="btn btn-primary" onclick="navigate(\'event-form\')">+ 新建活动</button>';
+  let evData;try{evData=await api('/api/events')}catch(e){content.innerHTML=err(e);return}
+  const all=evData.data||[];
+  const ceo=all.filter(e=>e.key_messages==='吴明辉(CEO)');
+  const mkt=all.filter(e=>e.key_messages!=='吴明辉(CEO)');
+  
+
+  // CEO获客汇总（数据源：events表CEO获客活动，口径与CEO获客数据分析报告一致）
+  const tReg=ceo.reduce((s,e)=>s+(e.wechat_followers||0),0);
+  const tLeads=ceo.reduce((s,e)=>s+(e.registrations||0),0);
+  const tMql=ceo.reduce((s,e)=>s+(e.activations||0),0);
+  const tSql=ceo.reduce((s,e)=>s+(e.sql_count||0),0);
+
+  const funnel=[['活码加微',tReg,tReg],['OCTO申请',tLeads,tReg],['审核开通',tMql,tReg],['转出销售',tSql,tReg]].map(([l,v,max])=>`<div class="funnel-row"><span class="fl-label">${l}</span><div class="fl-bar"><div class="fl-fill" style="width:${Math.max(v/max*100,2)}%"></div></div><span class="fl-val">${v}</span></div>`).join('');
+
+  content.innerHTML=`
+    <div class="stats-grid">
+      ${[{v:ceo.length,l:'🎯 CEO获客活动',c:'var(--pink)'},{v:fmtNum(tReg),l:'👥 活码加微',c:'var(--accent)'},{v:fmtNum(tLeads),l:'📝 OCTO申请',c:'var(--info)'},{v:fmtNum(tMql),l:'✅ 审核开通',c:'var(--success)'},{v:tSql,l:'📤 转出销售',c:'var(--warning)'}].map(s=>`<div class="stat-card"><div class="accent-bar" style="background:${s.c}"></div><div class="stat-value" style="color:${s.c}">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('')}
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="card"><div class="card-header"><h3>🎯 CEO获客漏斗（${ceo.length}场活动·全渠道总计）</h3></div><div class="card-body">
+        ${funnel}
+        <div style="margin-top:12px;font-size:12px;color:var(--text-muted)">口径：REG=活码加微，LEADS=OCTO申请，MQL=审核开通，SQL=转出销售；混沌学院无活码直接发开通链接</div>
+      </div></div>
+      <div class="card"><div class="card-header"><h3>💡 核心洞察</h3></div><div class="card-body">
+        <div class="highlight-box success"><strong>渠道效果排名：</strong>🥇混沌学院(94%通过率·CEO社群信任背书) 🥈《晚点》头条(33%·流量最大198加微) 🥉Octo产品发布(12%·小规模精准)；混沌+晚点贡献96%开通量</div>
+        <div class="highlight-box"><strong>活动获客≠大客户获取：</strong>39家大客户中25家(64%)来自高管直推，贡献100%签约+90%+管线；线上活动是品牌势能和信任入口</div>
+        <div class="highlight-box warning"><strong>混沌模式值得复制：</strong>不走活码直接发开通链接(94%通过率)——CEO在高信任社群分享→直接引导注册，跳过加微中间环节</div>
+        <div class="highlight-box insight"><strong>加微≠转化：</strong>394个活码加微中77%加微后零后续动作，建议加微后7天内SDR外呼/私信激活</div>
+      </div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px"><div class="card-header"><h3>📊 逐活动转化对比 <span style="font-size:12px;color:var(--text-muted);font-weight:400">点击行查看明细 →</span></h3></div><div class="card-body" style="padding:0"><table>
+      <tr><th>活动</th><th>日期</th><th>获客方式</th><th>加微</th><th>申请</th><th>开通</th><th>转出</th><th>转化率</th></tr>
+      <tbody>${ceo.length?ceo.map(e=>{
+        const rate=e.wechat_followers>0?((e.activations||0)/e.wechat_followers*100).toFixed(0)+'%':(e.registrations>0?((e.activations||0)/e.registrations*100).toFixed(0)+'%(申请→)':'—');
+        return `<tr class="clickable-row" onclick="navigate('event-detail',{id:${e.id}})">
+          <td><strong>${esc(e.name)}</strong></td><td>${e.date||'—'}</td>
+          <td style="font-size:12px">${e.wechat_followers>0?'企微活码扫码':'直接开通链接'}</td>
+          <td>${e.wechat_followers>0?e.wechat_followers:'无活码'}</td>
+          <td style="font-weight:600">${e.registrations||0}</td>
+          <td style="font-weight:600;color:var(--success)">${e.activations||0}</td>
+          <td>${e.sql_count||0}</td>
+          <td>${rate}</td>
+        </tr>`}).join(''):'<tr><td colspan="8"><div class="empty-state"><p>暂无CEO获客活动</p></div></td></tr>'}</tbody>
+    </table></div></div>
+
+    ${mkt.length?`<div class="card" style="margin-bottom:16px"><div class="card-header"><h3>🎪 市场部活动（${mkt.length}场）<span style="font-size:12px;color:var(--text-muted);font-weight:400">点击行查看明细 →</span></h3></div><div class="card-body" style="padding:0"><table>
+      <tr><th>活动</th><th>日期</th><th>类型</th><th>报名</th><th>到场</th><th>留资</th><th>MQL</th></tr>
+      <tbody>${mkt.map(e=>`<tr class="clickable-row" onclick="navigate('event-detail',{id:${e.id}})">
+        <td><strong>${esc(e.name)}</strong></td><td>${e.date||'—'}</td><td>${e.event_type||'—'}</td>
+        <td>${fmtNum(e.registrations)}</td><td>${fmtNum(e.audience_count)}</td><td>${e.activations||0}</td><td>${e.mql_count||0}</td>
+      </tr>`).join('')}</tbody>
+    </table></div></div>`:''}
+`;
+}
+
+async function renderCeoEventDetail(id){
+  const content=document.getElementById('content'),ha=document.getElementById('header-actions');
+  try{const s=await api(`/api/speeches/${id}`);
+    ha.innerHTML=`<button class="btn btn-secondary" onclick="navigate('ceo-events')">← 返回</button><button class="btn btn-primary" onclick="navigate('ceo-event-form',{id:${id}})">编辑</button><button class="btn btn-danger" onclick="if(confirm('确定删除这条活动记录？'))deleteCeoEvent(${id})">删除</button>`;
+    content.innerHTML=`
+      <div class="card" style="margin-bottom:16px"><div class="card-header"><h3>${esc(s.topic)}</h3></div><div class="card-body"><div class="detail-grid">
+        ${[['日期',s.date],['活动',s.event_name],['地点',s.location],['听众',fmtNum(s.audience_count)+'人'],['听众画像',s.audience_profile],['获客数',s.leads_count]].map(([l,v])=>`<div><div class="detail-field"><div class="label">${l}</div><div class="value">${esc(v)}</div></div></div>`).join('')}
+      </div></div></div>
+      ${s.business_design?`<div class="card" style="margin-bottom:16px"><div class="card-header"><h3>⭐ 业务设计</h3></div><div class="card-body"><div class="highlight-box" style="white-space:pre-wrap">${esc(s.business_design)}</div></div></div>`:''}
+      ${s.story_line||s.follow_up_plan?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">${s.story_line?`<div class="card"><div class="card-header"><h3>故事线</h3></div><div class="card-body"><div style="white-space:pre-wrap">${esc(s.story_line)}</div></div></div>`:''}${s.follow_up_plan?`<div class="card"><div class="card-header"><h3>跟进计划</h3></div><div class="card-body"><div style="white-space:pre-wrap">${esc(s.follow_up_plan)}</div></div></div>`:''}</div>`:''}`;
+  }catch(e){content.innerHTML=err(e)}
+}
+
+async function renderCeoEventForm(id){
+  const content=document.getElementById('content'),ha=document.getElementById('header-actions');
+  ha.innerHTML=`<button class="btn btn-secondary" onclick="navigate('ceo-events')">← 返回</button>`;
+  let s={};if(id){try{s=await api(`/api/speeches/${id}`)}catch(e){content.innerHTML=err(e);return}}
+  content.innerHTML=`<div class="card"><div class="card-body"><form id="sp-form" onsubmit="saveSpeech(event,${id||'null'})">
+    <div class="form-group"><label>活动主题 *</label><input name="topic" required value="${esc(s.topic||'')}"></div>
+    <div class="form-row-3"><div class="form-group"><label>日期</label><input type="date" name="date" value="${s.date||''}"></div><div class="form-group"><label>地点</label><input name="location" value="${esc(s.location||'')}"></div><div class="form-group"><label>所属活动</label><input name="event_name" value="${esc(s.event_name||'')}"></div></div>
+    <div class="form-row"><div class="form-group"><label>听众人数</label><input type="number" name="audience_count" value="${s.audience_count||''}"></div><div class="form-group"><label>听众画像</label><input name="audience_profile" value="${esc(s.audience_profile||'')}"></div></div>
+    <div class="form-group"><label>⭐ 业务设计</label><textarea name="business_design" rows="3">${esc(s.business_design||'')}</textarea></div>
+    <div class="form-group"><label>故事线</label><textarea name="story_line">${esc(s.story_line||'')}</textarea></div>
+    <div class="form-row"><div class="form-group"><label>反馈</label><textarea name="feedback">${esc(s.feedback||'')}</textarea></div><div class="form-group"><label>跟进计划</label><textarea name="follow_up_plan">${esc(s.follow_up_plan||'')}</textarea></div></div>
+    <div class="form-group"><label>获客数</label><input type="number" name="leads_count" value="${s.leads_count||0}"></div>
+    <div class="form-group"><label>备注</label><textarea name="notes">${esc(s.notes||'')}</textarea></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn btn-secondary" onclick="navigate('ceo-events')">取消</button><button type="submit" class="btn btn-primary">💾 保存</button></div>
+  </form></div></div>`;
+}
+async function saveSpeech(ev,id){
+  ev.preventDefault();const form=new FormData(document.getElementById('sp-form'));const body=Object.fromEntries(form);body.audience_count=+body.audience_count||0;body.leads_count=+body.leads_count||0;
+  try{if(id){await api(`/api/speeches/${id}`,{method:'PUT',body});toast('更新成功')}else{const r=await api('/api/speeches',{method:'POST',body});id=r.id;toast('创建成功')}navigate('ceo-event-detail',{id})}catch(e){toast(e.message,'error')}
+}
+async function deleteCeoEvent(id){
+  try{await api(`/api/speeches/${id}`,{method:'DELETE'});toast('删除成功');navigate('ceo-events')}catch(e){toast(e.message,'error')}
+}
+
+// ===== ACCOUNTS =====
+async function renderAccounts(){
+  const content=document.getElementById('content'),ha=document.getElementById('header-actions');
+  ha.innerHTML='<button class="btn btn-primary" onclick="navigate(\'account-form\')">+ 新建客户</button>';
+  let data;try{data=await api('/api/accounts')}catch(e){content.innerHTML=err(e);return}
+  content.innerHTML=`
+    <div class="search-bar"><input type="text" placeholder="搜索公司/行业/负责人..." id="acc-search" oninput="searchAccounts()"><select id="acc-tier" onchange="searchAccounts()"><option value="">全部等级</option><option value="S">S级</option><option value="A">A级</option><option value="B">B级</option><option value="C">C级</option><option value="D">D级</option></select><select id="acc-stage" onchange="searchAccounts()"><option value="">全部阶段</option><option value="已签约">已签约</option><option value="交付中">交付中</option><option value="投标中">投标中</option><option value="B类重点推进">B类重点推进</option><option value="C类跟进">C类跟进</option><option value="D类观察">D类观察</option><option value="战败">战败</option><option value="放弃">放弃</option></select></div>
+    <div class="card"><div class="table-wrap"><table>
+      <tr><th>等级</th><th>公司名称</th><th>行业</th><th>阶段</th><th>金额</th><th>负责人</th><th>卡点</th><th>操作</th></tr>
+      <tbody id="acc-tbody">${data.data.length?data.data.map(accRow).join(''):'<tr><td colspan="8"><div class="empty-state"><p>暂无客户</p></div></td></tr>'}</tbody>
+    </table></div></div>`;
+}
+function accRow(a){
+  const stageCls=a.customer_stage?`stage-${a.customer_stage}`:'';
+  return `<tr class="clickable-row" onclick="navigate('account-report',{id:${a.id}})">
+    <td><span class="tier-badge tier-${a.tier}">${a.tier}</span></td>
+    <td><strong>${esc(a.company_name)}</strong>${a.region?'<br><span style="font-size:11px;color:var(--text-muted)">'+esc(a.region)+'</span>':''}</td>
+    <td>${esc(a.industry)||'—'}</td>
+    <td>${a.customer_stage?`<span class="stage-tag ${stageCls}">${esc(a.customer_stage)}</span>`:followUpTag(a.follow_up_status)}</td>
+    <td style="font-weight:700;color:var(--accent-light)">${a.deal_amount?a.deal_amount+'万':'—'}</td>
+    <td>${esc(a.assigned_to)||'—'}</td>
+    <td>${a.blockers?'<span style="color:var(--danger);font-weight:700">⚠️</span>':'<span style="color:var(--text-muted)">—</span>'}</td>
+    <td><button class="btn btn-sm btn-primary" onclick="event.stopPropagation();navigate('account-report',{id:${a.id}})">全景档案</button></td>
+  </tr>`;
+}
+async function searchAccounts(){
+  const q=document.getElementById('acc-search').value,t=document.getElementById('acc-tier').value,st=document.getElementById('acc-stage')?.value||'';
+  const p=new URLSearchParams();if(q)p.set('search',q);if(t)p.set('tier',t);if(st)p.set('customer_stage',st);
+  try{const d=await api('/api/accounts?'+p);document.getElementById('acc-tbody').innerHTML=d.data.length?d.data.map(accRow).join(''):'<tr><td colspan="8"><div class="empty-state"><p>无匹配</p></div></td></tr>'}catch(e){toast(e.message,'error')}
+}
+
+async function renderAccountDetail(id){
+  const content=document.getElementById('content'),ha=document.getElementById('header-actions');
+  try{const a=await api(`/api/accounts/${id}`);
+    ha.innerHTML=`<button class="btn btn-secondary" onclick="navigate('accounts')">← 返回</button><button class="btn btn-primary" onclick="navigate('account-form',{id:${id}})">编辑</button><button class="btn btn-danger" onclick="if(confirm('确定删除该客户？'))deleteItem('accounts',${id},'${esc(a.company_name).replace(/'/g,"\\'")}')">删除</button>`;
+    content.innerHTML=`
+      <div class="card" style="margin-bottom:16px"><div class="card-header"><h3><span class="tier-badge tier-${a.tier}">${a.tier}</span> ${esc(a.company_name)}</h3></div><div class="card-body"><div class="detail-grid">
+        ${[['行业',a.industry],['规模',a.scale],['地区',a.region],['来源',a.source],['首次触达',a.first_touch_date],['触达次数',a.touch_count],['Octo状态',a.octo_status],['负责人',a.assigned_to]].map(([l,v])=>`<div><div class="detail-field"><div class="label">${l}</div><div class="value">${esc(v)}</div></div></div>`).join('')}
+      </div></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="card"><div class="card-header"><h3>需求 & 预算</h3></div><div class="card-body">
+          <div class="detail-field"><div class="label">需求摘要</div><div class="value">${esc(a.needs_summary)}</div></div>
+          <div class="detail-field"><div class="label">预估预算</div><div class="value">${esc(a.estimated_budget)}</div></div>
+        </div></div>
+        <div class="card"><div class="card-header"><h3>🤖 红拂 AI 建议</h3></div><div class="card-body"><div style="white-space:pre-wrap;color:${a.ai_suggestion?'var(--text)':'var(--text-muted)'}">${esc(a.ai_suggestion)||'接入红拂Agent后自动生成智能跟进建议'}</div></div></div>
+      </div>
+      ${a.events?.length?`<div class="card" style="margin-bottom:16px"><div class="card-header"><h3>🎪 参与活动 (${a.events.length})</h3></div><div class="card-body" style="padding:0"><table><tr><th>活动</th><th>日期</th><th>状态</th></tr>${a.events.map(e=>`<tr class="clickable-row" onclick="navigate('event-detail',{id:${e.id}})"><td>${esc(e.name)}</td><td>${e.date||'—'}</td><td>${statusTag(e.status)}</td></tr>`).join('')}</table></div></div>`:''}
+      ${a.leads?.length?`<div class="card"><div class="card-header"><h3>🔄 SDR线索 (${a.leads.length})</h3></div><div class="card-body" style="padding:0"><table><tr><th>姓名</th><th>来源</th><th>阶段</th></tr>${a.leads.map(l=>`<tr><td>${esc(l.contact_name)}</td><td>${sourceTag(l.source_type)}</td><td>${stageTag(l.stage)}</td></tr>`).join('')}</table></div></div>`:''}`;
+  }catch(e){content.innerHTML=err(e)}
+}
+
+async function renderAccountForm(id){
+  const content=document.getElementById('content'),ha=document.getElementById('header-actions');
+  ha.innerHTML=`<button class="btn btn-secondary" onclick="navigate('octo-summary')">← 返回</button>`;
+  let a={};if(id){try{a=await api(`/api/accounts/${id}`)}catch(e){content.innerHTML=err(e);return}}
+  const stages=['已签约','交付中','投标中','POC中','B类重点推进','C类跟进','D类观察','战败','放弃'];
+  const stageDisplay={'B类重点推进':'B类重点推进','C类跟进':'C类跟进','D类观察':'D类观察'};
+  const deployTypes=['私有化','SaaS','混合',''];
+  content.innerHTML=`<div class="card"><div class="card-body"><form id="acc-form" onsubmit="saveAccount(event,${id||'null'})">
+    <h3 style="font-size:14px;margin-bottom:16px;color:var(--accent-light)">📋 基本信息</h3>
+    <div class="form-row"><div class="form-group"><label>公司名称 *</label><input name="company_name" required value="${esc(a.company_name||'')}"></div><div class="form-group"><label>等级</label><select name="tier">${['S','A','B','C','D'].map(t=>`<option ${a.tier===t?'selected':''}>${t}</option>`).join('')}</select></div></div>
+    <div class="form-row-3"><div class="form-group"><label>行业</label><input name="industry" value="${esc(a.industry||'')}"></div><div class="form-group"><label>规模</label><input name="scale" value="${esc(a.scale||'')}"></div><div class="form-group"><label>地区</label><input name="region" value="${esc(a.region||'')}"></div></div>
+    <div class="form-row"><div class="form-group"><label>客户阶段</label><select name="customer_stage"><option value="">请选择</option>${stages.map(s=>`<option value="${s}" ${a.customer_stage===s?'selected':''}>${s}</option>`).join('')}</select></div><div class="form-group"><label>负责人</label><input name="assigned_to" value="${esc(a.assigned_to||'')}"></div></div>
+    <div class="form-group"><label>需求摘要</label><textarea name="needs_summary" rows="2">${esc(a.needs_summary||'')}</textarea></div>
+    <div class="form-group"><label>备注</label><textarea name="notes" rows="2">${esc(a.notes||'')}</textarea></div>
+
+    <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
+    <h3 style="font-size:14px;margin-bottom:16px;color:var(--warning)">💰 商机信息</h3>
+    <div class="form-row-3"><div class="form-group"><label>签约/预估金额(万元)</label><input type="number" step="0.1" name="deal_amount" value="${a.deal_amount||''}"></div><div class="form-group"><label>商机阶段描述</label><input name="deal_stage" value="${esc(a.deal_stage||'')}" placeholder="如：9/18述标完成"></div><div class="form-group"><label>部署方式</label><select name="deployment_type"><option value="">请选择</option>${deployTypes.filter(Boolean).map(t=>`<option value="${t}" ${a.deployment_type===t?'selected':''}>${t}</option>`).join('')}</select></div></div>
+    <div class="form-group"><label>线索来源详情</label><input name="lead_source" value="${esc(a.lead_source||'')}" placeholder="如：贾祥轩5/9官网主动联系"></div>
+    <div class="form-group"><label>产品方案详情</label><textarea name="product_solutions_detail" rows="2" placeholder="具体场景和方案">${esc(a.product_solutions_detail||'')}</textarea></div>
+
+    <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
+    <h3 style="font-size:14px;margin-bottom:16px;color:var(--info)">🏆 竞争分析</h3>
+    <div class="form-group"><label>竞品信息</label><input name="competitors" value="${esc(a.competitors||'')}" placeholder="如：酷开/浙江实在/联想"></div>
+    <div class="form-group"><label>客户认可点</label><textarea name="customer_recognition" rows="2" placeholder="客户认可我们什么？">${esc(a.customer_recognition||'')}</textarea></div>
+    <div class="form-group"><label>核心痛点</label><textarea name="core_painpoint" rows="2">${esc(a.core_painpoint||'')}</textarea></div>
+    <div class="form-group"><label>生态锁定评估</label><input name="ecosystem_lock" value="${esc(a.ecosystem_lock||'')}" placeholder="如：飞书/钉钉/企微/自研等"></div>
+
+    <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
+    <h3 style="font-size:14px;margin-bottom:16px;color:var(--success)">🚀 推进信息</h3>
+    <div class="form-group"><label>卡点/阻塞事项 ⚠️</label><textarea name="blockers" rows="2" placeholder="当前卡点是什么">${esc(a.blockers||'')}</textarea></div>
+    <div class="form-row"><div class="form-group"><label>下一步行动</label><input name="next_step" value="${esc(a.next_step||'')}"></div><div class="form-group"><label>下一步截止时间</label><input type="date" name="next_deadline" value="${a.next_deadline||''}"></div></div>
+    <div class="form-row"><div class="form-group"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" name="ceo_involvement" value="1" ${a.ceo_involvement?'checked':''} style="width:auto"> 🔥 CEO/高管直推</label></div><div class="form-group"><label>覆盖联系人数量</label><input type="number" name="key_contacts_count" value="${a.key_contacts_count||''}"></div></div>
+    <div class="form-group"><label>覆盖部门/条线</label><input name="key_departments" value="${esc(a.key_departments||'')}" placeholder="如：16+联系人覆盖10条线"></div>
+    <div class="form-group"><label>经验教训（战败/停滞原因）</label><textarea name="lessons_learned" rows="2">${esc(a.lessons_learned||'')}</textarea></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button type="button" class="btn btn-secondary" onclick="navigate('octo-summary')">取消</button><button type="submit" class="btn btn-primary">💾 保存</button></div>
+  </form></div></div>`;
+}
+async function saveAccount(ev,id){
+  ev.preventDefault();const form=new FormData(document.getElementById('acc-form'));const body=Object.fromEntries(form);
+  body.deal_amount=+body.deal_amount||0;
+  body.key_contacts_count=+body.key_contacts_count||0;
+  body.ceo_involvement=form.get('ceo_involvement')?1:0;
+  body.tier=body.tier||'C';
+  try{if(id){await api(`/api/accounts/${id}`,{method:'PUT',body});toast('更新成功')}else{const r=await api('/api/accounts',{method:'POST',body});id=r.id;toast('创建成功')}navigate('account-report',{id})}catch(e){toast(e.message,'error')}
+}
+
+// ===== FUNNEL (SDR数据工作台) =====
+let _leadsSearch='',_leadsStatus='',_leadsSource='',_leadsPage=1,_funnelData=null;
+async function renderFunnel(){
+  const content=document.getElementById('content');
+  const ha=document.getElementById('header-actions');
+  ha.innerHTML=`<button class="btn btn-secondary" onclick="if(confirm('确定清空所有线索数据？清空后需重新导入。'))clearAllLeads()">🗑️ 清空线索</button><button class="btn btn-sm btn-primary" onclick="openLeadForm()">+ 新建线索</button><button class="btn btn-primary" onclick="navigate('import')">📥 导入数据</button>`;
+  content.innerHTML='<div style="text-align:center;padding:60px;color:var(--text-muted)">⏳ 加载数据...</div>';
+  let data;try{data=await api('/api/leads/funnel');_funnelData=data}catch(e){content.innerHTML=err(e);return}
+  const k=data.kpi||{};
+  const mainFunnel=(data.funnel||[]).filter(s=>s.status!=='closed_lost');
+  const lostCount=((data.funnel||[]).find(s=>s.status==='closed_lost')||{count:0}).count;
+  const stageColors={new:'#475569',contacted:'#3b82f6',qualified:'#8b5cf6',opportunity:'#f59e0b',closed_won:'#10b981',closed_lost:'#ef4444'};
+
+  // 计算逐阶段转化率
+  const funnelRows=mainFunnel.map((s,i)=>{
+    const prev=i>0?mainFunnel[i-1].count:s.count;
+    const stageRate=prev>0?((s.count/prev)*100).toFixed(1):'100.0';
+    return { ...s, stageRate, totalRate:k.total>0?((s.count/k.total)*100).toFixed(1):'0.0' };
+  });
+
+  content.innerHTML=`
+    <div class="stats-grid" style="margin-bottom:20px;grid-template-columns:repeat(5,1fr)">
+      ${[
+        {v:fmtNum(k.total),l:'线索总量',c:'var(--accent)',icon:'📥'},
+        {v:fmtNum(k.qualifiedCount),l:'转出线索数',c:'var(--info)',icon:'✅'},
+        {v:(k.transferRate||'0.0')+'%',l:'转出率',c:'#8b5cf6',icon:'📊'},
+        {v:fmtNum(k.opportunityCount),l:'商机数',c:'var(--warning)',icon:'💼'},
+        {v:(k.totalDeal?fmtNum(k.totalDeal):'0')+'万',l:'成单金额',c:'var(--success)',icon:'💰'},
+      ].map(s=>`<div class="stat-card animate-in"><div class="accent-bar" style="background:${s.c}"></div><div style="font-size:20px;margin-bottom:4px">${s.icon}</div><div class="stat-value" style="color:${s.c}">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('')}
+    </div>
+
+    <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="card"><div class="card-header"><h3>🔄 转化漏斗</h3></div><div class="card-body">
+        ${mainFunnel.length?buildFunnelHTML(funnelRows,stageColors,k.total):'<div class="empty-state" style="padding:24px"><p>暂无线索数据</p></div>'}
+        ${lostCount?`<div style="margin-top:12px;padding:10px 14px;background:var(--danger-bg);border:1px solid rgba(239,68,68,.2);border-radius:var(--radius);font-size:12px;color:var(--danger)">❌ 无效/丢单: <strong>${lostCount}</strong> 条</div>`:''}
+      </div></div>
+      <div class="card"><div class="card-header"><h3>📡 来源渠道分布</h3></div><div class="card-body">
+        ${data.bySource&&data.bySource.length?renderHBars(data.bySource,'#3b82f6'):'<div class="empty-state" style="padding:24px"><p>暂无来源数据</p></div>'}
+      </div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="card"><div class="card-header"><h3>🏷️ 产品分布</h3></div><div class="card-body">
+        ${data.byProduct&&data.byProduct.length?renderHBars(data.byProduct,'#10b981'):'<div class="empty-state" style="padding:24px"><p>暂无产品数据</p></div>'}
+      </div></div>
+      <div class="card"><div class="card-header"><h3>👥 团队分配分布</h3></div><div class="card-body">
+        ${data.byTeam&&data.byTeam.length?renderHBars(data.byTeam,'#8b5cf6'):'<div class="empty-state" style="padding:24px"><p>暂无团队数据</p></div>'}
+      </div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px"><div class="card-header"><h3>📈 月度趋势（进线量 vs 转出量）</h3></div><div class="card-body">
+      ${data.monthlyTrend&&data.monthlyTrend.length?'<div class="chart-container" style="height:280px"><canvas id="chart-monthly"></canvas></div>':'<div class="empty-state" style="padding:24px"><p>暂无月度数据（需要 inbound_date 字段）</p></div>'}
+    </div></div>
+
+    <div class="card"><div class="card-header"><h3>📋 线索池</h3><button class="btn btn-sm btn-primary" onclick="openLeadForm()">+ 新建线索</button></div><div class="card-body" style="padding:16px">
+      <div id="leads-table-container"><div style="text-align:center;padding:20px;color:var(--text-muted)">⏳ 加载线索...</div></div>
+    </div></div>
+  `;
+
+  if(data.monthlyTrend&&data.monthlyTrend.length){
+    const months=data.monthlyTrend.map(m=>m.month);
+    const totals=data.monthlyTrend.map(m=>m.total);
+    const transferred=data.monthlyTrend.map(m=>m.transferred);
+    const rates=data.monthlyTrend.map(m=>m.total>0?(m.transferred/m.total*100).toFixed(1):0);
+    charts.monthly=new Chart(document.getElementById('chart-monthly'),{
+      type:'line',
+      data:{labels:months,datasets:[
+        {label:'进线量',data:totals,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.15)',tension:.3,fill:true,pointRadius:4,pointBackgroundColor:'#3b82f6'},
+        {label:'转出量',data:transferred,borderColor:'#8b5cf6',backgroundColor:'rgba(139,92,246,.15)',tension:.3,fill:true,pointRadius:4,pointBackgroundColor:'#8b5cf6'},
+        {label:'转出率%',data:rates,borderColor:'#10b981',backgroundColor:'transparent',borderDash:[5,5],tension:.3,pointRadius:3,pointBackgroundColor:'#10b981',yAxisID:'y1'}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#94a3b8',usePointStyle:true,padding:16}}},scales:{
+        y:{beginAtZero:true,ticks:{color:'#64748b',precision:0},grid:{color:'rgba(51,65,85,.3)'},title:{display:true,text:'数量',color:'#64748b'}},
+        y1:{position:'right',beginAtZero:true,max:100,ticks:{color:'#10b981',callback:v=>v+'%'},grid:{display:false},title:{display:true,text:'转出率',color:'#10b981'}},
+        x:{ticks:{color:'#64748b'},grid:{display:false}}
+      }}
+    });
+  }
+
+  loadLeadsTable();
+}
+
+function buildFunnelHTML(rows,colors,total){
+  if(!rows.length)return'';
+  const topCount=rows[0].count||1;
+  return `<div style="display:flex;flex-direction:column;gap:8px">
+    ${rows.map((s,i)=>{
+      const wPct=Math.max((s.count/topCount)*100,8);
+      const isFirst=i===0;
+      return `<div style="display:flex;align-items:center;gap:12px">
+        <div style="min-width:72px;font-size:13px;font-weight:500;color:var(--text-secondary);text-align:right">${esc(s.name)}</div>
+        <div style="flex:1;position:relative;height:36px;background:var(--bg-surface);border-radius:6px;overflow:hidden">
+          <div style="width:${wPct}%;height:100%;background:linear-gradient(90deg,${colors[s.status]},${colors[s.status]}cc);border-radius:6px;display:flex;align-items:center;justify-content:flex-end;padding-right:12px;transition:width .8s cubic-bezier(.4,0,.2,1);min-width:40px">
+            <span style="font-size:16px;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.4)">${s.count}</span>
+          </div>
+        </div>
+        <div style="min-width:80px;font-size:11px;color:var(--text-muted);text-align:left">
+          ${isFirst?`<span style="color:${colors[s.status]}">起点</span>`:`<span style="color:${colors[s.status]};font-weight:600">↘ ${s.stageRate}%</span><br><span style="font-size:10px">总占比 ${s.totalRate}%</span>`}
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function renderHBars(items,color){
+  if(!items||!items.length)return'';
+  const max=Math.max(...items.map(i=>i.count),1);
+  const palette=[color,'#8b5cf6','#10b981','#f59e0b','#ec4899','#06b6d4','#f97316','#6366f1','#84cc16','#ef4444'];
+  return `<div class="data-bars">${items.slice(0,12).map((i,idx)=>{
+    const pct=Math.max((i.count/max)*100,3);
+    const c=palette[idx%palette.length];
+    return `<div class="data-bar-row"><div class="data-bar-label" title="${esc(i.name)}">${esc(i.name)}</div><div class="data-bar"><div class="data-bar-fill" style="width:${pct}%;background:${c}"></div></div><div class="data-bar-value" style="color:${c}">${i.count}</div></div>`;
+  }).join('')}</div>`;
+}
+function renderStageBars(stages){
+  if(!stages||!stages.length)return'';
+  const max=Math.max(...stages.map(s=>s.count),1);
+  const colorMap={'已签约':'#10b981','交付中':'#06b6d4','投标中':'#f59e0b','POC中':'#8b5cf6','B类重点推进':'#3b82f6','重点推进':'#3b82f6','C类跟进':'#64748b','跟进中':'#64748b','D类观察':'#94a3b8','观察':'#94a3b8','战败':'#ef4444','放弃':'#ef4444'};
+  return `<div class="data-bars">${stages.map(s=>{
+    const pct=Math.max((s.count/max)*100,3);
+    const c=colorMap[s.stage]||'#64748b';
+    return `<div class="data-bar-row"><div class="data-bar-label" title="${esc(s.stage)}">${esc(s.stage)}</div><div class="data-bar"><div class="data-bar-fill" style="width:${pct}%;background:${c}"></div></div><div class="data-bar-value" style="color:${c}">${s.count}</div></div>`;
+  }).join('')}</div>`;
+}
+function renderClickableStageBars(stages){
+  if(!stages||!stages.length)return'';
+  const max=Math.max(...stages.map(s=>s.count),1);
+  return `<div class="data-bars">${stages.map(s=>{
+    const pct=Math.max((s.count/max)*100,3);
+    const c=stageColor(s.stage);
+    return `<div class="data-bar-row" style="cursor:pointer;padding:3px 0;border-radius:var(--radius);transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''" onclick="navigate('octo-pipeline',{stage:'${s.stage}'})">
+      <div class="data-bar-label" title="${esc(s.stage)}">${esc(s.stage)}</div>
+      <div class="data-bar"><div class="data-bar-fill" style="width:${pct}%;background:${c}"></div></div>
+      <div class="data-bar-value" style="color:${c}">${s.count}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+function renderIndustryBars(industries){
+  if(!industries||!industries.length)return'';
+  const max=Math.max(...industries.map(s=>s.c),1);
+  const indColors=['#10b981','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#f59e0b','#f97316','#14b8a6','#6366f1','#84cc16'];
+  return `<div class="data-bars">${industries.slice(0,10).map((s,idx)=>{
+    const pct=Math.max((s.c/max)*100,3);
+    const c=indColors[idx%indColors.length];
+    return `<div class="data-bar-row"><div class="data-bar-label" title="${esc(s.industry)}">${esc(s.industry)}</div><div class="data-bar"><div class="data-bar-fill" style="width:${pct}%;background:${c}"></div></div><div class="data-bar-value" style="color:${c}">${s.c}</div></div>`;
+  }).join('')}</div>`;
+}
+
+// ===== 线索池表格 =====
+async function loadLeadsTable(){
+  const container=document.getElementById('leads-table-container');
+  if(!container)return;
+  container.innerHTML='<div style="text-align:center;padding:20px;color:var(--text-muted)">⏳ 加载...</div>';
+  const params=new URLSearchParams();
+  if(_leadsSearch)params.set('search',_leadsSearch);
+  if(_leadsStatus)params.set('status',_leadsStatus);
+  if(_leadsSource)params.set('source_channel',_leadsSource);
+  params.set('page',_leadsPage);params.set('limit',20);
+
+  let sourceOptions=[];
+  if(_funnelData&&_funnelData.bySource)sourceOptions=_funnelData.bySource.map(s=>s.name);
+
+  let data;try{data=await api('/api/leads?'+params)}catch(e){container.innerHTML=`<div style="color:var(--danger);padding:16px">❌ ${esc(e.message)}</div>`;return}
+  const totalPages=Math.ceil(data.total/data.limit)||1;
+
+  container.innerHTML=`
+    <div class="search-bar" style="margin-bottom:12px;flex-wrap:wrap">
+      <input type="text" placeholder="🔍 搜索公司/联系人/产品..." id="leads-search" value="${esc(_leadsSearch)}" onkeyup="if(event.key==='Enter'){_leadsSearch=this.value;_leadsPage=1;loadLeadsTable()}" style="max-width:280px">
+      <select id="leads-status" onchange="_leadsStatus=this.value;_leadsPage=1;loadLeadsTable()">
+        <option value="">全部状态</option>
+        <option value="new" ${_leadsStatus==='new'?'selected':''}>新进线</option>
+        <option value="contacted" ${_leadsStatus==='contacted'?'selected':''}>已联系</option>
+        <option value="qualified" ${_leadsStatus==='qualified'?'selected':''}>已转出</option>
+        <option value="opportunity" ${_leadsStatus==='opportunity'?'selected':''}>商机</option>
+        <option value="closed_won" ${_leadsStatus==='closed_won'?'selected':''}>成单</option>
+        <option value="closed_lost" ${_leadsStatus==='closed_lost'?'selected':''}>无效/丢单</option>
+      </select>
+      <select id="leads-source" onchange="_leadsSource=this.value;_leadsPage=1;loadLeadsTable()">
+        <option value="">全部来源</option>
+        ${sourceOptions.map(s=>`<option value="${esc(s)}" ${_leadsSource===s?'selected':''}>${esc(s)}</option>`).join('')}
+      </select>
+      <button class="btn btn-sm btn-secondary" onclick="_leadsSearch=document.getElementById('leads-search').value;_leadsPage=1;loadLeadsTable()">🔍 搜索</button>
+      <span style="margin-left:auto;font-size:12px;color:var(--text-muted)">共 ${data.total} 条 · ${_leadsPage}/${totalPages} 页</span>
+    </div>
+    <div class="table-wrap"><table>
+      <tr><th>公司名称</th><th>联系人</th><th>职位</th><th>电话</th><th>来源渠道</th><th>产品</th><th>行业</th><th>团队</th><th>分配给</th><th>状态</th><th>进线日期</th><th>操作</th></tr>
+      <tbody id="leads-tbody">${data.data.length?data.data.map(leadRow).join(''):'<tr><td colspan="12"><div class="empty-state" style="padding:24px"><p>暂无匹配数据</p></div></td></tr>'}</tbody>
+    </table></div>
+    ${totalPages>1?`<div style="display:flex;justify-content:center;gap:6px;margin-top:14px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-sm btn-secondary" ${+_leadsPage<=1?'disabled style="opacity:.4;cursor:not-allowed"':''} onclick="_leadsPage=${_leadsPage-1};loadLeadsTable()">← 上页</button>
+      ${renderPageNums(_leadsPage,totalPages)}
+      <button class="btn btn-sm btn-secondary" ${+_leadsPage>=totalPages?'disabled style="opacity:.4;cursor:not-allowed"':''} onclick="_leadsPage=${_leadsPage+1};loadLeadsTable()">下页 →</button>
+    </div>`:''}
+  `;
+}
+
+function renderPageNums(cur,total){
+  cur=+cur;total=+total;
+  let pages=[];
+  const add=p=>{if(p>=1&&p<=total&&!pages.includes(p))pages.push(p)};
+  add(1);add(total);
+  for(let i=cur-2;i<=cur+2;i++)add(i);
+  pages.sort((a,b)=>a-b);
+  let html='';let prev=0;
+  for(const p of pages){
+    if(p-prev>1)html+='<span style="color:var(--text-muted);padding:0 4px">…</span>';
+    const active=p===cur;
+    html+=`<button class="btn btn-sm ${active?'btn-primary':'btn-secondary'}" onclick="_leadsPage=${p};loadLeadsTable()" style="min-width:30px;padding:4px 8px">${p}</button>`;
+    prev=p;
+  }
+  return html;
+}
+
+function leadRow(l){
+  return `<tr class="clickable-row" onclick="viewLead(${l.id})">
+    <td><strong>${esc(l.company_name)||'—'}</strong></td>
+    <td>${esc(l.contact_name)||'—'}</td>
+    <td style="color:var(--text-secondary);font-size:12px">${esc(l.contact_title)||'—'}</td>
+    <td style="font-size:12px">${esc(l.phone)||'—'}</td>
+    <td>${sourceTag(l.source_channel)}</td>
+    <td>${esc(l.product)||'—'}</td>
+    <td style="color:var(--text-secondary);font-size:12px">${esc(l.industry)||'—'}</td>
+    <td>${esc(l.team)||'—'}</td>
+    <td>${esc(l.assigned_to)||'<span style="color:var(--text-muted)">未分配</span>'}</td>
+    <td>${leadStatusTag(l.status)}</td>
+    <td style="font-size:12px;color:var(--text-secondary)">${l.inbound_date||'—'}</td>
+    <td style="white-space:nowrap" onclick="event.stopPropagation()"><button class="btn btn-sm btn-secondary" onclick="openLeadForm(${l.id})">编辑</button> <button class="btn btn-sm btn-danger" onclick="if(confirm('确定删除？'))deleteLead(${l.id})">删除</button></td>
+  </tr>`;
+}
+
+async function viewLead(id){
+  try{
+    const l=await api('/api/leads/'+id);
+    openModal(`
+      <div class="modal-header"><h3>🔍 ${esc(l.company_name)||'线索详情'}</h3><button onclick="closeModal()" style="font-size:20px">✕</button></div>
+      <div class="modal-body">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px">
+          ${leadStatusTag(l.status)}
+          ${l.source_channel?`<span class="tag tag-cyan">${esc(l.source_channel)}</span>`:''}
+          ${l.product?`<span class="tag tag-blue">${esc(l.product)}</span>`:''}
+        </div>
+        <div class="detail-grid">
+          ${[['公司名称',l.company_name],['联系人',l.contact_name],['职位',l.contact_title],['电话',l.phone],['来源渠道',l.source_channel],['来源明细',l.source_detail],['需求产品',l.product],['行业',l.industry],['所属团队',l.team],['分配给',l.assigned_to],['进线日期',l.inbound_date],['转出日期',l.transfer_date],['成单金额(万)',l.deal_amount?l.deal_amount+'万':'']].map(([lb,v])=>`<div class="detail-field"><div class="label">${lb}</div><div class="value">${esc(v)}</div></div>`).join('')}
+        </div>
+        ${l.requirement?`<div class="detail-field" style="margin-top:12px"><div class="label">需求描述/跟进记录</div><div class="value" style="white-space:pre-wrap;line-height:1.7;background:var(--bg-surface);padding:12px;border-radius:var(--radius);border:1px solid var(--border)">${esc(l.requirement)}</div></div>`:''}
+        ${l.lost_reason?`<div class="detail-field" style="margin-top:8px"><div class="label">丢单原因</div><div class="value" style="color:var(--danger)">${esc(l.lost_reason)}</div></div>`:''}
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-sm btn-danger" onclick="if(confirm('确定删除？')){closeModal();deleteLead(${l.id})}">删除</button>
+        <button class="btn btn-secondary" onclick="closeModal()">关闭</button>
+        <button class="btn btn-primary" onclick="closeModal();openLeadForm(${l.id})">✏️ 编辑</button>
+      </div>
+    `);
+  }catch(e){toast(e.message,'error')}
+}
+
+async function clearAllLeads(){
+  try{const r=await api('/api/leads/all',{method:'DELETE'});toast(r.message);renderFunnel()}catch(e){toast(e.message,'error')}
+}
+async function deleteLead(id){
+  try{await api('/api/leads/'+id,{method:'DELETE'});toast('删除成功');renderFunnel()}catch(e){toast(e.message,'error')}
+}
+async function openLeadForm(id){
+  let l={};if(id){try{l=await api('/api/leads/'+id)}catch(e){toast(e.message,'error');return}}
+  const title=id?'编辑线索 #'+id:'新建线索';
+  const statusOpts=['new','contacted','qualified','opportunity','closed_won','closed_lost'];
+  openModal(`
+    <div class="modal-header"><h3>${title}</h3><button onclick="closeModal()" style="font-size:20px">✕</button></div>
+    <div class="modal-body"><form id="lead-form" onsubmit="saveLead(event,${id||'null'})">
+      <div class="form-row">
+        <div class="form-group"><label>公司名称 *</label><input name="company_name" required value="${esc(l.company_name||'')}"></div>
+        <div class="form-group"><label>联系人</label><input name="contact_name" value="${esc(l.contact_name||'')}"></div>
+      </div>
+      <div class="form-row-3">
+        <div class="form-group"><label>职位</label><input name="contact_title" value="${esc(l.contact_title||'')}"></div>
+        <div class="form-group"><label>电话</label><input name="phone" value="${esc(l.phone||'')}"></div>
+        <div class="form-group"><label>状态</label><select name="status">${statusOpts.map(s=>'<option value="'+s+'" '+(l.status===s?'selected':'')+'>'+leadStatusName(s)+'</option>').join('')}</select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>来源渠道</label><input name="source_channel" value="${esc(l.source_channel||'')}" placeholder="400电话/官方微信/Octo体验..."></div>
+        <div class="form-group"><label>来源子渠道</label><input name="source_detail" value="${esc(l.source_detail||'')}"></div>
+      </div>
+      <div class="form-row-3">
+        <div class="form-group"><label>需求产品</label><input name="product" value="${esc(l.product||'')}"></div>
+        <div class="form-group"><label>行业</label><input name="industry" value="${esc(l.industry||'')}"></div>
+        <div class="form-group"><label>团队</label><input name="team" value="${esc(l.team||'')}"></div>
+      </div>
+      <div class="form-row-3">
+        <div class="form-group"><label>分配销售</label><input name="assigned_to" value="${esc(l.assigned_to||'')}"></div>
+        <div class="form-group"><label>进线日期</label><input type="date" name="inbound_date" value="${l.inbound_date||''}"></div>
+        <div class="form-group"><label>转出日期</label><input type="date" name="transfer_date" value="${l.transfer_date||''}"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>商机号</label><input name="opportunity_id" value="${esc(l.opportunity_id||'')}"></div>
+        <div class="form-group"><label>成单金额(万)</label><input type="number" step="0.01" name="deal_amount" value="${l.deal_amount||''}"></div>
+      </div>
+      <div class="form-group"><label>需求描述/跟进记录</label><textarea name="requirement" rows="3">${esc(l.requirement||'')}</textarea></div>
+      <div class="form-group"><label>丢单原因</label><input name="lost_reason" value="${esc(l.lost_reason||'')}"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+        <button type="submit" class="btn btn-primary">💾 保存</button>
+      </div>
+    </form></div>`);
+}
+async function saveLead(ev,id){
+  ev.preventDefault();const form=new FormData(document.getElementById('lead-form'));const body=Object.fromEntries(form);
+  body.deal_amount=+body.deal_amount||0;
+  try{
+    if(id){await api('/api/leads/'+id,{method:'PUT',body});toast('线索更新成功')}
+    else{await api('/api/leads',{method:'POST',body});toast('线索创建成功')}
+    closeModal();renderFunnel();
+  }catch(e){toast(e.message,'error')}
+}
+
+// ===== IMPORT =====
+function renderImport(){
+  const content=document.getElementById('content');
+  content.innerHTML=`
+    <div class="tabs"><div class="tab active" onclick="switchImportTab(this,'upload')">上传导入</div><div class="tab" onclick="switchImportTab(this,'history')">导入历史</div><div class="tab" onclick="switchImportTab(this,'guide')">字段说明</div></div>
+    <div id="import-content">
+      <div class="form-group" style="max-width:300px;margin-bottom:20px"><label>选择导入目标</label><select id="import-target" onchange="showImportFields()"><option value="speeches">🎤 活动和CEO获客</option><option value="accounts">🐙 客户数据</option><option value="leads">🔄 SDR线索</option></select></div>
+      <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="event.preventDefault();this.classList.remove('dragover');handleDrop(event)">
+        <div class="icon">📁</div><p><strong>点击或拖拽文件到这里</strong></p><p>支持 .xlsx / .xls / .csv，最大20MB</p>
+        <input type="file" id="file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFileSelect(this)">
+      </div>
+      <div id="import-result" style="margin-top:16px"></div>
+      <div id="import-fields" style="margin-top:16px"></div>
+    </div>`;
+  showImportFields();
+}
+async function showImportFields(){try{const f=await api(`/api/import/fields/${document.getElementById('import-target').value}`);document.getElementById('import-fields').innerHTML=`<div class="card"><div class="card-header"><h3>字段说明</h3></div><div class="card-body" style="padding:0"><table><tr><th>中文</th><th>英文</th><th>必填</th><th>备注</th></tr>${f.map(x=>`<tr><td><strong>${x.cn}</strong></td><td><code style="background:var(--bg-surface);padding:2px 6px;border-radius:3px">${x.en}</code></td><td>${x.required?'<span class="tag tag-red">必填</span>':''}</td><td>${x.note||''}</td></tr>`).join('')}</table></div></div>`}catch(e){}}
+function handleDrop(ev){if(ev.dataTransfer.files.length)uploadFile(ev.dataTransfer.files[0])}
+function handleFileSelect(inp){if(inp.files.length)uploadFile(inp.files[0])}
+async function uploadFile(file){
+  const table=document.getElementById('import-target').value,rd=document.getElementById('import-result');
+  rd.innerHTML='<div style="padding:16px;text-align:center;color:var(--text-muted)">⏳ 导入中...</div>';
+  const fd=new FormData();fd.append('file',file);
+  try{const r=await fetch(`/api/import/${table}`,{method:'POST',body:fd}).then(r=>r.json());if(r.error)throw new Error(r.error);
+    rd.innerHTML=`<div class="card"><div class="card-header"><h3>✅ 导入完成</h3></div><div class="card-body"><div class="stats-grid">${[{v:r.total,l:'总行数',c:'var(--text)'},{v:r.success,l:'成功',c:'var(--success)'},{v:r.errors.length,l:'失败',c:'var(--danger)'}].map(s=>`<div class="stat-card" style="cursor:default"><div class="stat-value" style="color:${s.c}">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('')}</div>${r.errors.length?`<div style="margin-top:12px;font-size:12px;color:var(--danger)">${r.errors.slice(0,5).map(e=>`第${e.row}行: ${esc(e.error)}`).join('<br>')}</div>`:''}</div></div>`;
+    toast(r.message);
+  }catch(e){rd.innerHTML=`<div class="card" style="border-color:var(--danger)"><div class="card-body" style="color:var(--danger)">❌ ${esc(e.message)}</div></div>`;toast(e.message,'error')}
+}
+async function switchImportTab(el,tab){
+  document.querySelectorAll('.tabs .tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
+  const c=document.getElementById('import-content');
+  if(tab==='history'){try{const logs=await api('/api/import/logs');c.innerHTML=logs.length?`<div class="card"><div class="table-wrap"><table><tr><th>文件</th><th>目标</th><th>总行</th><th>成功</th><th>失败</th><th>时间</th></tr>${logs.map(l=>`<tr><td>${esc(l.filename)}</td><td>${l.target_table}</td><td>${l.total_rows}</td><td style="color:var(--success)">${l.success_rows}</td><td style="color:${l.error_rows?'var(--danger)':'inherit'}">${l.error_rows}</td><td>${l.imported_at}</td></tr>`).join('')}</table></div></div>`:'<div class="empty-state"><p>暂无导入记录</p></div>'}catch(e){c.innerHTML=err(e)}}
+  else if(tab==='guide'){c.innerHTML=`<div class="card"><div class="card-body" style="line-height:2"><h3 style="margin-bottom:12px">数据导入指南</h3><p>1. 准备Excel文件，第一行为表头（中文或英文均可）</p><p>2. 选择导入目标：活动和CEO获客/客户/线索</p><p>3. 上传文件，系统自动识别列名匹配字段</p><hr style="border:none;border-top:1px solid var(--border);margin:12px 0"><p><strong>SDR线索字段说明：</strong></p><p>日期格式YYYY-MM-DD · 客户等级S/A/B/C</p><p>线索状态：new(新进线)/contacted(已联系)/qualified(已转出)/opportunity(商机)/closed_won(成单)/closed_lost(无效)</p><p>来源渠道：直接传中文原值（400电话/官方微信/Octo体验等）</p><p>成单金额：单位万元</p></div></div>`}
+  else renderImport();
+}
+
+// ===== OCTO SUMMARY (大客户复盘看板) =====
+let _octoData = null, _octoAccSearch='',_octoAccTier='',_octoAccStage='';
+async function renderOctoSummary(tab){
+  const content=document.getElementById('content'),ha=document.getElementById('header-actions');
+  ha.innerHTML='<button class="btn btn-secondary" onclick=\'navigate("octo-pipeline")\'>📊 看板视图</button> <button class="btn btn-primary" onclick=\'navigate("account-form")\'>+ 新建客户</button>';
+  content.innerHTML='<div style="text-align:center;padding:60px;color:var(--text-muted)">⏳ 加载中...</div>';
+  try{_octoData=await api('/api/octo/summary')}catch(e){content.innerHTML=err(e);return}
+  const k=_octoData.kpi||{};
+  // Update badge: blockers + pendingDecisions
+  const badgeCount=(k.blockers||0)+(k.pendingDecisions||0);
+  const bb=document.getElementById('badge-blockers');
+  if(badgeCount>0){bb.style.display='';bb.textContent=badgeCount}else{bb.style.display='none'}
+
+  const activeTab=tab||'dashboard';
+  content.innerHTML=`
+    <div class="sub-tabs" id="octo-tabs">
+      <div class="tab ${activeTab==='dashboard'?'active':''}" onclick="switchOctoTab(this,'dashboard')">📊 全景报告</div>
+      <div class="tab ${activeTab==='list'?'active':''}" onclick="switchOctoTab(this,'list')">🏢 全部客户</div>
+    </div>
+    <div id="octo-tab-content"></div>`;
+  if(activeTab==='dashboard') renderOctoDashboard();
+  else renderOctoListTab();
+}
+function switchOctoTab(el,tab){
+  document.querySelectorAll('#octo-tabs .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  if(tab==='dashboard') renderOctoDashboard();
+  else renderOctoListTab();
+}
+function stageColor(s){
+  return {'已签约':'#10b981','交付中':'#06b6d4','投标中':'#f59e0b','POC中':'#8b5cf6','重点推进':'#3b82f6','B类重点推进':'#3b82f6','跟进中':'#64748b','C类跟进':'#64748b','观察':'#64748b','D类观察':'#64748b','战败':'#ef4444','放弃':'#ef4444'}[s]||'#64748b';
+}
+function renderOctoDashboard(){
+  const d=_octoData;if(!d)return;
+  const k=d.kpi||{};
+  const tc=document.getElementById('octo-tab-content');
+  const clink=(a)=>`<span onclick="navigate('account-report',{id:${a.id}})" style="cursor:pointer;color:var(--accent-light);font-weight:700">${esc(a.company_name)}</span>`;
+  const short=(s,n=90)=>{s=String(s||'');return s.length>n?s.slice(0,n)+'…':s};
+  const money=(a)=>a.deal_amount?`${a.deal_amount}万`:((a.estimated_budget||'').replace('¥','')||'—');
+
+  const signed=d.signed||[], bidding=d.bidding||[], bClass=d.bClass||[], cClass=d.cClass||[], dClass=d.dClass||[], deadAll=d.deadAll||[];
+  const wonAmt=signed.reduce((s,a)=>s+(a.deal_amount||0),0);
+  const bPipe=bClass.reduce((s,a)=>s+(a.deal_amount||0),0);
+  const bidPipe=bidding.reduce((s,a)=>s+(a.deal_amount||0),0);
+  const totalPlus=wonAmt+bPipe+bidPipe;
+
+  const sectionNav=['大盘概览','39家客户现状','行业洞察','需求共性','阻碍卡点','竞品分析','CEO获客','成功/失败模式']
+    .map((t,i)=>`<a class="tag tag-blue" style="cursor:pointer;margin:3px" onclick="document.getElementById('pano-${i+1}').scrollIntoView({behavior:'smooth',block:'start'})">${['一','二','三','四','五','六','七','八'][i]} ${t}</a>`).join('');
+
+  const statCards=`<div class="strategy-overview">
+    <div class="overview-item"><div class="ov-value" style="color:var(--accent-light)">${k.totalAccounts||39}</div><div class="ov-label">覆盖客户</div></div>
+    <div class="overview-item"><div class="ov-value" style="color:var(--success)">${signed.length||3}</div><div class="ov-label">已签约/交付</div></div>
+    <div class="overview-item"><div class="ov-value" style="color:var(--warning)">${bidding.length||1}</div><div class="ov-label">投标中</div></div>
+    <div class="overview-item"><div class="ov-value" style="color:var(--accent)">${bClass.length||7}</div><div class="ov-label">B类重点</div></div>
+    <div class="overview-item"><div class="ov-value" style="color:var(--pink)">${totalPlus}万+</div><div class="ov-label">签约+管线</div></div>
+    <div class="overview-item"><div class="ov-value" style="color:var(--danger)">${deadAll.length||12}</div><div class="ov-label">战败/放弃</div></div>
+  </div>`;
+
+  const stageFunnel=(d.byStage||[]).map(x=>{
+    const max=Math.max(...(d.byStage||[]).map(v=>v.amount||v.count||0),1);
+    const val=x.amount||x.count||0; const w=Math.max(val/max*100,4);
+    return `<div class="data-bar-row"><div class="data-bar-label">${esc(x.stage)}</div><div class="data-bar"><div class="data-bar-fill" style="width:${w}%;background:${stageColor(x.stage)}"></div></div><div class="data-bar-value">${x.amount?x.amount+'万':x.count+'家'}</div></div>`;
+  }).join('');
+
+  const signedCards=signed.map(a=>`<div class="signed-card" onclick="navigate('account-report',{id:${a.id}})">
+    <div class="sc-top"><span class="tier-badge tier-${a.tier}">${a.tier}</span><span class="sc-name">${esc(a.company_name)}</span></div>
+    <div class="sc-amount">${money(a)}</div><div class="sc-owner">👤 ${esc(a.assigned_to||'')}</div>
+    <div class="sc-status">${esc(short(a.customer_recognition||a.product_solutions_detail||a.next_step||a.needs_summary,120))}</div>
+  </div>`).join('');
+
+  const yutong=bidding[0];
+  const biddingCard=yutong?`<div class="bidding-card" onclick="navigate('account-report',{id:${yutong.id}})">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap"><div><span class="tier-badge tier-${yutong.tier}">${yutong.tier}</span><span class="bc-name" style="margin-left:8px">${esc(yutong.company_name)}</span><div class="bc-amount">≤${yutong.deal_amount||200}万<span style="font-size:13px;color:#fca5a5;font-weight:400"> + 二三期各200万</span></div></div><div class="countdown">⏰ 9/25前出结果</div></div>
+    <div class="bc-meta"><div class="bc-meta-item"><div class="bc-meta-label">负责人</div><div class="bc-meta-value">${esc(yutong.assigned_to||'')}</div></div><div class="bc-meta-item"><div class="bc-meta-label">进展</div><div class="bc-meta-value">9/18郑州述标完成</div></div><div class="bc-meta-item"><div class="bc-meta-label">联系人</div><div class="bc-meta-value">16+联系人 / 10条线</div></div><div class="bc-meta-item"><div class="bc-meta-label">竞品</div><div class="bc-meta-value">酷开/实在/联想/腾讯/阿里</div></div></div>
+    <div class="highlight-box danger" style="margin-top:10px">姜平定调「亏本也拿」；客户认可 Octo 是 AI 原生平台（非 AI 增强工具）；11月需量化提效。</div>
+  </div>`:'';
+
+  const bCards=bClass.map(a=>`<div class="bclass-card" onclick="navigate('account-report',{id:${a.id}})"><div class="bcc-top"><span class="tier-badge tier-${a.tier}" style="width:auto;height:auto;padding:1px 6px;font-size:10px">${a.tier}</span><span class="bcc-name">${esc(a.company_name)}</span><span class="bcc-amount">${money(a)}</span></div><div class="bcc-owner">👤 ${esc(a.assigned_to||'')}</div><div class="bcc-status">${esc(short(a.product_solutions_detail||a.needs_summary||a.next_step,105))}</div>${a.blockers?`<div class="bcc-blocker">⚠️ ${esc(short(a.blockers,70))}</div>`:''}</div>`).join('');
+  const compact=(arr)=>arr.map(a=>`<div class="compact-item" onclick="navigate('account-report',{id:${a.id}})"><span class="tier-badge tier-${a.tier}" style="width:auto;height:auto;padding:2px 6px;font-size:10px">${a.tier}</span><span class="ci-name">${esc(a.company_name)}</span><span class="ci-status">${esc(short(a.needs_summary||a.blockers||a.next_step||a.core_painpoint,100))}</span><span class="ci-owner">${esc(a.assigned_to||'')}</span></div>`).join('');
+
+  const industryBars=(d.byIndustry||[]).slice(0,10).map((x,i)=>{const max=Math.max(...(d.byIndustry||[]).map(v=>v.c||0),1);return `<div class="data-bar-row"><div class="data-bar-label">${esc(x.industry)}</div><div class="data-bar"><div class="data-bar-fill" style="width:${Math.max((x.c||0)/max*100,3)}%;background:${['#3b82f6','#10b981','#8b5cf6','#f59e0b','#06b6d4','#ec4899'][i%6]}"></div></div><div class="data-bar-value">${x.c}家</div></div>`}).join('');
+  const industryInsights=[
+    ['制造业','吉利/三一/宇通/极光湾：私有化部署、大合同、长周期，是核心收入来源和标杆复制主赛道。'],
+    ['医疗','卓正/联合影像/健主任/新世纪：付费意愿强、合规要求高、私有化刚需，卓正已成可复制标杆。'],
+    ['快消','南孚/宝洁系线索：AIGC营销和企业协同替代诉求强，预算中等但决策链清晰。'],
+    ['互联网','墨迹/得到/PPIO/混沌：技术接受度高，但自研/免费生态替代强，必须先判断付费意愿。']
+  ].map(([t,desc])=>`<div class="highlight-box"><strong>${t}</strong><br>${desc}</div>`).join('');
+
+  const concerns=(d.topConcerns||[]).map(c=>`<div class="concern-item"><div class="ci-rank">${c.rank}</div><div><div class="ci-title">${esc(c.title)}</div><div class="ci-desc">${esc(c.desc)}</div></div></div>`).join('');
+  const demandBars=[['私有化部署',30],['AI Coding',8],['会议Agent',7],['HR场景',6],['营销AIGC',6],['数据治理',5],['AtoA协作',5]].map(([n,c],i)=>`<div class="data-bar-row"><div class="data-bar-label">${n}</div><div class="data-bar"><div class="data-bar-fill" style="width:${c/30*100}%;background:${['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ec4899','#06b6d4','#64748b'][i]}"></div></div><div class="data-bar-value">${c}家+</div></div>`).join('');
+
+  const blockers=(d.blockers||[]).slice(0,20);
+  const blockerGroups=[
+    ['资源卡点','跨产品线协调、交付团队、售前资源', blockers.filter(x=>/资源|交付|售前|团队|协调|主R/.test(x.blockers||'')),'red'],
+    ['商务卡点','预算周期、合规审批、定价异议、合同边界', blockers.filter(x=>/预算|合规|价格|费用|合同|商务|Token|保险|SOC/.test(x.blockers||'')),'yellow'],
+    ['技术卡点','集成复杂度、环境搭建、Token显示、私有化部署', blockers.filter(x=>/技术|集成|环境|Token|部署|私有化|Loop/.test(x.blockers||'')),'blue']
+  ];
+  const blockersHtml=blockerGroups.map(([name,desc,items,color])=>`<div class="card" style="margin-bottom:12px"><div class="card-header"><h3>${color==='red'?'🔴':color==='yellow'?'🟡':'🔵'} ${name}</h3><span class="section-count">${items.length}项</span></div><div class="card-body">${items.length?items.map(b=>`<div class="action-item ${color==='red'?'red':color==='yellow'?'yellow':'blue'}" onclick="navigate('account-report',{id:${b.id}})"><span class="ai-company">${esc(b.company_name)}</span><span class="ai-content">${esc(short(b.blockers,130))}</span><span class="ai-owner">${esc(b.assigned_to||'')}</span></div>`).join(''):`<span style="color:var(--text-muted)">暂无</span>`}</div></div>`).join('');
+
+  const compBars=(d.byCompetitor||[]).slice(0,12).map((x,i)=>{const max=Math.max(...(d.byCompetitor||[]).map(v=>v.count||0),1);return `<div class="data-bar-row"><div class="data-bar-label">${esc(x.name)}</div><div class="data-bar"><div class="data-bar-fill" style="width:${Math.max(x.count/max*100,3)}%;background:${['#ef4444','#f59e0b','#3b82f6','#8b5cf6','#06b6d4'][i%5]}"></div></div><div class="data-bar-value">${x.count}</div></div>`}).join('');
+  const compInsights=[
+    ['飞书Aily/飞书生态','最大竞争对手；生态锁定一旦建立几乎不可破，得到/方里是典型战败。'],
+    ['腾讯Hermes/WorkBuddy','大企业IM+AI入口竞争，南孚/宇通场景均出现。'],
+    ['阿里QoderWork/MuleRun','AI Coding方向强对手，宇通/墨迹均出现。'],
+    ['Dify/开源自建','企业内部技术团队低成本替代方案，三一等制造客户会对比。']
+  ].map(([t,desc])=>`<div class="highlight-box"><strong>${t}</strong><br>${desc}</div>`).join('');
+
+  const ceo=d.ceoFunnel||{};
+  const ceoFunnel=[['8场活动',ceo.events||8,394],['加微',ceo.wechat||394,394],['申请',ceo.applied||122,394],['开通',ceo.activated||102,394],['转出销售',ceo.converted||5,394]].map(([l,v,max])=>`<div class="funnel-row"><span class="fl-label">${l}</span><div class="fl-bar"><div class="fl-fill" style="width:${Math.max(v/max*100,2)}%"></div></div><span class="fl-val">${v}</span></div>`).join('');
+
+  const successPatterns=[
+    '高管直推/CEO关系：卓正「必须发生」、南孚CEO+CMO辉哥直通，关系质量决定成交概率。',
+    '明确付费意愿+刚需场景：卓正医疗私有化、南孚替代钉飞企微、宇通CIO线招标。',
+    '交付团队快速响应：私有化部署、现场安装、培训和量化提效要跟上销售节奏。'
+  ].map((x,i)=>`<div class="lesson-item"><span class="li-num">${i+1}</span><span>${x}</span></div>`).join('');
+  const failureGroups=(d.deadGrouped||[]).map(g=>`<div class="dead-group"><div class="dead-group-header">${g.icon} ${esc(g.title)}<span class="dg-desc">${esc(g.desc||'')}</span><span style="margin-left:auto;color:var(--danger);font-weight:700;font-size:12px">${g.items.length}家</span></div>${g.items.map(it=>`<div class="dead-item"><span class="di-name">${esc(it.company_name)}</span><span class="di-lesson">${esc(short(it.lessons_learned||it.blockers,100))}</span></div>`).join('')}</div>`).join('');
+  const coreLessons=(d.coreLessons||[]).map((l,i)=>`<div class="lesson-item"><span class="li-num">${i+1}</span><span>${esc(l)}</span></div>`).join('');
+
+  const actionHtml=(d.actionItems||[]).slice(0,18).map(a=>{const cls=a.priority==='red'?'red':a.priority==='yellow'?'yellow':'blue';const label={red:'紧急',yellow:'本周',blue:'推进'}[cls];return `<div class="action-item ${cls}" onclick="navigate('account-report',{id:${a.account_id}})"><span class="ai-prio">${label}</span><span class="ai-company">${esc(a.company_name)}</span><span class="ai-content">${esc(short(a.content,130))}</span><span class="ai-owner">${esc(a.owner||'')}</span></div>`}).join('');
+
+  tc.innerHTML=`<div class="panorama">
+    <div class="card" style="margin-bottom:16px"><div class="card-body"><div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center"><span style="font-size:12px;color:var(--text-muted);margin-right:6px">快速导航</span>${sectionNav}</div></div></div>
+
+    <div class="section-card" id="pano-1"><div class="section-header"><h3>一、大盘概览</h3><span class="section-count">KR2整体战况</span></div><div class="section-body">${statCards}<div class="conclusion-box"><strong>战略定调：</strong>姜平明确「不能付费的客户不再投入时间」；宇通定调「亏本也拿」；卓正定调「必须发生」。客户分层围绕A/B/C/D进行资源配置，制造+医疗贡献100%签约和80%+管线。</div><div class="card" style="margin-top:14px"><div class="card-header"><h3>管线阶段金额</h3></div><div class="card-body"><div class="data-bars">${stageFunnel}</div></div></div></div></div>
+
+    <div class="section-card" id="pano-2"><div class="section-header"><h3>二、39家客户现状</h3><span class="section-count">按阶段分层</span></div><div class="section-body"><h4>✅ 已签约/交付中（3家）</h4><div class="client-grid">${signedCards}</div><h4 style="margin-top:18px">🔴 投标进行中（1家）</h4>${biddingCard}<h4 style="margin-top:18px">🟡 B类重点推进（7家）</h4><div class="bclass-grid">${bCards}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px"><div><h4>🔵 C类跟进（9家）</h4><div class="compact-list">${compact(cClass)}</div></div><div><h4>⚪ D类观察（7家）</h4><div class="compact-list">${compact(dClass)}</div></div></div><div class="highlight-box danger" style="margin-top:14px">❌ 战败/放弃 ${deadAll.length} 家，核心原因见第八板块。</div></div></div>
+
+    <div class="section-card" id="pano-3"><div class="section-header"><h3>三、行业洞察</h3><span class="section-count">制造+医疗最强赛道</span></div><div class="section-body"><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px"><div class="card"><div class="card-header"><h3>行业分布</h3></div><div class="card-body"><div class="data-bars">${industryBars}</div></div></div><div>${industryInsights}</div></div><div class="conclusion-box" style="margin-top:14px">制造业客户规模大、私有化刚需强、合同额高；医疗客户付费意愿强但合规要求高；互联网客户技术接受度高但自研/免费替代强。</div></div></div>
+
+    <div class="section-card" id="pano-4"><div class="section-header"><h3>四、需求共性</h3><span class="section-count">TOP5关注点+高频场景</span></div><div class="section-body"><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px"><div><h4>客户最关注TOP5</h4><div class="concern-list">${concerns}</div></div><div><h4>高频产品/场景需求</h4><div class="data-bars">${demandBars}</div><div class="highlight-box" style="margin-top:12px">共性需求从「个人助手」升级到「组织协作」：AI Coding、会议Agent、HR、营销AIGC、数据治理和AtoA多Agent协作。</div></div></div></div></div>
+
+    <div class="section-card" id="pano-5"><div class="section-header"><h3>五、阻碍卡点</h3><span class="section-count">资源/商务/技术三类</span></div><div class="section-body">${blockersHtml}<h4 style="margin:16px 0 10px">需要品鉴者决策 / 关键行动项</h4><div class="action-list">${actionHtml||'<span style="color:var(--text-muted)">暂无</span>'}</div></div></div>
+
+    <div class="section-card" id="pano-6"><div class="section-header"><h3>六、竞品分析</h3><span class="section-count">生态入口之争</span></div><div class="section-body"><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px"><div class="card"><div class="card-header"><h3>竞品出现频次</h3></div><div class="card-body"><div class="data-bars">${compBars}</div></div></div><div>${compInsights}</div></div></div></div>
+
+    <div class="section-card" id="pano-7"><div class="section-header"><h3>七、CEO获客</h3><span class="section-count">高管信任链路</span></div><div class="section-body"><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px"><div class="card"><div class="card-header"><h3>CEO活动获客漏斗</h3></div><div class="card-body">${ceoFunnel}</div></div><div><div class="highlight-box success"><strong>核心事实：</strong>8场活动→394加微→122申请→102开通→5转出销售（1%）；但39家中25家(64%)来自高管直推，贡献100%签约+90%+管线。</div><div class="highlight-box"><strong>结论：</strong>大客户靠CEO信任+高管直推，活动获客不是直接成交漏斗，而是品牌势能和信任入口。</div></div></div></div></div>
+
+    <div class="section-card" id="pano-8"><div class="section-header"><h3>八、成功/失败模式</h3><span class="section-count">可复制经验与避坑机制</span></div><div class="section-body"><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px"><div><h4>✅ 成功模式</h4><div class="lessons-summary">${successPatterns}</div></div><div><h4>❌ 失败模式分类</h4>${failureGroups}</div></div><h4 style="margin:18px 0 10px">6条核心教训</h4><div class="lessons-summary">${coreLessons}</div></div></div>
+  </div>`;
+}
+
+async function renderOctoListTab(){
+  const tc=document.getElementById('octo-tab-content');
+  tc.innerHTML=`<div class="search-bar">
+    <input type="text" placeholder="搜索公司/行业/负责人..." id="octo-acc-search" oninput="searchOctoAccounts()">
+    <select id="octo-acc-tier" onchange="searchOctoAccounts()"><option value="">全部等级</option><option value="S">S级</option><option value="A">A级</option><option value="B">B级</option><option value="C">C级</option><option value="D">D级</option></select>
+    <select id="octo-acc-stage" onchange="searchOctoAccounts()"><option value="">全部阶段</option><option value="已签约">已签约</option><option value="交付中">交付中</option><option value="投标中">投标中</option><option value="B类重点推进">B类重点推进</option><option value="C类跟进">C类跟进</option><option value="D类观察">D类观察</option><option value="战败">战败</option><option value="放弃">放弃</option></select>
+  </div><div class="card"><div class="table-wrap"><table>
+    <tr><th>等级</th><th>客户名</th><th>行业</th><th>金额(万)</th><th>负责人</th><th>阶段</th><th>卡点</th><th>操作</th></tr>
+    <tbody id="octo-acc-tbody"></tbody>
+  </table></div></div>`;
+  searchOctoAccounts();
+}
+async function searchOctoAccounts(){
+  const q=document.getElementById('octo-acc-search')?.value||'';
+  const t=document.getElementById('octo-acc-tier')?.value||'';
+  const st=document.getElementById('octo-acc-stage')?.value||'';
+  const p=new URLSearchParams();if(q)p.set('search',q);if(t)p.set('tier',t);if(st)p.set('customer_stage',st);
+  try{
+    const d=await api('/api/accounts?'+p);const tb=document.getElementById('octo-acc-tbody');
+    if(tb)tb.innerHTML=d.data.length?d.data.map(a=>`<tr class="clickable-row" onclick="navigate('account-report',{id:${a.id}})">
+      <td><span class="tier-badge tier-${a.tier}">${a.tier}</span></td>
+      <td><strong>${esc(a.company_name)}</strong></td>
+      <td>${esc(a.industry)||'—'}</td>
+      <td style="font-weight:700;color:var(--accent-light)">${a.deal_amount?a.deal_amount+'万':'—'}</td>
+      <td style="font-size:12px">${esc(a.assigned_to)||'—'}</td>
+      <td>${customerStageTag(a.customer_stage)}</td>
+      <td>${a.blockers?'<span style="color:var(--danger)">⚠️</span>':'—'}</td>
+      <td onclick="event.stopPropagation()"><button class="btn btn-sm btn-primary" onclick="navigate('account-report',{id:${a.id}})">全景档案</button></td>
+    </tr>`).join(''):'<tr><td colspan="8"><div class="empty-state"><p>无匹配结果</p></div></td></tr>'
+  }catch(e){toast(e.message,'error')}
+}
+
+// ===== OCTO PIPELINE KANBAN (客户拓展看板) =====
+const PIPELINE_COLS=[
+  {title:'重点推进',stages:['B类重点推进','C类跟进','D类观察'],color:'#3b82f6'},
+  {title:'POC中',stages:['POC中'],color:'#8b5cf6'},
+  {title:'投标中',stages:['投标中'],color:'#f59e0b'},
+  {title:'交付中',stages:['交付中'],color:'#06b6d4'},
+  {title:'已签约',stages:['已签约'],color:'#10b981'},
+  {title:'战败',stages:['战败','放弃'],color:'#ef4444'},
+];
+async function renderOctoPipeline(highlightStage){
+  const content=document.getElementById('content'),ha=document.getElementById('header-actions');
+  ha.innerHTML='<button class="btn btn-secondary" onclick=\'navigate("octo-summary")\'>← 返回复盘</button> <button class="btn btn-primary" onclick=\'navigate("account-form")\'>+ Add Account</button>';
+  document.getElementById('page-title').textContent='🐙 Account Pipeline · 大客户拓展看板';
+  content.innerHTML='<div style="text-align:center;padding:60px;color:var(--text-muted)">⏳ 加载中...</div>';
+  let data;try{data=await api('/api/accounts?limit=200')}catch(e){content.innerHTML=err(e);return}
+  const allAccounts=data.data||[];
+
+  // Build columns
+  let columnsHtml='';
+  PIPELINE_COLS.forEach(col=>{
+    const items=allAccounts.filter(a=>col.stages.includes(a.customer_stage));
+    const isHighlighted=highlightStage&&col.stages.includes(highlightStage);
+    columnsHtml+=`<div class="kanban-column ${isHighlighted?'col-highlighted':''}" id="kanban-col-${col.title}">
+      <div class="kanban-column-header" style="border-top-color:${col.color}">
+        <span class="kch-name">${col.title}</span>
+        <span class="kch-count">${items.length}</span>
+      </div>
+      <div class="kanban-cards">
+        ${items.length?items.map(a=>pipelineCardHtml(a,col.color)).join(''):'<div style="font-size:11px;color:var(--text-muted);text-align:center;padding:16px 0">暂无客户</div>'}
+      </div>
+    </div>`;
+  });
+
+  const activeAccounts=allAccounts.filter(a=>a.customer_stage&&!['战败','放弃'].includes(a.customer_stage));
+  const signedCount=allAccounts.filter(a=>a.customer_stage==='已签约').length;
+  const pipelineAmount=activeAccounts.reduce((s,a)=>s+(a.deal_amount||0),0);
+
+  content.innerHTML=`
+    <div style="display:flex;gap:12px;margin-bottom:16px">
+      <div class="stat-card" style="flex:1"><div class="stat-value">${allAccounts.length}</div><div class="stat-label">全部客户</div></div>
+      <div class="stat-card" style="flex:1"><div class="accent-bar" style="background:#10b981"></div><div class="stat-value" style="color:#10b981">${signedCount}</div><div class="stat-label">已签约</div></div>
+      <div class="stat-card" style="flex:1"><div class="accent-bar" style="background:var(--pink)"></div><div class="stat-value" style="color:var(--pink)">${pipelineAmount}万</div><div class="stat-label">管线总额</div></div>
+    </div>
+    <div class="kanban-board">${columnsHtml}</div>`;
+
+  if(highlightStage){
+    const matchedCol=PIPELINE_COLS.find(c=>c.stages.includes(highlightStage));
+    if(matchedCol){
+      const el=document.getElementById('kanban-col-'+matchedCol.title);
+      if(el)setTimeout(()=>el.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'}),100);
+    }
+  }
+}
+function pipelineCardHtml(a,colColor){
+  const tierCls='pc-tier-'+(a.tier||'C');
+  const progressMap={'B类重点推进':20,'重点推进':20,'C类跟进':15,'跟进中':15,'D类观察':10,'观察':10,'POC中':35,'投标中':55,'交付中':75,'已签约':100,'战败':0,'放弃':0};
+  const progress=progressMap[a.customer_stage]!==undefined?progressMap[a.customer_stage]:(40+((a.id*17+7)%51));
+  const desc=a.product_solutions_detail||a.needs_summary||a.next_step||'';
+  const shortDesc=desc.length>40?desc.slice(0,40)+'...':desc;
+  return `<div class="pipeline-card" onclick="navigate('account-report',{id:${a.id}})">
+    <div class="pc-top">
+      <span class="pc-tier ${tierCls}">${a.tier||'C'}</span>
+      <span class="pc-name">${esc(a.company_name)}</span>
+    </div>
+    ${a.industry?`<div class="pc-industry">${esc(a.industry)}</div>`:'<div class="pc-industry" style="opacity:0">&nbsp;</div>'}
+    ${a.deal_amount?`<div class="pc-amount">${a.deal_amount}万</div>`:''}
+    <div class="pc-progress"><div class="pc-progress-fill" style="width:${progress}%;background:${colColor}"></div></div>
+    ${shortDesc?`<div class="pc-desc">${esc(shortDesc)}</div>`:''}
+    ${a.assigned_to?`<div class="pc-owner">👤 ${esc(a.assigned_to)}</div>`:''}
+  </div>`;
+}
+
+// ===== ACCOUNT REPORT (客户全景报告 - 三tab:档案/周报/联系人) =====
+let _accountReportData=null,_accountReports=[],_accountContacts=[];
+async function renderAccountReport(id){
+  const content=document.getElementById('content'),ha=document.getElementById('header-actions');
+  ha.innerHTML=`<button class="btn btn-secondary" onclick="navigate('octo-summary')">← 返回</button><button class="btn btn-primary" onclick="navigate('account-form',{id:${id}})">编辑客户</button>`;
+  content.innerHTML='<div style="text-align:center;padding:60px;color:var(--text-muted)">⏳ 加载中...</div>';
+  try{
+    const a=await api(`/api/accounts/${id}`);
+    _accountReportData=a;
+    _accountReports=a.reports||[];
+    _accountContacts=a.contacts||[];
+  }catch(e){content.innerHTML=err(e);return}
+  const a=_accountReportData;
+  document.getElementById('page-title').textContent=`🐙 ${a.company_name} · 全景档案`;
+
+  content.innerHTML=`
+    <!-- Hero Section -->
+    <div class="account-hero">
+      <div class="account-hero-top">
+        <span class="tier-badge tier-${a.tier}">${a.tier}</span>
+        <div>
+          <div class="account-hero-name">${esc(a.company_name)}</div>
+          <div class="account-hero-tags">
+            ${a.customer_stage?customerStageTag(a.customer_stage):''}
+            ${a.industry?`<span class="tag tag-blue">${esc(a.industry)}</span>`:''}
+            ${a.region?`<span class="tag tag-gray">${esc(a.region)}</span>`:''}
+            ${a.deployment_type?`<span class="tag tag-cyan">${esc(a.deployment_type)}</span>`:''}
+            ${a.ceo_involvement?'<span class="champion-tag">🔥 高管直推</span>':''}
+          </div>
+        </div>
+        <div class="account-hero-amount">
+          <div class="amount-label">${a.customer_stage==='已签约'||a.customer_stage==='交付中'?'已签约金额':'预估金额'}</div>
+          <div class="amount-hero ${a.customer_stage==='已签约'||a.customer_stage==='交付中'?'green':''}">${a.deal_amount?a.deal_amount+'万':'—'}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs" id="ar-tabs">
+      <div class="tab active" onclick="switchArTab(this,'profile')">📋 客户档案</div>
+      <div class="tab" onclick="switchArTab(this,'reports')">📝 推进周报 (${_accountReports.length})</div>
+      <div class="tab" onclick="switchArTab(this,'contacts')">👥 联系人 (${_accountContacts.length})</div>
+    </div>
+    <div id="ar-tab-content"></div>`;
+  renderArProfileTab();
+}
+function switchArTab(el,tab){
+  document.querySelectorAll('#ar-tabs .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  if(tab==='profile') renderArProfileTab();
+  else if(tab==='reports') renderArReportsTab();
+  else renderArContactsTab();
+}
+function renderArProfileTab(){
+  const a=_accountReportData;
+  const tc=document.getElementById('ar-tab-content');
+  const events=(a.key_events||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
+  tc.innerHTML=`
+    <!-- 客户概况 -->
+    <div class="card" style="margin-bottom:16px"><div class="card-header"><h3>📌 客户概况</h3></div><div class="card-body">
+      <div class="info-grid">
+        ${[['行业',a.industry],['规模',a.scale],['地区',a.region],['线索来源',a.lead_source||a.source],['部署方式',a.deployment_type],['负责人',a.assigned_to],['覆盖联系人',a.key_contacts_count?a.key_contacts_count+'人':''],['覆盖部门',a.key_departments]].map(([l,v])=>v?`<div class="detail-field"><div class="label">${l}</div><div class="value">${esc(v)}</div></div>`:'').join('')}
+      </div>
+      ${a.deal_stage?`<div class="detail-field" style="margin-top:12px"><div class="label">商机阶段</div><div class="value" style="font-weight:600;color:var(--warning)">${esc(a.deal_stage)}</div></div>`:''}
+    </div></div>
+
+    <!-- 核心痛点 & 客户认可点 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="card"><div class="card-header"><h3>🎯 核心痛点</h3></div><div class="card-body"><div class="highlight-box danger" style="white-space:pre-wrap">${esc(a.core_painpoint)||'<span style="color:var(--text-muted)">暂无记录</span>'}</div></div></div>
+      <div class="card"><div class="card-header"><h3>💚 客户认可点</h3></div><div class="card-body"><div class="highlight-box success" style="white-space:pre-wrap">${esc(a.customer_recognition)||'<span style="color:var(--text-muted)">暂无记录</span>'}</div></div></div>
+    </div>
+
+    <!-- 产品方案 -->
+    ${a.product_solutions_detail?`<div class="card" style="margin-bottom:16px"><div class="card-header"><h3>🛠️ 产品方案详情</h3></div><div class="card-body"><div style="white-space:pre-wrap;line-height:1.7">${esc(a.product_solutions_detail)}</div></div></div>`:''}
+
+    <!-- 竞品 & 生态 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="card"><div class="card-header"><h3>⚔️ 竞品信息</h3></div><div class="card-body">${a.competitors?`<div style="display:flex;flex-wrap:wrap;gap:6px">${a.competitors.split(/[/、,，]/).filter(Boolean).map(c=>`<span class="tag tag-red">${esc(c.trim())}</span>`).join('')}</div>`:'<span style="color:var(--text-muted)">暂无记录</span>'}</div></div>
+      <div class="card"><div class="card-header"><h3>🔗 生态锁定评估</h3></div><div class="card-body"><div style="font-size:13px;line-height:1.7">${esc(a.ecosystem_lock)||'<span style="color:var(--text-muted)">暂无评估</span>'}</div></div></div>
+    </div>
+
+    <!-- 卡点 -->
+    ${a.blockers?`<div class="card" style="margin-bottom:16px"><div class="card-header"><h3 style="color:var(--danger)">🚨 卡点/阻塞事项</h3></div><div class="card-body"><div class="highlight-box danger" style="white-space:pre-wrap;border-left-color:var(--danger)">${esc(a.blockers)}</div></div></div>`:''}
+
+    <!-- 下一步 -->
+    ${a.next_step?`<div class="card" style="margin-bottom:16px"><div class="card-header"><h3>➡️ 下一步行动 ${a.next_deadline?`<span class="tag tag-yellow" style="margin-left:8px">截止 ${a.next_deadline}</span>`:''}</h3></div><div class="card-body"><div class="highlight-box" style="white-space:pre-wrap">${esc(a.next_step)}</div></div></div>`:''}
+
+    <!-- 关键事件时间线 -->
+    ${events.length?`<div class="card" style="margin-bottom:16px"><div class="card-header"><h3>🕐 关键事件时间线</h3></div><div class="card-body">
+      <div class="vertical-timeline">${events.map(ev=>`<div class="vt-item"><div class="vt-dot"></div><div class="vt-date">${ev.date||''}</div><div class="vt-event">${esc(ev.event||'')}</div>${ev.note?`<div class="vt-note">${esc(ev.note)}</div>`:''}</div>`).join('')}</div>
+    </div></div>`:''}
+
+    <!-- 经验教训 -->
+    ${a.lessons_learned?`<div class="card" style="margin-bottom:16px"><div class="card-header"><h3>💡 经验教训</h3></div><div class="card-body"><div class="lesson-card" style="margin-bottom:0"><div class="lc-content">${esc(a.lessons_learned)}</div></div></div></div>`:''}
+
+    <!-- 备注 -->
+    ${a.notes?`<div class="card"><div class="card-header"><h3>📝 备注</h3></div><div class="card-body"><div style="white-space:pre-wrap;font-size:13px;line-height:1.7;color:var(--text-secondary)">${esc(a.notes)}</div></div></div>`:''}`;
+}
+function renderArReportsTab(){
+  const tc=document.getElementById('ar-tab-content');
+  const ha=document.getElementById('header-actions');
+  ha.innerHTML=`<button class="btn btn-secondary" onclick="navigate('octo-summary')">← 返回</button><button class="btn btn-primary" onclick="openReportForm(null,${_accountReportData.id})">+ 新增报告</button>`;
+  tc.innerHTML=`<div style="margin-bottom:16px"><button class="btn btn-primary" onclick="openReportForm(null,${_accountReportData.id})">+ 新增周报/月报</button></div>`;
+  if(!_accountReports.length){
+    tc.innerHTML+='<div class="empty-state"><div class="icon">📝</div><p>暂无推进报告</p><button class="btn btn-primary" onclick="openReportForm(null,'+_accountReportData.id+')">+ 写第一条报告</button></div>';return;
+  }
+  tc.innerHTML+=`<div class="timeline">${_accountReports.map(r=>renderReportCard(r)).join('')}</div>`;
+}
+function renderReportCard(r){
+  const typeLabel=r.report_type==='weekly'?'周报':'月报';
+  const typeClass=r.report_type==='weekly'?'report-type-weekly':'report-type-monthly';
+  const field=(icon,label,val,extraClass='')=>val?`<div class="report-field"><div class="report-field-label">${icon} ${label}</div><div class="report-field-value ${extraClass}">${esc(val)}</div></div>`:'';
+  return `<div class="card report-card" style="margin-bottom:4px"><div class="card-body">
+    <div class="report-meta">
+      <span class="report-period">${esc(r.report_period)||'未设周期'}</span>
+      <span class="report-type-badge ${typeClass}">${typeLabel}</span>
+      <span style="margin-left:auto;font-size:11px;color:var(--text-muted)">${r.created_at||''}</span>
+      <button class="btn btn-sm btn-secondary" onclick="openReportForm(${r.id},${r.account_id})">编辑</button>
+      <button class="btn btn-sm btn-danger" onclick="if(confirm('确定删除这条报告？'))deleteReport(${r.id})">删除</button>
+    </div>
+    ${field('🔴','本期最重要的一件事',r.most_important,'highlight-box')}
+    ${field('📝','重点工作',r.key_work)}
+    ${field('❓','需要品鉴者决策',r.need_decision,'highlight-box insight')}
+    ${field('🤝','跨线协同需求',r.cross_team_needs)}
+    ${field('🚧','瓶颈/阻塞',r.bottlenecks)}
+    ${field('➡️','下期最重要的一件事',r.next_important)}
+  </div></div>`;
+}
+function renderArContactsTab(){
+  const tc=document.getElementById('ar-tab-content');
+  const ha=document.getElementById('header-actions');
+  ha.innerHTML=`<button class="btn btn-secondary" onclick="navigate('octo-summary')">← 返回</button><button class="btn btn-primary" onclick="openContactForm(null,${_accountReportData.id})">+ 新增联系人</button>`;
+  const contacts=_accountContacts||[];
+  const groups=[
+    {key:'决策层',icon:'👑',cls:'cg-decision'},
+    {key:'管理层',icon:'💼',cls:'cg-management'},
+    {key:'执行层',cls:'cg-execution',icon:'⚙️'}
+  ];
+  let html=`<div style="margin-bottom:16px"><button class="btn btn-primary" onclick="openContactForm(null,${_accountReportData.id})">+ 新增联系人</button></div>`;
+  if(!contacts.length){
+    html+=`<div class="card"><div class="empty-state"><p>暂无联系人</p></div></div>`;
+  }else{
+    groups.forEach(g=>{
+      const list=contacts.filter(c=>c.role_level===g.key);
+      if(!list.length) return;
+      html+=`<div class="contact-group">
+        <div class="contact-group-header ${g.cls}">${g.icon} ${g.key} (${list.length}人)</div>
+        <div class="contact-group-body">
+          ${list.map(c=>`<div class="contact-person-card">
+            <div class="cpc-name">${esc(c.name)}${c.is_champion?'<span class="cpc-champion">⭐</span>':''}</div>
+            <div class="cpc-title">${esc(c.title)||''}${c.department?' · '+esc(c.department):''}</div>
+            <div class="cpc-contact">${c.phone?esc(c.phone):''}${c.email?' · '+esc(c.email):''}</div>
+            ${c.notes?`<div class="cpc-notes">${esc(c.notes)}</div>`:''}
+            <div class="cpc-actions" style="margin-left:auto"><button class="btn btn-sm btn-secondary" onclick="openContactForm(${c.id},${c.account_id})">编辑</button> <button class="btn btn-sm btn-danger" onclick="if(confirm('确定删除？'))deleteContact(${c.id})">删除</button></div>
+          </div>`).join('')}
+        </div>
+      </div>`;
+    });
+    // Ungrouped (no role_level set)
+    const ungrouped=contacts.filter(c=>!c.role_level);
+    if(ungrouped.length){
+      html+=`<div class="contact-group">
+        <div class="contact-group-header" style="background:rgba(100,116,139,.1);border-left:3px solid var(--text-muted);color:var(--text-muted)">📋 未分级 (${ungrouped.length}人)</div>
+        <div class="contact-group-body">
+          ${ungrouped.map(c=>`<div class="contact-person-card">
+            <div class="cpc-name">${esc(c.name)}${c.is_champion?'<span class="cpc-champion">⭐</span>':''}</div>
+            <div class="cpc-title">${esc(c.title)||''}${c.department?' · '+esc(c.department):''}</div>
+            <div class="cpc-contact">${c.phone?esc(c.phone):''}${c.email?' · '+esc(c.email):''}</div>
+            ${c.notes?`<div class="cpc-notes">${esc(c.notes)}</div>`:''}
+            <div class="cpc-actions" style="margin-left:auto"><button class="btn btn-sm btn-secondary" onclick="openContactForm(${c.id},${c.account_id})">编辑</button> <button class="btn btn-sm btn-danger" onclick="if(confirm('确定删除？'))deleteContact(${c.id})">删除</button></div>
+          </div>`).join('')}
+        </div>
+      </div>`;
+    }
+  }
+  tc.innerHTML=html;
+}
+
+// Report CRUD
+async function openReportForm(reportId,accountId){
+  let r={};if(reportId){r=_accountReports.find(x=>x.id===reportId)||{}}
+  openModal(`
+    <div class="modal-header"><h3>${reportId?'编辑报告':'新增报告'}</h3><button onclick="closeModal()" style="font-size:20px">✕</button></div>
+    <div class="modal-body"><form id="report-form" onsubmit="saveReport(event,${reportId||'null'},${accountId})">
+      <div class="form-row">
+        <div class="form-group"><label>报告类型</label><select name="report_type"><option value="weekly" ${r.report_type!=='monthly'?'selected':''}>周报</option><option value="monthly" ${r.report_type==='monthly'?'selected':''}>月报</option></select></div>
+        <div class="form-group"><label>周期</label><input name="report_period" value="${esc(r.report_period||'')}" placeholder="如 2026-W39 或 2026-09"></div>
+      </div>
+      <div class="form-group"><label>🔴 本${r.report_type==='monthly'?'月':'周'}最重要的一件事</label><textarea name="most_important" rows="2" placeholder="一件事">${esc(r.most_important||'')}</textarea></div>
+      <div class="form-group"><label>📝 重点工作</label><textarea name="key_work" rows="4">${esc(r.key_work||'')}</textarea></div>
+      <div class="form-group"><label>❓ 需要品鉴者决策</label><textarea name="need_decision" rows="2">${esc(r.need_decision||'')}</textarea></div>
+      <div class="form-group"><label>🤝 跨线协同需求</label><textarea name="cross_team_needs" rows="2">${esc(r.cross_team_needs||'')}</textarea></div>
+      <div class="form-group"><label>🚧 瓶颈/阻塞</label><textarea name="bottlenecks" rows="2">${esc(r.bottlenecks||'')}</textarea></div>
+      <div class="form-group"><label>➡️ 下${r.report_type==='monthly'?'月':'周'}最重要</label><textarea name="next_important" rows="2">${esc(r.next_important||'')}</textarea></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+        <button type="submit" class="btn btn-primary">💾 保存</button>
+      </div>
+    </form></div>`);
+}
+async function saveReport(ev,reportId,accountId){
+  ev.preventDefault();const body=Object.fromEntries(new FormData(document.getElementById('report-form')));
+  try{
+    if(reportId){await api('/api/accounts/reports/'+reportId,{method:'PUT',body});toast('报告更新成功')}
+    else{await api(`/api/accounts/${accountId}/reports`,{method:'POST',body});toast('报告创建成功')}
+    closeModal();renderAccountReport(accountId);
+  }catch(e){toast(e.message,'error')}
+}
+async function deleteReport(reportId){
+  try{await api('/api/accounts/reports/'+reportId,{method:'DELETE'});toast('删除成功');renderAccountReport(_accountReportData.id)}catch(e){toast(e.message,'error')}
+}
+
+// Contact CRUD
+async function openContactForm(contactId,accountId){
+  let c={};if(contactId){c=_accountContacts.find(x=>x.id===contactId)||{}}
+  openModal(`
+    <div class="modal-header"><h3>${contactId?'编辑联系人':'新增联系人'}</h3><button onclick="closeModal()" style="font-size:20px">✕</button></div>
+    <div class="modal-body"><form id="contact-form" onsubmit="saveContact(event,${contactId||'null'},${accountId})">
+      <div class="form-row">
+        <div class="form-group"><label>姓名 *</label><input name="name" required value="${esc(c.name||'')}"></div>
+        <div class="form-group"><label>职位</label><input name="title" value="${esc(c.title||'')}"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>部门</label><input name="department" value="${esc(c.department||'')}"></div>
+        <div class="form-group"><label>角色级别</label><select name="role_level"><option value="">请选择</option>${['决策层','管理层','执行层'].map(l=>`<option value="${l}" ${c.role_level===l?'selected':''}>${l}</option>`).join('')}</select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>电话</label><input name="phone" value="${esc(c.phone||'')}"></div>
+        <div class="form-group"><label>邮箱</label><input name="email" value="${esc(c.email||'')}"></div>
+      </div>
+      <div class="form-group"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" name="is_champion" value="1" ${c.is_champion?'checked':''} style="width:auto"> ⭐ Champion</label></div>
+      <div class="form-group"><label>备注</label><textarea name="notes" rows="2">${esc(c.notes||'')}</textarea></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+        <button type="submit" class="btn btn-primary">💾 保存</button>
+      </div>
+    </form></div>`);
+}
+async function saveContact(ev,contactId,accountId){
+  ev.preventDefault();const fd=new FormData(document.getElementById('contact-form'));const body=Object.fromEntries(fd);
+  body.is_champion=fd.get('is_champion')?1:0;
+  try{
+    if(contactId){await api('/api/accounts/contacts/'+contactId,{method:'PUT',body});toast('联系人更新成功')}
+    else{await api(`/api/accounts/${accountId}/contacts`,{method:'POST',body});toast('联系人创建成功')}
+    closeModal();renderAccountReport(accountId);
+  }catch(e){toast(e.message,'error')}
+}
+async function deleteContact(contactId){
+  try{await api('/api/accounts/contacts/'+contactId,{method:'DELETE'});toast('删除成功');renderAccountReport(_accountReportData.id)}catch(e){toast(e.message,'error')}
+}
+
+// ===== HELPERS =====
+function leadStatusName(s){return{new:'新进线',contacted:'已联系',qualified:'已转出',opportunity:'商机',closed_won:'成单',closed_lost:'无效/丢单'}[s]||s}
+function leadStatusTag(s){const m={new:'gray',contacted:'blue',qualified:'purple',opportunity:'yellow',closed_won:'green',closed_lost:'red'};return `<span class="tag tag-${m[s]||'gray'}">${leadStatusName(s)}</span>`}
+function stageName(s){return leadStatusName(s)}
+function stageTag(s){return leadStatusTag(s)}
+function eventStatusTag(s){const m={'筹备中':'blue','进行中':'yellow','已结束':'green','已取消':'gray'};return `<span class="tag tag-${m[s]||'gray'}">${esc(s)}</span>`}
+function statusTag(s){return eventStatusTag(s)}
+function sourceTag(s){if(!s)return'—';return `<span class="tag tag-blue">${esc(s)}</span>`}
+function followUpTag(s){if(!s)return'—';const m={'待跟进':'yellow','跟进中':'blue','已完成':'green','已放弃':'gray'};return `<span class="tag tag-${m[s]||'gray'}">${esc(s)}</span>`}
+function customerStageTag(s){if(!s)return'';return `<span class="stage-tag stage-${s}">${esc(s)}</span>`}
+function fmtNum(n){if(!n||n===0)return'0';if(n>=10000)return(n/10000).toFixed(1)+'万';if(n>=1000)return n.toLocaleString();return n}
+function tryParse(s){try{return JSON.parse(s)||[]}catch{return[]}}
+function openModal(h){document.getElementById('modal').innerHTML=h;document.getElementById('modal-overlay').classList.add('active')}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('active')}
+async function deleteItem(t,id,name){if(!confirm(`确定删除「${name}」？`))return;try{await api(`/api/${t}/${id}`,{method:'DELETE'});toast('删除成功');navigate(t==='leads'?'funnel':t==='accounts'?'octo-summary':t)}catch(e){toast(e.message,'error')}}
+
+// ===== INIT =====
+navigate('dashboard');
+</script>
+</body>
+</html>

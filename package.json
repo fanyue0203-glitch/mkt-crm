@@ -6,13 +6,22 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "dev:front": "vite",
+    "build": "vite build"
   },
   "dependencies": {
     "better-sqlite3": "^11.0.0",
     "express": "^4.21.0",
     "multer": "^1.4.5-lts.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0",
     "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^5.4.11"
   },
   "allowScripts": {
     "better-sqlite3@11.10.0": true

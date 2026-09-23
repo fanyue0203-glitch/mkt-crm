@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-app.use(express.static(join(__dirname, 'public')));
+app.use(express.static(join(__dirname, 'dist')));
 
 // CORS
 app.use((req, res, next) => {
@@ -811,6 +811,12 @@ app.get('/api/history/:table/:id', (req, res) => {
   const rows = db.prepare('SELECT * FROM edit_history WHERE table_name = ? AND record_id = ? ORDER BY edited_at DESC LIMIT 50')
     .all(req.params.table, +req.params.id);
   res.json(rows);
+});
+
+// ===== SPA fallback（必须在 API 路由之后）=====
+app.get('*', (req, res) => {
+  if (!req.path.startsWith('/api')) res.sendFile(join(__dirname, 'dist', 'index.html'));
+  else res.status(404).json({ error: 'Not found' });
 });
 
 // ===== Start Server =====
