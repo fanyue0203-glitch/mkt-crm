@@ -60,6 +60,10 @@ app.get('/api/stats', (req, res) => {
   const ceoEventCount = db.prepare('SELECT COUNT(*) as c FROM ceo_events').get().c;
   const ceoEventsByStatus = db.prepare("SELECT status, COUNT(*) as c FROM ceo_events GROUP BY status").all();
   const totalAudience = db.prepare('SELECT COALESCE(SUM(audience_count),0) as c FROM ceo_events').get().c;
+  const totalWechat = db.prepare('SELECT COALESCE(SUM(wechat_followers),0) as c FROM ceo_events').get().c;
+  const totalRegs = db.prepare('SELECT COALESCE(SUM(registrations),0) as c FROM ceo_events').get().c;
+  const totalActivations = db.prepare('SELECT COALESCE(SUM(activations),0) as c FROM ceo_events').get().c;
+  const totalSQL = db.prepare('SELECT COALESCE(SUM(sql_count),0) as c FROM ceo_events').get().c;
   const accountCount = db.prepare('SELECT COUNT(*) as c FROM accounts').get().c;
   const accountsByTier = db.prepare("SELECT tier, COUNT(*) as c FROM accounts GROUP BY tier").all();
   const leadCount = db.prepare('SELECT COUNT(*) as c FROM leads').get().c;
@@ -68,7 +72,7 @@ app.get('/api/stats', (req, res) => {
   const recentLeads = db.prepare("SELECT id, contact_name, company_name, status, source_channel, created_at FROM leads ORDER BY created_at DESC LIMIT 10").all();
   res.json({
     events: { total: ceoEventCount, byStatus: ceoEventsByStatus },
-    speeches: { total: ceoEventCount, totalAudience },
+    speeches: { total: ceoEventCount, totalAudience, totalWechat, totalRegs, totalActivations, totalSQL },
     accounts: { total: accountCount, byTier: accountsByTier },
     leads: { total: leadCount, byStatus: leadsByStatus },
     recentEvents, recentLeads

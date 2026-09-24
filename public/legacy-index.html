@@ -100,6 +100,35 @@ select option{background:var(--bg-card);color:var(--text)}
 .hero-stat .label{font-size:12px;color:var(--text-secondary);margin-top:4px}
 .hero-stat .sub{font-size:11px;color:var(--text-muted);margin-top:6px}
 
+/* Insight Bar */
+.insight-bar{background:linear-gradient(135deg,rgba(59,130,246,.12),rgba(139,92,246,.08));border:1px solid rgba(59,130,246,.2);border-radius:var(--radius-lg);padding:14px 20px;margin-bottom:4px;display:flex;align-items:center;gap:12px;position:relative}
+.insight-bar .insight-icon{font-size:20px;flex-shrink:0}
+.insight-bar .insight-text{font-size:13px;color:var(--text);line-height:1.5}
+.insight-bar .insight-text strong{color:var(--accent-light);font-weight:700}
+.insight-bar .hl-warn{color:var(--warning);font-weight:600}
+.insight-bar .hl-danger{color:var(--danger);font-weight:600}
+
+/* Penetration Bar */
+.pen-section{margin-bottom:20px}
+.pen-section h4{font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.pen-section h4 span{font-weight:400;font-size:11px;color:var(--text-muted)}
+.pen-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 20px}
+.pen-bar{height:26px;border-radius:13px;overflow:hidden;display:flex;background:rgba(255,255,255,.04)}
+.pen-bar .seg{height:100%;transition:width .6s;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:rgba(255,255,255,.9);min-width:0;overflow:hidden;white-space:nowrap}
+.pen-legend{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:10px}
+.pen-legend .lg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-secondary)}
+.pen-legend .lg .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.pen-legend .lg b{color:var(--text);font-weight:700}
+
+/* Industry Grid */
+.ind-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+.ind-item{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;transition:all .2s}
+.ind-item:hover{border-color:var(--accent);background:var(--accent-glow)}
+.ind-item .ind-name{font-size:11px;color:var(--text-secondary);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ind-item .ind-val{font-size:18px;font-weight:800;color:var(--text)}
+.ind-item .ind-bar{height:3px;border-radius:2px;background:rgba(255,255,255,.06);margin-top:5px;overflow:hidden}
+.ind-item .ind-fill{height:100%;border-radius:2px;transition:width .6s}
+
 /* Stats Grid */
 .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px}
 .stat-card{background:var(--bg-card);border-radius:var(--radius-lg);padding:16px 20px;border:1px solid var(--border);cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
@@ -594,19 +623,44 @@ function destroyCharts(){Object.values(charts).forEach(c=>c.destroy());charts={}
 async function renderDashboard(){
   const content=document.getElementById('content');
   content.innerHTML='<div style="text-align:center;padding:60px;color:var(--text-muted)">⏳ 加载数据...</div>';
-  try{stats=await api('/api/stats')}catch(e){content.innerHTML=err(e);return}
+  let _oc;
+  try{[stats,_oc]=await Promise.all([api('/api/stats'),api('/api/octo/summary')])}catch(e){content.innerHTML=err(e);return}
   updateBadges();
+
+  // Dynamic insight
+  const _ins=[];
+  if(_oc.kpi?.pipeline>0) _ins.push('管线 <strong>'+fmtNum(_oc.kpi.pipeline)+'万</strong>');
+  if(_oc.kpi?.wonAmount>0) _ins.push('签约 <strong>'+fmtNum(_oc.kpi.wonAmount)+'万</strong>');
+  if(_oc.upcomingDeadlines?.length){const u=_oc.upcomingDeadlines[0];_ins.push('<span class="hl-warn">'+esc(u.company_name)+' '+esc(u.next_step||'')+(u.next_deadline?' ⏰'+u.next_deadline:'')+'</span>')}
+  const _bc=(_oc.kpi?.blockers||0)+(_oc.kpi?.pendingDecisions||0);
+  if(_bc>0) _ins.push('<span class="hl-danger">'+_bc+'项待决策/卡点</span>');
+  const _itxt=_ins.join(' · ')||'系统已就绪';
+
+  // Penetration bar
+  const _sc={'已签约':'#10b981','交付中':'#06b6d4','投标中':'#f59e0b','B类重点推进':'#3b82f6','POC中':'#8b5cf6','C类跟进':'#64748b','D类观察':'#475569','战败':'#ef4444','放弃':'#991b1b'};
+  const _ta=_oc.kpi?.totalAccounts||stats.accounts.total||1;
+  const _pb=(_oc.byStage||[]).map(s=>{const p=Math.round(s.count/_ta*100);const c=_sc[s.stage]||'#64748b';return p>0?'<div class="seg" style="width:'+p+'%;background:'+c+'" title="'+s.stage+' '+s.count+'家">'+(p>=8?s.count:'')+'</div>':''}).join('');
+  const _pl=(_oc.byStage||[]).map(s=>'<span class="lg"><span class="dot" style="background:'+(_sc[s.stage]||'#64748b')+'"></span>'+s.stage+' <b>'+s.count+'</b></span>').join('');
+
+  // Industry (aggregate by top-level, show top 8)
+  const _im={};
+  (_oc.byIndustry||[]).forEach(i=>{const k=i.industry.split('/')[0];_im[k]=(_im[k]||0)+i.c});
+  const _ia=Object.entries(_im).filter(x=>x[0]!=='未知').sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const _mx=Math.max(..._ia.map(x=>x[1]),1);
+  const _icl=['#3b82f6','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ec4899','#f97316','#ef4444'];
+  const _ih=_ia.map(([n,c],i)=>'<div class="ind-item"><div class="ind-name">'+esc(n)+'</div><div class="ind-val">'+c+'</div><div class="ind-bar"><div class="ind-fill" style="width:'+Math.round(c/_mx*100)+'%;background:'+_icl[i%_icl.length]+'"></div></div></div>').join('')||'<div style="color:var(--text-muted);font-size:12px">暂无数据</div>';
 
   content.innerHTML=`
     <div class="hero">
-      <div class="hero-title">MKT-CRM · 市场部数据指挥中心</div>
-      <div class="hero-sub">明略科技 · 品牌与市场部 AI-Native 工作台 · 实时数据概览</div>
+      <div class="insight-bar"><span class="insight-icon">🎯</span><div class="insight-text">${_itxt}</div></div>
+      <div class="hero-title" style="margin-top:14px">MKT-CRM · 市场部数据指挥中心</div>
+      <div class="hero-sub">明略科技 · 品牌与市场部 AI-Native 工作台</div>
       <div class="hero-stats">
         <div class="hero-stat animate-in" onclick="navigate('ceo-events')" style="animation-delay:.1s">
           <span class="icon">🎤</span>
           <div class="value pink">${stats.speeches.total}</div>
           <div class="label">活动和CEO获客</div>
-          <div class="sub">累计触达 ${fmtNum(stats.speeches.totalAudience)} 人</div>
+          <div class="sub">加微 ${fmtNum(stats.speeches.totalWechat)} · 申请 ${fmtNum(stats.speeches.totalRegs)} · 开通 ${fmtNum(stats.speeches.totalActivations)} · 转出 ${fmtNum(stats.speeches.totalSQL)}</div>
         </div>
         <div class="hero-stat animate-in" onclick="navigate('octo-summary')" style="animation-delay:.2s">
           <span class="icon">🐙</span>
@@ -623,14 +677,22 @@ async function renderDashboard(){
       </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+    <div class="pen-section">
+      <h4>🐙 客户阶段渗透 <span>${_ta}家客户</span></h4>
+      <div class="pen-wrap">
+        <div class="pen-bar">${_pb}</div>
+        <div class="pen-legend">${_pl}</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:3fr 2fr;gap:16px;margin-bottom:20px">
       <div class="card">
         <div class="card-header"><h3>📊 SDR 线索漏斗</h3></div>
         <div class="card-body">${(stats.leads.byStatus||[]).length?'<div class="chart-container"><canvas id="chart-funnel"></canvas></div>':'<div class="empty-state" style="padding:24px"><p>导入线索数据后自动生成漏斗</p></div>'}</div>
       </div>
       <div class="card">
-        <div class="card-header"><h3>🏢 客户等级分布</h3></div>
-        <div class="card-body">${stats.accounts.byTier.length?'<div class="chart-container"><canvas id="chart-tiers"></canvas></div>':'<div class="empty-state" style="padding:24px"><p>导入客户数据后自动生成分布图</p></div>'}</div>
+        <div class="card-header"><h3>🏭 行业分布</h3></div>
+        <div class="card-body"><div class="ind-grid">${_ih}</div></div>
       </div>
     </div>
 
@@ -640,7 +702,16 @@ async function renderDashboard(){
         <div class="card-body">
           <div style="text-align:center;padding:16px">
             <div style="font-size:36px;font-weight:800;background:var(--gradient-pink);-webkit-background-clip:text;-webkit-text-fill-color:transparent">${stats.speeches.total}</div>
-            <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">累计场次 · 触达 ${fmtNum(stats.speeches.totalAudience)} 人</div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">累计 ${stats.speeches.total} 场活动</div>
+            <div style="display:flex;justify-content:center;gap:12px;margin-top:14px;flex-wrap:wrap">
+              <div style="text-align:center"><div style="font-size:20px;font-weight:700;color:#3b82f6">${fmtNum(stats.speeches.totalWechat)}</div><div style="font-size:11px;color:var(--text-secondary)">加微</div></div>
+              <div style="color:var(--text-secondary);align-self:center">→</div>
+              <div style="text-align:center"><div style="font-size:20px;font-weight:700;color:#8b5cf6">${fmtNum(stats.speeches.totalRegs)}</div><div style="font-size:11px;color:var(--text-secondary)">申请</div></div>
+              <div style="color:var(--text-secondary);align-self:center">→</div>
+              <div style="text-align:center"><div style="font-size:20px;font-weight:700;color:#10b981">${fmtNum(stats.speeches.totalActivations)}</div><div style="font-size:11px;color:var(--text-secondary)">开通</div></div>
+              <div style="color:var(--text-secondary);align-self:center">→</div>
+              <div style="text-align:center"><div style="font-size:20px;font-weight:700;color:#f59e0b">${fmtNum(stats.speeches.totalSQL)}</div><div style="font-size:11px;color:var(--text-secondary)">转出</div></div>
+            </div>
             <button class="btn btn-secondary" style="margin-top:16px" onclick="navigate('ceo-events')">查看全部 →</button>
           </div>
         </div>
@@ -665,9 +736,7 @@ async function renderDashboard(){
     const sd=so.map(s=>(stats.leads.byStatus.find(x=>x.status===s)||{c:0}).c);
     charts.funnel=new Chart(document.getElementById('chart-funnel'),{type:'bar',data:{labels:so.map(leadStatusName),datasets:[{label:'线索数',data:sd,backgroundColor:['#475569','#3b82f6','#8b5cf6','#f59e0b','#10b981','#ef4444'],borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0,color:'#64748b'},grid:{color:'rgba(51,65,85,.3)'}},x:{ticks:{color:'#64748b'},grid:{display:false}}}}});
   }
-  if(stats.accounts.byTier.length){
-    charts.tiers=new Chart(document.getElementById('chart-tiers'),{type:'doughnut',data:{labels:stats.accounts.byTier.map(t=>t.tier+' 级'),datasets:[{data:stats.accounts.byTier.map(t=>t.c),backgroundColor:stats.accounts.byTier.map(t=>({'S':'#ef4444','A':'#f97316','B':'#3b82f6','C':'#64748b'}[t.tier])),borderWidth:0,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#94a3b8',padding:16}}}}});
-  }
+  // Tier doughnut removed — replaced by penetration bar + industry grid
 }
 function updateBadges(){
   document.getElementById('badge-speeches').textContent=stats.speeches?.total??0;
