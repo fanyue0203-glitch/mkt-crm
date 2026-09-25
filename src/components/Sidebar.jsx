@@ -22,15 +22,15 @@ export default function Sidebar() {
         </div>
         <div className="nav-section">
           <div className="nav-section-title">业务板块</div>
-          <NavLink to="/ceo-events" className={navItemClass} data-page="ceo-events">
-            <span className="icon">🎤</span>活动和CEO获客<span className="badge">{badges.speeches}</span>
+          <NavLink to="/ceo-events" className={navItemClass} data-page="ceo-events" end>
+            <span className="icon">🎤</span>CEO获客<span className="badge">{badges.speeches}</span>
           </NavLink>
           <NavLink to="/octo" className={navItemClass} data-page="octo-summary">
-            <span className="icon">🐙</span>Octo 大客户复盘
+            <span className="icon">🐙</span>Octo大客户
             <span className="badge" style={badges.blockers > 0 ? {} : { display: 'none' }}>{badges.blockers}</span>
           </NavLink>
           <NavLink to="/funnel" className={navItemClass} data-page="funnel">
-            <span className="icon">🔄</span>SDR 漏斗<span className="badge">{badges.leads}</span>
+            <span className="icon">🔄</span>线索转化漏斗<span className="badge">{badges.leads}</span>
           </NavLink>
         </div>
         <div className="nav-section">

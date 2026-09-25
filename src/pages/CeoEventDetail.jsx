@@ -45,6 +45,11 @@ export default function CeoEventDetail() {
 
   // ===== CEO获客活动专用明细（二级目录）=====
   if (e.key_messages === '吴明辉(CEO)') {
+    const ceoTabs = [
+      ['overview', '📊 概览'],
+      ['weiban', '👥 微伴客户' + (e.weibanCustomers && e.weibanCustomers.length ? '(' + e.weibanCustomers.length + ')' : '')],
+      ['leads', '📋 线索明细' + (e.linkedLeads && e.linkedLeads.length ? '(' + e.linkedLeads.length + ')' : '')],
+    ];
     const rate1 = e.wechat_followers > 0 ? ((e.activations || 0) / e.wechat_followers * 100).toFixed(1) + '%' : '—';
     const rate2 = e.registrations > 0 ? ((e.sql_count || 0) / e.registrations * 100).toFixed(1) + '%' : '—';
     const maxV = Math.max(e.wechat_followers, e.registrations || 0, 1);
@@ -56,17 +61,30 @@ export default function CeoEventDetail() {
           <span className="fl-val">{v}</span>
         </div>
       ));
-    const statCards = [
-      { v: e.wechat_followers > 0 ? fmtNum(e.wechat_followers) : '无活码', l: '活码加微', c: 'var(--accent)' },
-      { v: e.registrations || 0, l: 'OCTO申请', c: 'var(--info)' },
-      { v: e.activations || 0, l: '审核开通', c: 'var(--success)' },
-      { v: e.sql_count || 0, l: '转出销售', c: 'var(--warning)' },
-      { v: rate1, l: '加微→开通', c: 'var(--pink)' },
-    ];
+
+    // 线索统计
+    const linkedLeads = e.linkedLeads || [];
+    const leadStats = {};
+    linkedLeads.forEach(l => { leadStats[l.status] = (leadStats[l.status] || 0) + 1; });
+    const leadStatusName = (s) => ({new:'新进线',contacted:'已联系',qualified:'已转出',opportunity:'商机',closed_won:'成单',closed_lost:'无效/丢单'}[s]||s);
+
     return (
       <>
+        <div className="tabs" style={{marginBottom:16}}>
+          {ceoTabs.map(([k, label]) => (
+            <div key={k} className={'tab' + (tab === k ? ' active' : '')} onClick={() => setTab(k)}>{label}</div>
+          ))}
+        </div>
+
+        {tab === 'overview' && (<>
         <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(5,1fr)', marginBottom: 20 }}>
-          {statCards.map(s => (
+          {[
+            { v: e.wechat_followers > 0 ? fmtNum(e.wechat_followers) : '无活码', l: '活码加微', c: 'var(--accent)' },
+            { v: e.registrations || 0, l: 'OCTO申请', c: 'var(--info)' },
+            { v: e.activations || 0, l: '审核开通', c: 'var(--success)' },
+            { v: e.sql_count || 0, l: '转出销售', c: 'var(--warning)' },
+            { v: rate1, l: '加微→开通', c: 'var(--pink)' },
+          ].map(s => (
             <div className="stat-card" key={s.l}>
               <div className="accent-bar" style={{ background: s.c }}></div>
               <div className="stat-value" style={{ color: s.c }}>{s.v}</div>
@@ -83,7 +101,93 @@ export default function CeoEventDetail() {
           </div></div></div>
           <div className="card"><div className="card-header"><h3>漏斗</h3></div><div className="card-body">{sfunnel}<div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-muted)' }}>申请→转出：{rate2}</div></div></div>
         </div>
-        <div className="card"><div className="card-header"><h3>📋 获客明细与特点（报告原文）</h3></div><div className="card-body"><div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>{e.notes}</div></div></div>
+        {e.business_design ? <div className="card" style={{marginBottom:16}}><div className="card-header"><h3>⭐ 业务设计</h3></div><div className="card-body"><div style={{whiteSpace:'pre-wrap',lineHeight:1.8}}>{e.business_design}</div></div></div> : null}
+        {e.story_line ? <div className="card" style={{marginBottom:16}}><div className="card-header"><h3>📖 故事线</h3></div><div className="card-body"><div style={{whiteSpace:'pre-wrap',lineHeight:1.8}}>{e.story_line}</div></div></div> : null}
+        <div className="card"><div className="card-header"><h3>📋 获客明细与特点（报告原文）</h3></div><div className="card-body"><div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>{e.notes || '暂无明细'}</div></div></div>
+        </>)}
+
+        {tab === 'weiban' && (
+          <>
+            <div className="stats-grid" style={{gridTemplateColumns:'repeat(4,1fr)',marginBottom:16}}>
+              {[
+                {v: (e.weibanCustomers||[]).length, l:'微伴加微总数', c:'var(--accent)'},
+                {v: e.wechat_followers || (e.weibanCustomers||[]).length, l:'活码记录数', c:'var(--info)'},
+                {v: e.registrations || 0, l:'OCTO申请', c:'var(--success)'},
+                {v: e.activations || 0, l:'审核开通', c:'var(--warning)'},
+              ].map(s => (
+                <div className="stat-card" key={s.l}>
+                  <div className="accent-bar" style={{background:s.c}}></div>
+                  <div className="stat-value" style={{color:s.c}}>{s.v}</div>
+                  <div className="stat-label">{s.l}</div>
+                </div>
+              ))}
+            </div>
+            <div className="card">
+              <div className="card-header"><h3>👥 微伴客户明细（{(e.weibanCustomers||[]).length}人）<span style={{fontSize:12,color:'var(--text-muted)',fontWeight:400,marginLeft:8}}>企微活码扫码添加的客户</span></h3></div>
+              <div className="card-body" style={{padding:0}}>
+                {(e.weibanCustomers||[]).length ? (
+                  <table>
+                    <tr><th>#</th><th>微信昵称</th><th>添加时间</th><th>最近沟通</th><th>标签</th><th>添加渠道</th></tr>
+                    {(e.weibanCustomers||[]).map((w, i) => (
+                      <tr key={w.id}>
+                        <td style={{color:'var(--text-muted)',fontSize:12}}>{i+1}</td>
+                        <td><strong>👤 {w.nickname}</strong></td>
+                        <td style={{fontSize:12}}>{w.add_time||'—'}</td>
+                        <td style={{fontSize:12,color:'var(--text-muted)'}}>{w.last_chat_time&&w.last_chat_time.trim()?w.last_chat_time:'无沟通'}</td>
+                        <td style={{fontSize:11}}>{w.tags?<span className="tag tag-blue">{w.tags}</span>:'—'}</td>
+                        <td style={{fontSize:11,color:'var(--text-muted)'}}>{(w.add_channel||'').replace('通过渠道码','').replace('添加','').trim()}</td>
+                      </tr>
+                    ))}
+                  </table>
+                ) : <div className="empty-state" style={{padding:32}}><p>📭 该活动无活码（混沌学院走直接开通链接模式）</p></div>}
+              </div>
+            </div>
+          </>
+        )}
+
+        {tab === 'leads' && (
+          <>
+            <div className="stats-grid" style={{gridTemplateColumns:'repeat(5,1fr)',marginBottom:16}}>
+              {[
+                {v: linkedLeads.length, l:'关联线索总数', c:'var(--accent)'},
+                {v: leadStats['new']||0, l:'新进线', c:'#64748b'},
+                {v: leadStats['contacted']||0, l:'已联系', c:'#3b82f6'},
+                {v: leadStats['qualified']||0, l:'已转出', c:'#8b5cf6'},
+                {v: leadStats['closed_lost']||0, l:'无效/丢单', c:'#ef4444'},
+              ].map(s => (
+                <div className="stat-card" key={s.l}>
+                  <div className="accent-bar" style={{background:s.c}}></div>
+                  <div className="stat-value" style={{color:s.c}}>{s.v}</div>
+                  <div className="stat-label">{s.l}</div>
+                </div>
+              ))}
+            </div>
+            <div className="card">
+              <div className="card-header"><h3>📋 线索明细（{linkedLeads.length}条）<span style={{fontSize:12,color:'var(--text-muted)',fontWeight:400,marginLeft:8}}>按来源渠道自动匹配</span></h3></div>
+              <div className="card-body" style={{padding:0}}>
+                {linkedLeads.length ? (
+                  <table>
+                    <tr><th>公司名称</th><th>联系人</th><th>职位</th><th>来源</th><th>产品</th><th>团队</th><th>分配给</th><th>进线日期</th><th>转出日期</th><th>状态</th></tr>
+                    {linkedLeads.map(l => (
+                      <tr key={l.id}>
+                        <td><strong>{l.company_name||'—'}</strong></td>
+                        <td>{l.contact_name||'—'}</td>
+                        <td style={{fontSize:12,color:'var(--text-muted)'}}>{l.contact_title||'—'}</td>
+                        <td style={{fontSize:12}}>{l.source_channel||'—'}</td>
+                        <td style={{fontSize:12}}>{l.product||'—'}</td>
+                        <td style={{fontSize:12}}>{l.team||'—'}</td>
+                        <td>{l.assigned_to||<span style={{color:'var(--text-muted)'}}>未分配</span>}</td>
+                        <td style={{fontSize:12}}>{l.inbound_date||'—'}</td>
+                        <td style={{fontSize:12}}>{l.transfer_date||'—'}</td>
+                        <td><span className={'tag '+(l.status==='qualified'?'tag-green':l.status==='closed_lost'?'tag':l.status==='contacted'?'tag-blue':'tag-yellow')}>{leadStatusName(l.status)}</span></td>
+                      </tr>
+                    ))}
+                  </table>
+                ) : <div className="empty-state" style={{padding:32}}><p>🔍 暂无关联线索</p><p style={{fontSize:12,color:'var(--text-muted)',marginTop:8}}>系统按活动名称关键词自动匹配线索来源渠道</p></div>}
+              </div>
+            </div>
+          </>
+        )}
       </>
     );
   }

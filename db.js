@@ -152,7 +152,8 @@ db.exec(`
     account_id INTEGER DEFAULT NULL REFERENCES accounts(id) ON DELETE SET NULL,
     created_at TEXT DEFAULT (datetime('now','localtime')),
     updated_at TEXT DEFAULT (datetime('now','localtime')),
-    created_by TEXT DEFAULT ''
+    created_by TEXT DEFAULT '',
+    company_short_name TEXT DEFAULT ''
   );
 
   CREATE TABLE IF NOT EXISTS edit_history (
@@ -209,7 +210,7 @@ db.exec(`
   );
 `);
 
-// ===== 安全迁移：为已存在的库补列（取数逻辑相关字段）=====
+// ===== 安全迁移：为已存在的库补列 =====
 const acctCols = db.prepare("PRAGMA table_info(accounts)").all().map(c=>c.name);
 const needCols = {
   source_coverage: "TEXT DEFAULT '{}'",
@@ -222,6 +223,10 @@ const needCols = {
 for (const [col, def] of Object.entries(needCols)) {
   if (!acctCols.includes(col)) db.exec(`ALTER TABLE accounts ADD COLUMN ${col} ${def}`);
 }
+
+// leads表补列：企业简称
+const leadCols = db.prepare("PRAGMA table_info(leads)").all().map(c=>c.name);
+if (!leadCols.includes('company_short_name')) db.exec("ALTER TABLE leads ADD COLUMN company_short_name TEXT DEFAULT ''");
 
 
 // ===== 种子数据：仅在空库时插入（防止重启重复导入）=====

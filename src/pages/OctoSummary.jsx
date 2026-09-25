@@ -8,7 +8,7 @@ import { TierBadge, CustomerStageTag } from '../components/Tags.jsx';
 const short = (s, n = 90) => { s = String(s || ''); return s.length > n ? s.slice(0, n) + '…' : s; };
 const money = a => a.deal_amount ? `${a.deal_amount}万` : ((a.estimated_budget || '').replace('¥', '') || '—');
 
-const SECTION_TITLES = ['大盘概览', '39家客户现状', '行业洞察', '需求共性', '阻碍卡点', '竞品分析', '成功/失败模式'];
+const SECTION_TITLES = ['大盘概览', '重点客户', '行业洞察', '需求共性', '阻碍卡点', '竞品分析', '成功/失败模式'];
 const CN_NUMS = ['一', '二', '三', '四', '五', '六', '七', '八'];
 
 export default function OctoSummary() {
@@ -271,38 +271,45 @@ function OctoDashboard({ d }) {
       </div>
 
       <div className="section-card" id="pano-2">
-        <div className="section-header"><h3>二、39家客户现状</h3><span className="section-count">按健康度4档（≠KR2的ABCD分类）</span></div>
+        <div className="section-header"><h3>二、重点客户</h3><span className="section-count">重点推进 · 风险提示 · 战败名单</span></div>
         <div className="section-body">
           {(d.healthGroups || []).map(g => {
-            const icon = { '健康推进中': '🟢', '有风险': '🟡', '静默': '🔵', '战败冻结': '🔴' }[g.tier] || '⚪';
             const cnt = g.items.length;
-            const pct = k.totalAccounts ? Math.round(cnt / k.totalAccounts * 100) : 0;
-            return (
-              <div key={g.tier} style={{ marginBottom: 16 }}>
-                <h4>{icon} {g.tier}（{cnt}家 · {pct}%）</h4>
-                <div className={g.tier === '健康推进中' ? 'client-grid' : 'compact-list'}>
-                  {g.tier === '健康推进中'
-                    ? g.items.map(a => (
+            if (g.tier === '健康推进中') {
+              return (
+                <div key={g.tier} style={{ marginBottom: 16 }}>
+                  <h4>🟢 重点推进客户（{cnt}家）</h4>
+                  <div className="client-grid">
+                    {g.items.map(a => (
                       <div className="signed-card" key={a.id} onClick={() => navigate(`/octo/account/${a.id}`)}>
                         <div className="sc-top"><TierBadge tier={a.tier} /><span className="sc-name">{a.company_name}</span></div>
                         <div className="sc-amount">{money(a)}</div>
                         <div className="sc-owner">👤 {a.assigned_to || ''}</div>
                         <div className="sc-status">{short(a.octo_status || a.next_step || a.needs_summary, 100)}</div>
                       </div>
-                    ))
-                    : g.items.map(a => (
-                      <div className="compact-item" key={a.id} onClick={() => navigate(`/octo/account/${a.id}`)}>
-                        <TierBadge tier={a.tier} style={{ width: 'auto', height: 'auto', padding: '2px 6px', fontSize: 10 }} />
-                        <span className="ci-name">{a.company_name}</span>
-                        <span className="ci-status">{short(a.octo_status || a.needs_summary || a.blockers || a.lessons_learned, 90)}</span>
-                        <span className="ci-owner">{a.assigned_to || ''}</span>
-                      </div>
                     ))}
+                  </div>
+                </div>
+              );
+            }
+            const icon = { '有风险': '🟡', '战败冻结': '🔴' }[g.tier] || '⚪';
+            const label = { '有风险': '有风险客户', '战败冻结': '战败/放弃客户' }[g.tier] || g.tier;
+            return (
+              <div key={g.tier} style={{ marginBottom: 12 }}>
+                <h4 style={{ marginBottom: 8 }}>{icon} {label}（{cnt}家）</h4>
+                <div className="name-only-list">
+                  {g.items.map(a => (
+                    <span
+                      key={a.id}
+                      className="name-chip"
+                      style={g.tier === '战败冻结' ? { background: 'rgba(239,68,68,.08)', color: '#f87171', borderColor: 'rgba(239,68,68,.2)' } : { background: 'rgba(245,158,11,.08)', color: '#fbbf24', borderColor: 'rgba(245,158,11,.2)' }}
+                      onClick={() => navigate(`/octo/account/${a.id}`)}
+                    >{a.company_name}</span>
+                  ))}
                 </div>
               </div>
             );
           })}
-          <div className="highlight-box" style={{ marginTop: 8 }}>⚠️ 健康度4档 ≠ KR2的ABCD分类：KR2按客户管理阶段分（签约/投标/B/C/D），本板块按健康度分（推进/风险/静默/战败）。同一客户在两个体系下可能不同档（如宇通KR2是"投标"积极状态，但内网限制多属风险项）。</div>
         </div>
       </div>
 
@@ -424,20 +431,21 @@ function OctoDashboard({ d }) {
                   'D': { name: 'D：需求未建立', root: '关系型无实质需求', color: 'var(--warning)' },
                 }[x.mode] || {};
                 return (
-                  <div className="dead-group" key={x.mode}>
-                    <div className="dead-group-header">
+                  <div key={x.mode} style={{ marginBottom: 10, padding: '10px 14px', background: 'var(--bg-surface)', borderRadius: 'var(--radius)', borderLeft: '3px solid ' + (meta.color || 'var(--danger)') }}>
+                    <div style={{ fontSize: 13 }}>
                       <span style={{ color: meta.color, fontWeight: 700 }}>{meta.name || x.mode}</span>
-                      <span className="dg-desc">{meta.root || ''}</span>
-                      <span style={{ marginLeft: 'auto', color: 'var(--danger)', fontWeight: 700, fontSize: 12 }}>{x.count}家</span>
+                      <span style={{ color: 'var(--text-muted)', fontSize: 12, marginLeft: 6 }}>（{meta.root || ''}）</span>
+                      <span style={{ marginLeft: 8, color: 'var(--text-secondary)', fontSize: 12 }}>
+                        {x.clients.map((c, ci) => (
+                          <span key={c}>
+                            <span style={{ color: 'var(--danger)', cursor: 'pointer' }} onClick={() => {
+                              const acc = (d.healthGroups || []).flatMap(g => g.items).find(a => a.company_name === c);
+                              if (acc) navigate(`/octo/account/${acc.id}`);
+                            }}>{c}</span>{ci < x.clients.length - 1 ? '、' : ''}
+                          </span>
+                        ))}
+                      </span>
                     </div>
-                    {x.clients.map(c => (
-                      <div className="dead-item" key={c}>
-                        <span className="di-name" style={{ cursor: 'pointer' }} onClick={() => {
-                          const acc = (d.healthGroups || []).flatMap(g => g.items).find(a => a.company_name === c);
-                          if (acc) navigate(`/octo/account/${acc.id}`);
-                        }}>{c}</span>
-                      </div>
-                    ))}
                   </div>
                 );
               })}
@@ -470,6 +478,7 @@ function OctoListTab() {
 
   return (
     <>
+      <div className="sticky-bar">
       <div className="search-bar">
         <input type="text" placeholder="搜索公司/行业/负责人..." value={search} onChange={e => setSearch(e.target.value)} />
         <select value={tier} onChange={e => setTier(e.target.value)}>
@@ -482,6 +491,7 @@ function OctoListTab() {
           <option value="B类重点推进">B类重点推进</option><option value="C类跟进">C类跟进</option><option value="D类观察">D类观察</option>
           <option value="战败">战败</option><option value="放弃">放弃</option>
         </select>
+      </div>
       </div>
       <div className="card"><div className="table-wrap">
         <table>

@@ -19,6 +19,7 @@ import AccountReport from './pages/AccountReport.jsx';
 import AccountForm from './pages/AccountForm.jsx';
 import Accounts from './pages/Accounts.jsx';
 import Funnel from './pages/Funnel.jsx';
+import CeoCustomers from './pages/CeoCustomers.jsx';
 import ImportPage from './pages/ImportPage.jsx';
 
 function Header() {
@@ -53,6 +54,7 @@ export default function App() {
             <Route path="/ceo-events/report" element={<CeoReportPage />} />
             <Route path="/ceo-events/data-logic" element={<CeoDataLogicPage />} />
             <Route path="/ceo-events/:id" element={<CeoEventDetail />} />
+            <Route path="/ceo-events/customers" element={<CeoCustomers />} />
             <Route path="/speeches/new" element={<CeoSpeechForm />} />
             <Route path="/speeches/:id/edit" element={<CeoSpeechForm />} />
             <Route path="/speeches/:id" element={<CeoSpeechDetail />} />

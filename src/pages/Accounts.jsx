@@ -29,6 +29,7 @@ function AccountsList() {
 
   return (
     <>
+      <div className="sticky-bar">
       <div className="search-bar">
         <input type="text" placeholder="搜索公司/行业/负责人..." value={search} onChange={e => setSearch(e.target.value)} />
         <select value={tier} onChange={e => setTier(e.target.value)}>
@@ -41,6 +42,7 @@ function AccountsList() {
           <option value="B类重点推进">B类重点推进</option><option value="C类跟进">C类跟进</option><option value="D类观察">D类观察</option>
           <option value="战败">战败</option><option value="放弃">放弃</option>
         </select>
+      </div>
       </div>
       <div className="card"><div className="table-wrap">
         <table>

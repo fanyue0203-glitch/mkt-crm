@@ -10,10 +10,11 @@ export default function CeoEvents() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    setHeader('🎤 活动和CEO获客', <>
+    setHeader('📊 CEO获客·数据分析看板', <>
       <button className="btn btn-secondary" onClick={() => navigate('/ceo-events/report')}>📊 分析报告</button>
       <button className="btn btn-secondary" onClick={() => navigate('/ceo-events/data-logic')}>📐 取数逻辑</button>
-      <button className="btn btn-primary" onClick={() => navigate('/ceo-events/new')}>+ 新建活动</button>
+      <button className="btn btn-primary" onClick={() => navigate('/ceo-events/customers')}>👥 客户明细</button>
+      <button className="btn btn-secondary" onClick={() => navigate('/ceo-events/new?type=ceo')}>+ 新建活动</button>
     </>);
     api('/api/events').then(d => setData(d)).catch(e => setError(e));
   }, []);
@@ -51,14 +52,20 @@ export default function CeoEvents() {
 
   return (
     <>
-      <div className="stats-grid">
-        {kpiCards.map(s => (
-          <div className="stat-card" key={s.l}>
-            <div className="accent-bar" style={{ background: s.c }}></div>
-            <div className="stat-value" style={{ color: s.c }}>{s.v}</div>
-            <div className="stat-label">{s.l}</div>
-          </div>
-        ))}
+      <div className="sticky-bar">
+        <div className="tabs" style={{ marginBottom: 8 }}>
+          <div className="tab active">📊 数据分析看板</div>
+          <div className="tab" onClick={() => navigate('/ceo-events/customers')} style={{ cursor: 'pointer' }}>👥 客户明细</div>
+        </div>
+        <div className="stats-grid" style={{gridTemplateColumns:'repeat(5,1fr)',gap:8,padding:'0 0 8px'}}>
+          {kpiCards.map(s => (
+            <div className="stat-card" key={s.l} style={{padding:'8px 4px'}}>
+              <div className="accent-bar" style={{ background: s.c }}></div>
+              <div className="stat-value" style={{ color: s.c, fontSize:18 }}>{s.v}</div>
+              <div className="stat-label" style={{fontSize:11}}>{s.l}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>

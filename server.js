@@ -57,26 +57,109 @@ function logEdit(table, recordId, oldRow, newRow, editedBy = '') {
 
 // ===== Dashboard Stats =====
 app.get('/api/stats', (req, res) => {
-  const ceoEventCount = db.prepare('SELECT COUNT(*) as c FROM ceo_events').get().c;
-  const ceoEventsByStatus = db.prepare("SELECT status, COUNT(*) as c FROM ceo_events GROUP BY status").all();
-  const totalAudience = db.prepare('SELECT COALESCE(SUM(audience_count),0) as c FROM ceo_events').get().c;
-  const totalWechat = db.prepare('SELECT COALESCE(SUM(wechat_followers),0) as c FROM ceo_events').get().c;
-  const totalRegs = db.prepare('SELECT COALESCE(SUM(registrations),0) as c FROM ceo_events').get().c;
-  const totalActivations = db.prepare('SELECT COALESCE(SUM(activations),0) as c FROM ceo_events').get().c;
-  const totalSQL = db.prepare('SELECT COALESCE(SUM(sql_count),0) as c FROM ceo_events').get().c;
+  // 全部活动整体获客数据（不区分CEO/市场）
+  const allEventCount = db.prepare('SELECT COUNT(*) as c FROM ceo_events').get().c;
+  const allEventsByStatus = db.prepare("SELECT status, COUNT(*) as c FROM ceo_events GROUP BY status").all();
+  const totalAudienceAll = db.prepare("SELECT COALESCE(SUM(audience_count),0) as c FROM ceo_events").get().c;
+  const allFunnel = db.prepare(`SELECT
+      COALESCE(SUM(wechat_followers),0) as wechat,
+      COALESCE(SUM(registrations),0) as reg,
+      COALESCE(SUM(activations),0) as act,
+      COALESCE(SUM(sql_count),0) as sql,
+      COALESCE(SUM(mql_count),0) as mql
+    FROM ceo_events`).get();
+
+  // CEO出场活动单独统计
+  const ceoEventCount = db.prepare("SELECT COUNT(*) as c FROM ceo_events WHERE key_messages='吴明辉(CEO)'").get().c;
+  const ceoFunnel = db.prepare(`SELECT
+      COALESCE(SUM(wechat_followers),0) as wechat,
+      COALESCE(SUM(registrations),0) as reg,
+      COALESCE(SUM(activations),0) as act,
+      COALESCE(SUM(sql_count),0) as sql
+    FROM ceo_events WHERE key_messages='吴明辉(CEO)'`).get();
+  const ceoEventList = db.prepare(`SELECT id, name, date, wechat_followers, registrations, activations, sql_count
+    FROM ceo_events WHERE key_messages='吴明辉(CEO)' ORDER BY date DESC LIMIT 8`).all();
+
   const accountCount = db.prepare('SELECT COUNT(*) as c FROM accounts').get().c;
   const accountsByTier = db.prepare("SELECT tier, COUNT(*) as c FROM accounts GROUP BY tier").all();
   const leadCount = db.prepare('SELECT COUNT(*) as c FROM leads').get().c;
   const leadsByStatus = db.prepare("SELECT status, COUNT(*) as c FROM leads GROUP BY status").all();
   const recentEvents = db.prepare("SELECT id, name, date, status, sql_count as leads_count FROM ceo_events ORDER BY date DESC LIMIT 5").all();
-  const recentLeads = db.prepare("SELECT id, contact_name, company_name, status, source_channel, created_at FROM leads ORDER BY created_at DESC LIMIT 10").all();
+  const recentLeads = db.prepare("SELECT id, contact_name, company_name, company_short_name, status, source_channel, created_at FROM leads ORDER BY created_at DESC LIMIT 10").all();
+  const monthlyTrend = db.prepare(`
+    SELECT strftime('%Y-%m', inbound_date) as month,
+           COUNT(*) as total,
+           SUM(CASE WHEN status IN ('qualified','opportunity','closed_won') THEN 1 ELSE 0 END) as transferred
+    FROM leads WHERE inbound_date != '' AND inbound_date IS NOT NULL
+    GROUP BY month ORDER BY month
+  `).all();
   res.json({
-    events: { total: ceoEventCount, byStatus: ceoEventsByStatus },
-    speeches: { total: ceoEventCount, totalAudience, totalWechat, totalRegs, totalActivations, totalSQL },
+    events: { total: allEventCount, byStatus: allEventsByStatus },
+    speeches: { total: ceoEventCount, totalAudience: totalAudienceAll, totalWechat: allFunnel.wechat, totalRegs: allFunnel.reg, totalActivations: allFunnel.act, totalSQL: allFunnel.sql },
+    ceoFunnel: { wechat: allFunnel.wechat, reg: allFunnel.reg, act: allFunnel.act, sql: allFunnel.sql, events: ceoEventList, ceoEvents: ceoEventCount, ceoAct: ceoFunnel.act, ceoSql: ceoFunnel.sql },
     accounts: { total: accountCount, byTier: accountsByTier },
-    leads: { total: leadCount, byStatus: leadsByStatus },
+    leads: { total: leadCount, byStatus: leadsByStatus, monthlyTrend },
     recentEvents, recentLeads
   });
+});
+
+// ===== CEO获客客户明细（微伴客户）=====
+app.get('/api/ceo/customers', (req, res) => {
+  const { event_id, page = 1, limit = 50, search } = req.query;
+  let sql = `SELECT w.id, w.nickname as wechat_nickname, w.contact_name, w.contact_title,
+    w.company_name, w.phone, w.product, w.tags, w.status, w.add_time, w.last_chat_time,
+    w.customer_service as owner, w.assigned_to, w.requirement, w.notes, w.add_channel as source_detail,
+    w.event_id, e.name as event_name, 'weiban' as source
+    FROM ceo_event_weiban w JOIN ceo_events e ON w.event_id = e.id WHERE 1=1`;
+  const params = {};
+  if (event_id) { sql += ' AND w.event_id = @event_id'; params.event_id = +event_id; }
+  if (search) { sql += ' AND (w.nickname LIKE @s OR w.contact_name LIKE @s OR w.company_name LIKE @s OR w.tags LIKE @s OR w.phone LIKE @s OR w.product LIKE @s)'; params.s = '%' + search + '%'; }
+  sql += ' ORDER BY w.add_time DESC';
+  const total = db.prepare(sql.replace(/SELECT w\.id[\s\S]*?FROM/, 'SELECT COUNT(*) as c FROM')).get(params).c;
+  sql += ' LIMIT @limit OFFSET @offset';
+  params.limit = +limit; params.offset = (+page - 1) * +limit;
+  const rows = db.prepare(sql).all(params);
+  const byEvent = db.prepare(`SELECT e.id, e.name, e.wechat_followers, e.registrations, e.activations, e.sql_count,
+    COUNT(w.id) as cnt
+    FROM ceo_events e LEFT JOIN ceo_event_weiban w ON e.id = w.event_id
+    WHERE e.key_messages='吴明辉(CEO)' GROUP BY e.id ORDER BY e.date DESC`).all();
+  res.json({ data: rows, total, page: +page, limit: +limit, byEvent });
+});
+
+// ===== 单条微伴客户CRUD =====
+app.get('/api/ceo/weiban/:id', (req, res) => {
+  const row = db.prepare(`SELECT w.*, e.name as event_name FROM ceo_event_weiban w 
+    JOIN ceo_events e ON w.event_id = e.id WHERE w.id = ?`).get(req.params.id);
+  if (!row) return res.status(404).json({ error: '客户不存在' });
+  res.json(row);
+});
+
+app.post('/api/ceo/weiban', (req, res) => {
+  const { event_id, nickname, contact_name, contact_title, company_name, phone, product, tags, add_time, last_chat_time, status, assigned_to, requirement, source_detail, notes, customer_service } = req.body;
+  if (!nickname && !contact_name && !company_name) return res.status(400).json({ error: '请填写微信昵称/姓名/公司名称（至少一项）' });
+  if (!event_id) return res.status(400).json({ error: '请选择所属活动' });
+  const stmt = db.prepare(`INSERT INTO ceo_event_weiban (event_id, nickname, customer_service, rating, tags, status, add_time, last_chat_time, add_channel, phone, contact_title, company_name, product, requirement, assigned_to, source_detail, notes)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  const r = stmt.run(event_id, nickname||'', customer_service||'', '', tags||'', status||'待跟进', add_time||'', last_chat_time||'', '手动添加',
+    phone||'', contact_title||'', company_name||'', product||'', requirement||'', assigned_to||'', source_detail||'', notes||'');
+  res.json({ id: r.lastInsertRowid, message: '添加成功' });
+});
+
+app.put('/api/ceo/weiban/:id', (req, res) => {
+  const old = db.prepare('SELECT * FROM ceo_event_weiban WHERE id = ?').get(req.params.id);
+  if (!old) return res.status(404).json({ error: '客户不存在' });
+  const allowed = ['event_id','nickname','contact_title','company_name','phone','tags','add_time','last_chat_time','customer_service','status','product','requirement','assigned_to','source_detail','notes','rating'];
+  const fields = Object.keys(req.body).filter(k => allowed.includes(k));
+  if (!fields.length) return res.json({ message: '无更新' });
+  const sets = fields.map(f => `${f} = @${f}`).join(', ');
+  db.prepare(`UPDATE ceo_event_weiban SET ${sets} WHERE id = @id`).run({ ...req.body, id: +req.params.id });
+  res.json({ message: '更新成功' });
+});
+
+app.delete('/api/ceo/weiban/:id', (req, res) => {
+  const r = db.prepare('DELETE FROM ceo_event_weiban WHERE id = ?').run(req.params.id);
+  if (!r.changes) return res.status(404).json({ error: '客户不存在' });
+  res.json({ message: '删除成功' });
 });
 
 // ===== Events CRUD (now using ceo_events) =====
@@ -103,7 +186,29 @@ app.get('/api/events/:id', (req, res) => {
     FROM ceo_event_attendees ea JOIN accounts a ON ea.account_id = a.id
     WHERE ea.event_id = ?
   `).all(req.params.id);
-  res.json({ ...row, linkedAccounts });
+  // CEO获客活动：匹配关联线索（按source_channel关键词）+ 微伴客户明细
+  let linkedLeads = [];
+  let weibanCustomers = [];
+  if (row.key_messages === '吴明辉(CEO)') {
+    const name = (row.name || '');
+    // 关键词映射规则
+    const patterns = [];
+    if (/晚点/.test(name)) patterns.push('Octo·晚点头条', '晚点');
+    if (/混沌/.test(name)) patterns.push('混沌');
+    if (/全球AI|生态.*创新|创新峰会/.test(name)) patterns.push('全球AI生态与创新峰会');
+    if (/EMP|培训班|国有企业领导/.test(name)) patterns.push('EMP培训班');
+    if (/Octo.*发布|产品发布.*公众号|明略公众号/.test(name)) patterns.push('明略公众号', '公众号-明略');
+    if (/中欧|商学院/.test(name)) patterns.push('中欧商学院');
+    if (/CAIO/.test(name)) patterns.push('CAIO');
+    if (/外滩/.test(name)) patterns.push('外滩');
+    if (patterns.length) {
+      const where = patterns.map(() => 'source_channel LIKE ?').join(' OR ');
+      const params = patterns.map(p => '%' + p + '%');
+      linkedLeads = db.prepare(`SELECT id, company_name, company_short_name, contact_name, contact_title, phone, source_channel, source_detail, status, product, industry, team, assigned_to, inbound_date, transfer_date, requirement FROM leads WHERE (${where}) ORDER BY inbound_date DESC`).all(...params);
+    }
+    weibanCustomers = db.prepare(`SELECT id, nickname, customer_service, rating, tags, status, add_time, last_chat_time, add_channel FROM ceo_event_weiban WHERE event_id = ? ORDER BY add_time DESC`).all(req.params.id);
+  }
+  res.json({ ...row, linkedAccounts, linkedLeads, weibanCustomers });
 });
 
 app.post('/api/events', (req, res) => {
@@ -364,17 +469,17 @@ app.get('/api/octo/summary', (req, res) => {
   const totalAccounts = db.prepare('SELECT COUNT(*) as c FROM accounts').get().c;
 
   // KPI counts
-  const signedCount = db.prepare("SELECT COUNT(*) as c FROM accounts WHERE customer_stage IN ('已签约','交付中')").get().c;
+  const signedCount = db.prepare("SELECT COUNT(*) as c FROM accounts WHERE customer_stage IN ('已签约','交付中','已付费')").get().c;
   const biddingCount = db.prepare("SELECT COUNT(*) as c FROM accounts WHERE customer_stage = '投标中'").get().c;
-  const bClassCount = db.prepare("SELECT COUNT(*) as c FROM accounts WHERE customer_stage = 'B类重点推进'").get().c;
-  const cClassCount = db.prepare("SELECT COUNT(*) as c FROM accounts WHERE customer_stage = 'C类跟进'").get().c;
-  const dClassCount = db.prepare("SELECT COUNT(*) as c FROM accounts WHERE customer_stage = 'D类观察'").get().c;
+  const bClassCount = db.prepare("SELECT COUNT(*) as c FROM accounts WHERE customer_stage IN ('B类重点推进','重点推进','POC中')").get().c;
+  const cClassCount = db.prepare("SELECT COUNT(*) as c FROM accounts WHERE customer_stage IN ('C类跟进','跟进中')").get().c;
+  const dClassCount = db.prepare("SELECT COUNT(*) as c FROM accounts WHERE customer_stage = '观察中'").get().c;
   const deadCount = db.prepare("SELECT COUNT(*) as c FROM accounts WHERE customer_stage IN ('战败','放弃')").get().c;
 
-  const pipelineResult = db.prepare(`SELECT COALESCE(SUM(deal_amount),0) as total FROM accounts WHERE customer_stage NOT IN ('战败','放弃','D类观察','') AND customer_stage IS NOT NULL`).get();
+  const pipelineResult = db.prepare(`SELECT COALESCE(SUM(deal_amount),0) as total FROM accounts WHERE customer_stage NOT IN ('战败','放弃','观察中','') AND customer_stage IS NOT NULL`).get();
   const pipeline = Math.round(pipelineResult.total * 10) / 10;
 
-  const wonResult = db.prepare(`SELECT COALESCE(SUM(deal_amount),0) as total FROM accounts WHERE customer_stage IN ('已签约','交付中')`).get();
+  const wonResult = db.prepare(`SELECT COALESCE(SUM(deal_amount),0) as total FROM accounts WHERE customer_stage IN ('已签约','交付中','已付费')`).get();
   const wonAmount = Math.round(wonResult.total * 10) / 10;
 
   const deadRate = totalAccounts > 0 ? Math.round(deadCount / totalAccounts * 100) : 0;
@@ -384,9 +489,10 @@ app.get('/api/octo/summary', (req, res) => {
     SELECT customer_stage as stage, COUNT(*) as count, COALESCE(SUM(deal_amount),0) as amount
     FROM accounts WHERE customer_stage != '' GROUP BY customer_stage
     ORDER BY CASE customer_stage
-      WHEN '已签约' THEN 1 WHEN '交付中' THEN 2 WHEN '投标中' THEN 3
-      WHEN 'B类重点推进' THEN 4 WHEN 'POC中' THEN 5 WHEN 'C类跟进' THEN 6
-      WHEN 'D类观察' THEN 7 WHEN '战败' THEN 8 WHEN '放弃' THEN 9 ELSE 10 END
+      WHEN '已签约' THEN 1 WHEN '交付中' THEN 2 WHEN '已付费' THEN 3 WHEN '投标中' THEN 4
+      WHEN 'B类重点推进' THEN 5 WHEN '重点推进' THEN 6 WHEN 'POC中' THEN 7
+      WHEN 'C类跟进' THEN 8 WHEN '跟进中' THEN 9
+      WHEN '观察中' THEN 10 WHEN 'D类观察' THEN 11 WHEN '战败' THEN 12 WHEN '放弃' THEN 13 ELSE 14 END
   `).all();
 
   // By industry
@@ -404,7 +510,7 @@ app.get('/api/octo/summary', (req, res) => {
   // Active pipeline list
   const pipelineList = db.prepare(`
     SELECT id, company_name, tier, industry, deal_amount, customer_stage, assigned_to, next_step, next_deadline, blockers
-    FROM accounts WHERE customer_stage NOT IN ('战败','放弃','D类观察') AND customer_stage IS NOT NULL AND customer_stage != ''
+    FROM accounts WHERE customer_stage NOT IN ('战败','放弃','观察中','D类观察') AND customer_stage IS NOT NULL AND customer_stage != ''
     ORDER BY CASE tier WHEN 'S' THEN 1 WHEN 'A' THEN 2 WHEN 'B' THEN 3 WHEN 'C' THEN 4 ELSE 5 END, deal_amount DESC
   `).all();
 
@@ -554,7 +660,7 @@ app.get('/api/octo/summary', (req, res) => {
   const byBlocker = Object.entries(blockerCount).map(([name, count]) => ({ name, count, clients: blockerClients[name] })).sort((a, b) => b.count - a.count);
   const byFailure = Object.entries(failureCount).map(([mode, count]) => ({ mode, count, clients: failureClients[mode] }));
   // 健康度分组客户列表（板块二用）
-  const healthGroups = ['健康推进中', '有风险', '静默', '战败冻结'].map(t => ({
+  const healthGroups = ['健康推进中', '有风险', '战败冻结'].map(t => ({
     tier: t,
     items: db.prepare(`SELECT ${accountCols} FROM accounts WHERE health_tier = ? ORDER BY deal_amount DESC`).all(t)
   }));
@@ -611,7 +717,8 @@ app.get('/api/leads', (req, res) => {
   params.limit = +limit;
   params.offset = (+page - 1) * +limit;
   const rows = db.prepare(sql).all(params);
-  res.json({ data: rows, total, page: +page, limit: +limit });
+  const sourceOptions = db.prepare("SELECT DISTINCT source_channel FROM leads WHERE source_channel != '' ORDER BY source_channel").all().map(r => r.source_channel);
+  res.json({ data: rows, total, page: +page, limit: +limit, sourceOptions });
 });
 
 app.get('/api/leads/funnel', (req, res) => {
@@ -637,7 +744,7 @@ app.get('/api/leads/funnel', (req, res) => {
     FROM leads WHERE inbound_date != '' AND inbound_date IS NOT NULL
     GROUP BY month ORDER BY month
   `).all();
-  const recentLeads = db.prepare(`SELECT id, company_name, contact_name, source_channel, product, assigned_to, status, inbound_date
+  const recentLeads = db.prepare(`SELECT id, company_name, company_short_name, contact_name, source_channel, product, assigned_to, status, inbound_date
     FROM leads ORDER BY created_at DESC LIMIT 20`).all();
   res.json({
     funnel,
@@ -653,18 +760,18 @@ app.get('/api/leads/:id', (req, res) => {
 });
 
 app.post('/api/leads', (req, res) => {
-  const { company_name, contact_name, contact_title, phone, source_channel, source_detail,
+  const { company_name, company_short_name, contact_name, contact_title, phone, source_channel, source_detail,
     status, product, industry, team, assigned_to, inbound_date, transfer_date,
     opportunity_id, opportunity_stage, deal_amount, lost_reason, requirement, account_id } = req.body;
   if (!company_name && !contact_name) return res.status(400).json({ error: '客户名称或联系人不能为空' });
-  const stmt = db.prepare(`INSERT INTO leads (company_name, contact_name, contact_title, phone, source_channel, source_detail,
+  const stmt = db.prepare(`INSERT INTO leads (company_name, company_short_name, contact_name, contact_title, phone, source_channel, source_detail,
     status, product, industry, team, assigned_to, inbound_date, transfer_date,
     opportunity_id, opportunity_stage, deal_amount, lost_reason, requirement, account_id)
-    VALUES (@company_name, @contact_name, @contact_title, @phone, @source_channel, @source_detail,
+    VALUES (@company_name, @company_short_name, @contact_name, @contact_title, @phone, @source_channel, @source_detail,
     @status, @product, @industry, @team, @assigned_to, @inbound_date, @transfer_date,
     @opportunity_id, @opportunity_stage, @deal_amount, @lost_reason, @requirement, @account_id)`);
   const r = stmt.run({
-    company_name: company_name || '', contact_name: contact_name || '',
+    company_name: company_name || '', company_short_name: company_short_name || '', contact_name: contact_name || '',
     contact_title: contact_title || '', phone: phone || '',
     source_channel: source_channel || '', source_detail: source_detail || '',
     status: status || 'new', product: product || '', industry: industry || '',
@@ -718,7 +825,7 @@ app.post('/api/import/:table', upload.single('file'), async (req, res) => {
       ceo_events: { '活动名称': 'name', '日期': 'date', '截止日期': 'end_date', '地点': 'location', '主题': 'topic', '类型': 'event_type', '状态': 'status', '听众人数': 'audience_count', '听众画像': 'audience_profile', '业务设计': 'business_design', '故事线': 'story_line', '加微数': 'wechat_followers', '申请数': 'registrations', '开通数': 'activations', 'MQL': 'mql_count', 'SQL': 'sql_count', '备注': 'notes' },
       speeches: { '活动名称': 'name', '日期': 'date', '地点': 'location', '演讲主题': 'topic', '听众人数': 'audience_count', '听众画像': 'audience_profile', '故事线': 'story_line', '业务设计': 'business_design', '备注': 'notes' },
       accounts: { '公司名称': 'company_name', '行业': 'industry', '规模': 'scale', '地区': 'region', '来源': 'source', '等级': 'tier', '首次触达日期': 'first_touch_date', '需求摘要': 'needs_summary', '预估预算': 'estimated_budget', 'Octo状态': 'octo_status', '负责人': 'assigned_to', '备注': 'notes' },
-      leads: { '客户名称': 'company_name', '联系人': 'contact_name', '职位': 'contact_title', '电话': 'phone', '来源渠道': 'source_channel', '来源子渠道': 'source_detail', '线索状态': 'status', '需求产品': 'product', '行业': 'industry', '分配区域/团队': 'team', '团队': 'team', '分配销售': 'assigned_to', '进线日期': 'inbound_date', '转出日期': 'transfer_date', '商机号': 'opportunity_id', '商机阶段': 'opportunity_stage', '成单金额': 'deal_amount', '丢单原因': 'lost_reason', '需求描述/跟进记录': 'requirement', '需求描述': 'requirement', '跟进记录': 'requirement', '备注': 'requirement' }
+      leads: { '客户名称': 'company_name', '企业简称': 'company_short_name', '公司简称': 'company_short_name', '联系人': 'contact_name', '职位': 'contact_title', '电话': 'phone', '来源渠道': 'source_channel', '来源子渠道': 'source_detail', '线索状态': 'status', '需求产品': 'product', '行业': 'industry', '分配区域/团队': 'team', '团队': 'team', '分配销售': 'assigned_to', '进线日期': 'inbound_date', '转出日期': 'transfer_date', '商机号': 'opportunity_id', '商机阶段': 'opportunity_stage', '成单金额': 'deal_amount', '丢单原因': 'lost_reason', '需求描述/跟进记录': 'requirement', '需求描述': 'requirement', '跟进记录': 'requirement', '备注': 'requirement' }
     };
 
     const cmap = columnMaps[actualTable] || columnMaps[table];
