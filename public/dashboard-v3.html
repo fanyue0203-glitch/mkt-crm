@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SDR线索漏斗指挥中心 v3</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg:#0a0e1a;--bg2:#0f1628;--bg3:#151d35;--bg4:#1a2540;
+    --border:#1e2d4d;--text:#c8d6e5;--text2:#8395a7;--text3:#5a6f8a;
+    --blue:#3b82f6;--blue2:#2563eb;--purple:#8b5cf6;--cyan:#06b6d4;
+    --green:#10b981;--yellow:#f59e0b;--red:#ef4444;--pink:#ec4899;
+    --glow:0 0 20px rgba(59,130,246,0.15);
+  }
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;overflow-x:hidden;min-height:100vh}
+  .dashboard{max-width:1600px;margin:0 auto;padding:16px 20px}
+  .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding:16px 24px;background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid var(--border);border-radius:12px;position:relative;overflow:hidden}
+  .header::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--blue),var(--purple),var(--cyan))}
+  .header-left h1{font-size:22px;font-weight:700;background:linear-gradient(90deg,#60a5fa,#a78bfa,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:1px}
+  .header-left .sub{font-size:12px;color:var(--text3);margin-top:4px}
+  .header-right{display:flex;gap:12px;align-items:center}
+  .badge{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:500}
+  .badge-blue{background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3)}
+  .badge-green{background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3)}
+  .kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:18px}
+  .kpi-card{background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid var(--border);border-radius:10px;padding:16px 18px;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s}
+  .kpi-card:hover{transform:translateY(-2px);box-shadow:var(--glow)}
+  .kpi-card::after{content:'';position:absolute;top:0;left:0;width:3px;height:100%}
+  .kpi-card:nth-child(1)::after{background:var(--blue)}
+  .kpi-card:nth-child(2)::after{background:var(--cyan)}
+  .kpi-card:nth-child(3)::after{background:var(--purple)}
+  .kpi-card:nth-child(4)::after{background:var(--green)}
+  .kpi-card:nth-child(5)::after{background:var(--yellow)}
+  .kpi-card:nth-child(6)::after{background:var(--pink)}
+  .kpi-label{font-size:12px;color:var(--text3);margin-bottom:6px;font-weight:500}
+  .kpi-value{font-size:28px;font-weight:700;letter-spacing:-0.5px}
+  .kpi-card:nth-child(1) .kpi-value{color:#60a5fa}
+  .kpi-card:nth-child(2) .kpi-value{color:#22d3ee}
+  .kpi-card:nth-child(3) .kpi-value{color:#a78bfa}
+  .kpi-card:nth-child(4) .kpi-value{color:#34d399}
+  .kpi-card:nth-child(5) .kpi-value{color:#fbbf24}
+  .kpi-card:nth-child(6) .kpi-value{color:#f472b6}
+  .kpi-sub{font-size:11px;color:var(--text3);margin-top:4px}
+  .grid{display:grid;gap:14px;margin-bottom:14px}
+  .grid-2{grid-template-columns:1fr 1fr}
+  .grid-3{grid-template-columns:2fr 1fr 1fr}
+  .grid-ceo{grid-template-columns:1fr 1fr;}
+  .grid-mid{grid-template-columns:2fr 1fr 1fr}
+  .grid-bot{grid-template-columns:1fr 1fr 1fr}
+  .panel{background:linear-gradient(160deg,var(--bg2),var(--bg3));border:1px solid var(--border);border-radius:10px;padding:16px;position:relative;overflow:hidden}
+  .panel-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .panel-title::before{content:'';width:3px;height:14px;border-radius:2px;background:linear-gradient(180deg,var(--blue),var(--purple))}
+  .panel-title .tag{font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(59,130,246,0.15);color:#60a5fa;font-weight:400}
+  .chart-container{width:100%;height:320px}
+  .chart-container-sm{width:100%;height:260px}
+  .chart-container-lg{width:100%;height:360px}
+  .chart-container-xs{width:100%;height:220px}
+  /* CEO section styles */
+  .ceo-highlight{background:linear-gradient(135deg,rgba(139,92,246,0.08),rgba(6,182,212,0.08));border:1px solid rgba(139,92,246,0.2);border-radius:8px;padding:12px 14px;margin-bottom:10px}
+  .ceo-funnel-chart{height:220px}
+  .ceo-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+  .ceo-stat{background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);border-radius:8px;padding:10px;text-align:center}
+  .ceo-stat-val{font-size:20px;font-weight:700;color:#a78bfa}
+  .ceo-stat-label{font-size:11px;color:var(--text3);margin-top:2px}
+  .client-tier{display:flex;gap:6px;margin-bottom:6px;align-items:stretch}
+  .tier-badge{padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;min-width:60px;text-align:center;display:flex;align-items:center;justify-content:center}
+  .tier-signed{background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3)}
+  .tier-bidding{background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)}
+  .tier-b{background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3)}
+  .tier-c{background:rgba(139,92,246,0.1);color:#a78bfa;border:1px solid rgba(139,92,246,0.2)}
+  .tier-d{background:rgba(90,111,138,0.15);color:#8395a7;border:1px solid rgba(90,111,138,0.2)}
+  .tier-lost{background:rgba(239,68,68,0.1);color:#f87171;border:1px solid rgba(239,68,68,0.2)}
+  .tier-info{flex:1;font-size:12px;color:var(--text2);line-height:1.6;padding:4px 0}
+  .tier-info strong{color:var(--text)}
+  .insight-box{background:linear-gradient(135deg,rgba(16,185,129,0.06),rgba(6,182,212,0.06));border:1px solid rgba(16,185,129,0.2);border-radius:8px;padding:10px 12px;margin-top:8px;font-size:12px;line-height:1.7}
+  .insight-box .insight-title{color:#34d399;font-weight:600;margin-bottom:4px;font-size:12px}
+  .insight-box .highlight{color:#fbbf24;font-weight:600}
+  /* CRM funnel */
+  .crm-funnel{display:flex;flex-direction:column;gap:4px;padding:8px 0}
+  .crm-step{display:flex;align-items:center;gap:10px}
+  .crm-bar-wrap{flex:1;height:28px;background:var(--bg4);border-radius:4px;position:relative;overflow:hidden}
+  .crm-bar{height:100%;border-radius:4px;display:flex;align-items:center;padding:0 10px;font-size:11px;font-weight:600;color:#fff;transition:width .6s ease}
+  .crm-label{width:64px;font-size:12px;color:var(--text2);text-align:right;flex-shrink:0}
+  .crm-val{width:60px;font-size:12px;color:var(--text);font-weight:600;flex-shrink:0}
+  .crm-pct{width:48px;font-size:11px;color:var(--text3);text-align:right;flex-shrink:0}
+  /* Table */
+  .table-wrap{overflow-x:auto;margin-top:4px;max-height:360px;overflow-y:auto}
+  .table-wrap::-webkit-scrollbar{width:4px;height:4px}
+  .table-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+  table{width:100%;border-collapse:collapse;font-size:11px}
+  thead th{position:sticky;top:0;background:var(--bg4);color:var(--text3);font-weight:500;text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap;font-size:11px}
+  tbody td{padding:7px 10px;border-bottom:1px solid rgba(30,45,77,0.5);color:var(--text2);white-space:nowrap}
+  tbody tr:hover{background:rgba(59,130,246,0.05)}
+  .status-tag{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:500}
+  .status-active{background:rgba(59,130,246,0.15);color:#60a5fa}
+  .status-claimed{background:rgba(16,185,129,0.15);color:#34d399}
+  .status-follow{background:rgba(139,92,246,0.15);color:#a78bfa}
+  .status-lost{background:rgba(239,68,68,0.1);color:#f87171}
+  .status-pending{background:rgba(245,158,11,0.1);color:#fbbf24}
+  .footer{text-align:center;padding:16px;font-size:11px;color:var(--text3);margin-top:8px}
+  @media(max-width:1200px){
+    .kpi-row{grid-template-columns:repeat(3,1fr)}
+    .grid-3,.grid-mid{grid-template-columns:1fr 1fr}
+    .grid-ceo{grid-template-columns:1fr}
+  }
+  @media(max-width:768px){
+    .kpi-row{grid-template-columns:repeat(2,1fr)}
+    .grid-2,.grid-3,.grid-mid,.grid-bot{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="dashboard">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <h1>🎯 SDR线索漏斗指挥中心</h1>
+      <div class="sub">数据截止：2026-09-30 | 数据源：SDR月报_202609_final.xlsx | v3 修复版</div>
+    </div>
+    <div class="header-right">
+      <span class="badge badge-blue">CEO获客全量数据</span>
+      <span class="badge badge-green">数据已校准</span>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-label">进线线索总量</div>
+      <div class="kpi-value" id="kpi-inbound">—</div>
+      <div class="kpi-sub">2025.09 – 2026.09 累计</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">有效线索</div>
+      <div class="kpi-value" id="kpi-valid">—</div>
+      <div class="kpi-sub" id="kpi-valid-rate">—</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">转出线索</div>
+      <div class="kpi-value" id="kpi-trans">—</div>
+      <div class="kpi-sub" id="kpi-trans-rate">—</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">已认领</div>
+      <div class="kpi-value" id="kpi-claimed">—</div>
+      <div class="kpi-sub" id="kpi-claim-rate">—</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">创建商机</div>
+      <div class="kpi-value" id="kpi-deals">—</div>
+      <div class="kpi-sub">管线金额 ¥90万+</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">CEO获客签约</div>
+      <div class="kpi-value" style="color:#f472b6">¥525万+</div>
+      <div class="kpi-sub">3家已签约/交付</div>
+    </div>
+  </div>
+
+  <!-- Section 1: CEO获客 -->
+  <div class="panel" style="margin-bottom:14px">
+    <div class="panel-title">🚀 CEO获客指挥板 <span class="tag">全量数据 · 非样本</span></div>
+    <div class="grid grid-ceo">
+      <div>
+        <div class="ceo-highlight">
+          <div style="font-size:13px;font-weight:600;color:#a78bfa;margin-bottom:8px">CEO活动获客漏斗（8场活动全量数据）</div>
+          <div id="ceo-funnel-chart" class="ceo-funnel-chart"></div>
+        </div>
+        <div class="ceo-stats">
+          <div class="ceo-stat">
+            <div class="ceo-stat-val">39家</div>
+            <div class="ceo-stat-label">覆盖客户</div>
+          </div>
+          <div class="ceo-stat">
+            <div class="ceo-stat-val" style="color:#34d399">¥525万+</div>
+            <div class="ceo-stat-label">已签约金额</div>
+          </div>
+          <div class="ceo-stat">
+            <div class="ceo-stat-val" style="color:#fbbf24">¥690万+</div>
+            <div class="ceo-stat-label">B类管线金额</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">客户分层转化</div>
+        <div class="client-tier">
+          <div class="tier-badge tier-signed">已签约</div>
+          <div class="tier-info"><strong>3家</strong> · 卓正¥500万(已回款)、南孚¥20万(两年)、HKIC 5万港币(POC)</div>
+        </div>
+        <div class="client-tier">
+          <div class="tier-badge tier-bidding">投标中</div>
+          <div class="tier-info"><strong>1家</strong> · 宇通 ≤¥200万（含二三期）</div>
+        </div>
+        <div class="client-tier">
+          <div class="tier-badge tier-b">B类推进</div>
+          <div class="tier-info"><strong>7家</strong> · ¥690万+管线（重点推进中）</div>
+        </div>
+        <div class="client-tier">
+          <div class="tier-badge tier-c">C类跟进</div>
+          <div class="tier-info"><strong>9家</strong> · 持续培育中</div>
+        </div>
+        <div class="client-tier">
+          <div class="tier-badge tier-d">D类观察</div>
+          <div class="tier-info"><strong>7家</strong> · 长线观察</div>
+        </div>
+        <div class="client-tier">
+          <div class="tier-badge tier-lost">战败/放弃</div>
+          <div class="tier-info"><strong>12家</strong> · 31%战败率</div>
+        </div>
+        <div class="insight-box">
+          <div class="insight-title">💡 核心洞察</div>
+          <span class="highlight">25家(64%)</span>来自高管直推，贡献<span class="highlight">100%签约+90%+管线</span>；混沌+晚点贡献<span class="highlight">96%开通量</span>。高管圈层信任链是CEO获客的核心驱动力。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Monthly Trend + CRM Funnel -->
+  <div class="grid grid-mid" style="margin-bottom:14px">
+    <div class="panel">
+      <div class="panel-title">📈 月度线索趋势 <span class="tag">进线/有效/转出 + 转出率</span></div>
+      <div id="monthly-trend-chart" class="chart-container-lg"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">🔄 CRM转化链路</div>
+      <div class="crm-funnel" id="crm-funnel"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">📊 渠道分布</div>
+      <div id="channel-chart" class="chart-container-lg"></div>
+    </div>
+  </div>
+
+  <!-- Section 3: Product + Team -->
+  <div class="grid grid-2" style="margin-bottom:14px">
+    <div class="panel">
+      <div class="panel-title">🧩 产品需求分布（转出线索）</div>
+      <div id="product-chart" class="chart-container"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">👥 团队分配分布</div>
+      <div id="team-chart" class="chart-container"></div>
+    </div>
+  </div>
+
+  <!-- Section 4: Recent Leads Table -->
+  <div class="panel">
+    <div class="panel-title">📋 最近转出线索 <span class="tag">已过滤未来日期脏数据</span></div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>转出日期</th>
+            <th>公司名称</th>
+            <th>需求产品</th>
+            <th>来源渠道</th>
+            <th>分配销售</th>
+            <th>所属团队</th>
+            <th>跟进状态</th>
+          </tr>
+        </thead>
+        <tbody id="recent-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">
+    SDR线索漏斗指挥中心 v3 · 数据截止2026-09-30 · SDR月报_202609_final.xlsx · 已更新9月最终月报数据
+  </div>
+</div>
+
+<script>
+// ===== DATA =====
+const DATA = {
+  "kpis": {
+    "total_inbound": 4589,
+    "total_valid": 3402,
+    "total_transferred": 814,
+    "total_claimed": 307,
+    "total_deals": 15,
+    "total_won": 8,
+    "conversion_rate": 17.7,
+    "valid_rate": 74.1,
+    "claim_rate": 37.7
+  },
+  "monthly": [
+    {
+      "label": "2025-09",
+      "month": "9月",
+      "进线": 205,
+      "有效": 87,
+      "转出": 35,
+      "认领": 14,
+      "转出率": 17.1,
+      "有效率": 42.4,
+      "year": 2025
+    },
+    {
+      "label": "2025-10",
+      "month": "10月",
+      "进线": 131,
+      "有效": 68,
+      "转出": 41,
+      "认领": 19,
+      "转出率": 31.3,
+      "有效率": 51.9,
+      "year": 2025
+    },
+    {
+      "label": "2025-11",
+      "month": "11月",
+      "进线": 391,
+      "有效": 196,
+      "转出": 55,
+      "认领": 17,
+      "转出率": 14.1,
+      "有效率": 50.1,
+      "year": 2025
+    },
+    {
+      "label": "2025-12",
+      "month": "12月",
+      "进线": 342,
+      "有效": 226,
+      "转出": 91,
+      "认领": 28,
+      "转出率": 26.6,
+      "有效率": 66.1,
+      "year": 2025
+    },
+    {
+      "label": "2026-01",
+      "month": "1月",
+      "进线": 692,
+      "有效": 417,
+      "转出": 76,
+      "认领": 24,
+      "转出率": 11.0,
+      "有效率": 60.3,
+      "year": 2026
+    },
+    {
+      "label": "2026-02",
+      "month": "2月",
+      "进线": 191,
+      "有效": 149,
+      "转出": 44,
+      "认领": 14,
+      "转出率": 23.0,
+      "有效率": 78.0,
+      "year": 2026
+    },
+    {
+      "label": "2026-03",
+      "month": "3月",
+      "进线": 339,
+      "有效": 244,
+      "转出": 73,
+      "认领": 23,
+      "转出率": 21.5,
+      "有效率": 72.0,
+      "year": 2026
+    },
+    {
+      "label": "2026-04",
+      "month": "4月",
+      "进线": 351,
+      "有效": 187,
+      "转出": 77,
+      "认领": 24,
+      "转出率": 21.9,
+      "有效率": 53.3,
+      "year": 2026
+    },
+    {
+      "label": "2026-05",
+      "month": "5月",
+      "进线": 437,
+      "有效": 364,
+      "转出": 66,
+      "认领": 21,
+      "转出率": 15.1,
+      "有效率": 83.3,
+      "year": 2026
+    },
+    {
+      "label": "2026-06",
+      "month": "6月",
+      "进线": 364,
+      "有效": 335,
+      "转出": 75,
+      "认领": 24,
+      "转出率": 20.6,
+      "有效率": 92.0,
+      "year": 2026
+    },
+    {
+      "label": "2026-07",
+      "month": "7月",
+      "进线": 391,
+      "有效": 387,
+      "转出": 62,
+      "认领": 20,
+      "转出率": 15.9,
+      "有效率": 99.0,
+      "year": 2026
+    },
+    {
+      "label": "2026-08",
+      "month": "8月",
+      "进线": 457,
+      "有效": 444,
+      "转出": 59,
+      "认领": 19,
+      "转出率": 12.9,
+      "有效率": 97.2,
+      "year": 2026
+    },
+    {
+      "label": "2026-09",
+      "month": "9月",
+      "进线": 298,
+      "有效": 298,
+      "转出": 60,
+      "认领": 60,
+      "转出率": 20.1,
+      "有效率": 100.0,
+      "year": 2026
+    }
+  ],
+  "channels": {
+    "官方微信": 468,
+    "400电话": 184,
+    "官网": 28,
+    "公众号": 23,
+    "线下活动/大会": 23,
+    "混沌学园": 22,
+    "其他/待确认": 8,
+    "明略产品/AI工具": 7,
+    "爱投(广告投放)": 7,
+    "人脉/推荐": 5,
+    "视频号": 1
+  },
+  "products": {
+    "未分配": 173,
+    "GEO": 134,
+    "灵听工牌": 94,
+    "知识图谱": 56,
+    "魔方Pro": 53,
+    "广告监测/投放": 50,
+    "DeepMiner/明胜品智": 37,
+    "其他": 35,
+    "Dify/Agent": 34,
+    "Social/社媒洞察": 32,
+    "CDP+MA/DMP": 29,
+    "营食亿/餐饮": 11,
+    "会话智能": 10,
+    "调研/报告": 9,
+    "户外/OTT监测": 7,
+    "AIGC/妙啊": 6,
+    "私域/用户增长": 5,
+    "Social Grow/海外": 1
+  },
+  "teams": {
+    "华南区": 101,
+    "华北区": 93,
+    "华东二区": 88,
+    "会话智能": 82,
+    "总部/专项": 77,
+    "华东一区": 60,
+    "悦点科技": 58,
+    "营销生态": 57,
+    "渠道": 49,
+    "未分配/全国池": 31,
+    "明胜品智": 29,
+    "港澳/海外": 21,
+    "其他": 13,
+    "爱投": 9,
+    "灵听工牌": 6,
+    "华东区": 2
+  },
+  "crmFunnel": [
+    {
+      "name": "进线线索",
+      "value": 4402,
+      "pct": 100,
+      "color": "#3b82f6"
+    },
+    {
+      "name": "有效线索",
+      "value": 3186,
+      "pct": 72.4,
+      "color": "#06b6d4"
+    },
+    {
+      "name": "转出线索",
+      "value": 791,
+      "pct": 18.0,
+      "color": "#8b5cf6"
+    },
+    {
+      "name": "已认领",
+      "value": 259,
+      "pct": 5.9,
+      "color": "#10b981"
+    },
+    {
+      "name": "创建商机",
+      "value": 15,
+      "pct": 0.34,
+      "color": "#f59e0b"
+    },
+    {
+      "name": "成单",
+      "value": 8,
+      "pct": 0.18,
+      "color": "#ec4899"
+    }
+  ]
+};
+
+// ===== KPIs =====
+document.getElementById('kpi-inbound').textContent = DATA.kpis.total_inbound.toLocaleString();
+document.getElementById('kpi-valid').textContent = DATA.kpis.total_valid.toLocaleString();
+document.getElementById('kpi-valid-rate').textContent = '有效率 ' + DATA.kpis.valid_rate + '%';
+document.getElementById('kpi-trans').textContent = DATA.kpis.total_transferred.toLocaleString();
+document.getElementById('kpi-trans-rate').textContent = '转出率 ' + DATA.kpis.conversion_rate + '%';
+document.getElementById('kpi-claimed').textContent = DATA.kpis.total_claimed.toLocaleString();
+document.getElementById('kpi-claim-rate').textContent = '认领率 ' + DATA.kpis.claim_rate + '%';
+document.getElementById('kpi-deals').textContent = DATA.kpis.total_deals;
+
+// ===== CEO Funnel Chart =====
+const ceoChart = echarts.init(document.getElementById('ceo-funnel-chart'));
+ceoChart.setOption({
+  tooltip: {trigger:'item',formatter:'{b}: {c}'},
+  series:[{
+    type:'funnel',
+    left:'5%',right:'5%',top:10,bottom:10,
+    width:'90%',
+    min:0,max:400,
+    minSize:'15%',maxSize:'100%',
+    sort:'descending',gap:2,
+    label:{show:true,position:'inside',fontSize:11,color:'#fff',fontWeight:600,
+      formatter:function(p){return p.name+' '+p.value}},
+    labelLine:{show:false},
+    itemStyle:{borderColor:'rgba(255,255,255,0.1)',borderWidth:1},
+    emphasis:{label:{fontSize:13}},
+    data:[
+      {value:394,name:'加微',itemStyle:{color:'#3b82f6'}},
+      {value:122,name:'申请',itemStyle:{color:'#6366f1'}},
+      {value:102,name:'开通',itemStyle:{color:'#8b5cf6'}},
+      {value:5,name:'转出销售',itemStyle:{color:'#06b6d4'}}
+    ]
+  }]
+});
+
+// ===== Monthly Trend Chart =====
+const trendChart = echarts.init(document.getElementById('monthly-trend-chart'));
+const months = DATA.monthly.map(m=>m.month + (m.partial?'*':''));
+trendChart.setOption({
+  tooltip:{trigger:'axis',backgroundColor:'#1a2540',borderColor:'#1e2d4d',textStyle:{color:'#c8d6e5',fontSize:12}},
+  legend:{data:['进线','有效','转出','转出率'],textStyle:{color:'#8395a7',fontSize:11},top:0,right:10},
+  grid:{left:50,right:55,top:35,bottom:30},
+  xAxis:{type:'category',data:months,axisLine:{lineStyle:{color:'#1e2d4d'}},axisLabel:{color:'#8395a7',fontSize:11}},
+  yAxis:[
+    {type:'value',name:'线索数',nameTextStyle:{color:'#5a6f8a',fontSize:10},axisLine:{show:false},splitLine:{lineStyle:{color:'rgba(30,45,77,0.5)'}},axisLabel:{color:'#5a6f8a',fontSize:10}},
+    {type:'value',name:'转出率%',nameTextStyle:{color:'#5a6f8a',fontSize:10},axisLine:{show:false},splitLine:{show:false},axisLabel:{color:'#5a6f8a',fontSize:10,formatter:'{value}%'},max:40}
+  ],
+  series:[
+    {name:'进线',type:'bar',data:DATA.monthly.map(m=>m.进线),itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#3b82f6'},{offset:1,color:'rgba(59,130,246,0.3)'}]),borderRadius:[2,2,0,0]},barWidth:16},
+    {name:'有效',type:'bar',data:DATA.monthly.map(m=>m.有效),itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#06b6d4'},{offset:1,color:'rgba(6,182,212,0.3)'}]),borderRadius:[2,2,0,0]},barWidth:16},
+    {name:'转出',type:'bar',data:DATA.monthly.map(m=>m.转出),itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#8b5cf6'},{offset:1,color:'rgba(139,92,246,0.3)'}]),borderRadius:[2,2,0,0]},barWidth:16},
+    {name:'转出率',type:'line',yAxisIndex:1,data:DATA.monthly.map(m=>m.转出率),smooth:true,lineStyle:{color:'#f59e0b',width:2},itemStyle:{color:'#f59e0b'},symbol:'circle',symbolSize:5,
+      label:{show:true,formatter:'{c}%',color:'#fbbf24',fontSize:9,position:'top'}}
+  ]
+});
+
+// ===== CRM Funnel (custom HTML) =====
+const crmEl = document.getElementById('crm-funnel');
+const funnelColors = ['#3b82f6','#06b6d4','#8b5cf6','#10b981','#f59e0b','#ec4899'];
+DATA.crmFunnel.forEach((step,i)=>{
+  const w = Math.max(step.pct, 0.5);
+  crmEl.innerHTML += `
+    <div class="crm-step">
+      <div class="crm-label">${step.name}</div>
+      <div class="crm-bar-wrap">
+        <div class="crm-bar" style="width:${w}%;background:linear-gradient(90deg,${step.color},${step.color}aa)">${step.value.toLocaleString()}</div>
+      </div>
+      <div class="crm-pct" style="color:${step.color}">${step.pct}%</div>
+    </div>`;
+});
+
+// ===== Channel Pie Chart =====
+const chChart = echarts.init(document.getElementById('channel-chart'));
+const chData = Object.entries(DATA.channels).map(([k,v])=>({name:k,value:v})).sort((a,b)=>b.value-a.value);
+const chColors = ['#3b82f6','#06b6d4','#8b5cf6','#10b981','#f59e0b','#ec4899','#f43f5e','#14b8a6','#f97316','#a78bfa','#60a5fa'];
+chChart.setOption({
+  tooltip:{trigger:'item',backgroundColor:'#1a2540',borderColor:'#1e2d4d',textStyle:{color:'#c8d6e5',fontSize:11},formatter:'{b}: {c} ({d}%)'},
+  series:[{
+    type:'pie',radius:['35%','65%'],center:['50%','52%'],
+    avoidLabelOverlap:true,
+    itemStyle:{borderColor:'#0f1628',borderWidth:2,borderRadius:4},
+    label:{color:'#8395a7',fontSize:10,formatter:'{b}\n{d}%'},
+    labelLine:{lineStyle:{color:'#1e2d4d'}},
+    emphasis:{itemStyle:{shadowBlur:10,shadowColor:'rgba(59,130,246,0.3)'},label:{fontSize:12,color:'#c8d6e5'}},
+    data:chData.map((d,i)=>({...d,itemStyle:{color:chColors[i%chColors.length]}}))
+  }]
+});
+
+// ===== Product Bar Chart =====
+const prodChart = echarts.init(document.getElementById('product-chart'));
+const prodEntries = Object.entries(DATA.products).filter(([k])=>k!=='未分配').sort((a,b)=>b[1]-a[1]);
+const prodNames = prodEntries.map(d=>d[0]);
+const prodVals = prodEntries.map(d=>d[1]);
+prodChart.setOption({
+  tooltip:{trigger:'axis',backgroundColor:'#1a2540',borderColor:'#1e2d4d',textStyle:{color:'#c8d6e5',fontSize:11}},
+  grid:{left:110,right:20,top:10,bottom:20},
+  xAxis:{type:'value',axisLine:{show:false},splitLine:{lineStyle:{color:'rgba(30,45,77,0.5)'}},axisLabel:{color:'#5a6f8a',fontSize:10}},
+  yAxis:{type:'category',data:prodNames.reverse(),axisLine:{lineStyle:{color:'#1e2d4d'}},axisLabel:{color:'#8395a7',fontSize:10}},
+  series:[{
+    type:'bar',data:prodVals.reverse(),
+    itemStyle:{borderRadius:[0,4,4,0],
+      color:function(p){
+        const cs=['#3b82f6','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ec4899','#14b8a6','#f97316','#a78bfa','#60a5fa','#f472b6','#34d399','#fbbf24','#22d3ee','#818cf8','#fb7185','#2dd4bf'];
+        return new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:cs[p.dataIndex%cs.length]+'44'},{offset:1,color:cs[p.dataIndex%cs.length]}])
+      }
+    },
+    barWidth:14,
+    label:{show:true,position:'right',color:'#8395a7',fontSize:10}
+  }]
+});
+
+// ===== Team Horizontal Bar =====
+const teamChart = echarts.init(document.getElementById('team-chart'));
+const teamEntries = Object.entries(DATA.teams).filter(([k])=>k!=='未分配/全国池'&&k!=='其他').sort((a,b)=>b[1]-a[1]);
+const teamNames = teamEntries.map(d=>d[0]);
+const teamVals = teamEntries.map(d=>d[1]);
+teamChart.setOption({
+  tooltip:{trigger:'axis',backgroundColor:'#1a2540',borderColor:'#1e2d4d',textStyle:{color:'#c8d6e5',fontSize:11}},
+  grid:{left:80,right:20,top:10,bottom:20},
+  xAxis:{type:'value',axisLine:{show:false},splitLine:{lineStyle:{color:'rgba(30,45,77,0.5)'}},axisLabel:{color:'#5a6f8a',fontSize:10}},
+  yAxis:{type:'category',data:teamNames.reverse(),axisLine:{lineStyle:{color:'#1e2d4d'}},axisLabel:{color:'#8395a7',fontSize:10}},
+  series:[{
+    type:'bar',data:teamVals.reverse(),
+    itemStyle:{borderRadius:[0,4,4,0],
+      color:function(p){
+        const cs=['#06b6d4','#10b981','#8b5cf6','#3b82f6','#f59e0b','#ec4899','#14b8a6','#f97316','#a78bfa','#60a5fa','#f472b6','#34d399','#fbbf24'];
+        return new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:cs[p.dataIndex%cs.length]+'44'},{offset:1,color:cs[p.dataIndex%cs.length]}])
+      }
+    },
+    barWidth:14,
+    label:{show:true,position:'right',color:'#8395a7',fontSize:10}
+  }]
+});
+
+// ===== Recent Leads Table =====
+const tbody = document.getElementById('recent-tbody');
+DATA.recentLeads.forEach(r=>{
+  let statusClass='status-active';
+  let statusText=r.status;
+  if(r.status.indexOf('认领')>-1){statusClass='status-claimed';statusText='已认领'}
+  else if(r.status.indexOf('不再')>-1){statusClass='status-lost';statusText='不再跟进'}
+  else if(r.status.indexOf('待认领')>-1){statusClass='status-pending';statusText='待认领'}
+  else{statusClass='status-follow';statusText='跟进中'}
+  tbody.innerHTML+=`<tr>
+    <td style="color:var(--text3)">${r.date}</td>
+    <td style="color:var(--text);font-weight:500">${r.company}</td>
+    <td><span style="color:#a78bfa">${r.product}</span></td>
+    <td style="color:var(--text2)">${r.source}</td>
+    <td style="color:var(--text2)">${r.sales}</td>
+    <td style="color:var(--text2)">${r.dept}</td>
+    <td><span class="status-tag ${statusClass}">${statusText}</span></td>
+  </tr>`;
+});
+
+// ===== Resize =====
+window.addEventListener('resize',()=>{
+  ceoChart.resize();trendChart.resize();chChart.resize();prodChart.resize();teamChart.resize();
+});
+</script>
+</body>
+</html>

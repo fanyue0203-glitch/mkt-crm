@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SDR线索漏斗指挥中心 v3</title>
+<script src="/echarts.min.js"></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg:#0a0e1a;--bg2:#0f1628;--bg3:#151d35;--bg4:#1a2540;
+    --border:#1e2d4d;--text:#c8d6e5;--text2:#8395a7;--text3:#5a6f8a;
+    --blue:#3b82f6;--blue2:#2563eb;--purple:#8b5cf6;--cyan:#06b6d4;
+    --green:#10b981;--yellow:#f59e0b;--red:#ef4444;--pink:#ec4899;
+    --glow:0 0 20px rgba(59,130,246,0.15);
+  }
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;overflow-x:hidden;min-height:100vh}
+  .dashboard{max-width:1600px;margin:0 auto;padding:16px 20px}
+  .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding:16px 24px;background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid var(--border);border-radius:12px;position:relative;overflow:hidden}
+  .header::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--blue),var(--purple),var(--cyan))}
+  .header-left h1{font-size:22px;font-weight:700;background:linear-gradient(90deg,#60a5fa,#a78bfa,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:1px}
+  .header-left .sub{font-size:12px;color:var(--text3);margin-top:4px}
+  .header-right{display:flex;gap:12px;align-items:center}
+  .badge{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:500}
+  .badge-blue{background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3)}
+  .badge-green{background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3)}
+  .kpi-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}
+  .kpi-card{background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid var(--border);border-radius:10px;padding:14px 12px;min-width:0;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s}
+  .kpi-card:hover{transform:translateY(-2px);box-shadow:var(--glow)}
+  .kpi-card::after{content:'';position:absolute;top:0;left:0;width:3px;height:100%}
+  .kpi-card:nth-child(1)::after{background:var(--blue)}
+  .kpi-card:nth-child(2)::after{background:var(--purple)}
+  .kpi-card:nth-child(3)::after{background:var(--green)}
+  .kpi-card:nth-child(4)::after{background:var(--yellow)}
+  .kpi-card:nth-child(5)::after{background:var(--pink)}
+  .kpi-label{font-size:12px;color:var(--text3);margin-bottom:6px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .kpi-value{font-size:clamp(18px,2vw,28px);font-weight:700;letter-spacing:-0.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .kpi-card:nth-child(1) .kpi-value{color:#60a5fa}
+  .kpi-card:nth-child(2) .kpi-value{color:#a78bfa}
+  .kpi-card:nth-child(3) .kpi-value{color:#34d399}
+  .kpi-card:nth-child(4) .kpi-value{color:#fbbf24}
+  .kpi-card:nth-child(5) .kpi-value{color:#f472b6}
+  .kpi-sub{font-size:11px;color:var(--text3);margin-top:4px}
+  .grid{display:grid;gap:14px;margin-bottom:14px}
+  .grid-2{grid-template-columns:1fr 1fr}
+  .grid-3{grid-template-columns:2fr 1fr 1fr}
+  .grid-mid{grid-template-columns:2fr 1fr 1fr}
+  .grid-bot{grid-template-columns:1fr 1fr 1fr}
+  .panel{background:linear-gradient(160deg,var(--bg2),var(--bg3));border:1px solid var(--border);border-radius:10px;padding:16px;position:relative;overflow:hidden}
+  .panel-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .panel-title::before{content:'';width:3px;height:14px;border-radius:2px;background:linear-gradient(180deg,var(--blue),var(--purple))}
+  .panel-title .tag{font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(59,130,246,0.15);color:#60a5fa;font-weight:400}
+  .chart-container{width:100%;height:320px}
+  .chart-container-sm{width:100%;height:260px}
+  .chart-container-lg{width:100%;height:360px}
+  .chart-container-xs{width:100%;height:220px}
+  .crm-funnel{display:flex;flex-direction:column;gap:4px;padding:8px 0}
+  .crm-step{display:flex;align-items:center;gap:10px}
+  .crm-bar-wrap{flex:1;height:28px;background:var(--bg4);border-radius:4px;position:relative;overflow:hidden}
+  .crm-bar{height:100%;border-radius:4px;display:flex;align-items:center;padding:0 10px;font-size:11px;font-weight:600;color:#fff;transition:width .6s ease}
+  .crm-label{width:64px;font-size:12px;color:var(--text2);text-align:right;flex-shrink:0}
+  .crm-val{width:60px;font-size:12px;color:var(--text);font-weight:600;flex-shrink:0}
+  .crm-pct{width:48px;font-size:11px;color:var(--text3);text-align:right;flex-shrink:0}
+  .table-wrap{overflow-x:auto;margin-top:4px;max-height:360px;overflow-y:auto}
+  .table-wrap::-webkit-scrollbar{width:4px;height:4px}
+  .table-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+  table{width:100%;border-collapse:collapse;font-size:11px}
+  thead th{position:sticky;top:0;background:var(--bg4);color:var(--text3);font-weight:500;text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap;font-size:11px}
+  tbody td{padding:7px 10px;border-bottom:1px solid rgba(30,45,77,0.5);color:var(--text2);white-space:nowrap}
+  tbody tr:hover{background:rgba(59,130,246,0.05)}
+  .status-tag{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:500}
+  .status-active{background:rgba(59,130,246,0.15);color:#60a5fa}
+  .status-claimed{background:rgba(16,185,129,0.15);color:#34d399}
+  .status-follow{background:rgba(139,92,246,0.15);color:#a78bfa}
+  .status-lost{background:rgba(239,68,68,0.1);color:#f87171}
+  .status-pending{background:rgba(245,158,11,0.1);color:#fbbf24}
+  .footer{text-align:center;padding:16px;font-size:11px;color:var(--text3);margin-top:8px}
+  @media(max-width:1200px){
+    .kpi-row{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+    .grid-3,.grid-mid{grid-template-columns:1fr 1fr}
+  }
+  @media(max-width:768px){
+    .kpi-row{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+    .grid-2,.grid-3,.grid-mid,.grid-bot{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="dashboard">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <h1>🎯 SDR线索转化数据看板</h1>
+      <div class="sub" id="data-sub">加载中...</div>
+    </div>
+    <div class="header-right">
+      <span class="badge badge-green" id="data-badge">实时数据</span>
+      <span class="badge badge-blue" id="refresh-badge" style="cursor:pointer" onclick="loadDashboard()">🔄 刷新</span>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-label">累计进线量</div>
+      <div class="kpi-value" id="kpi-inbound">—</div>
+      <div class="kpi-sub" id="kpi-inbound-sub">—</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">累计转出量</div>
+      <div class="kpi-value" id="kpi-trans">—</div>
+      <div class="kpi-sub" id="kpi-trans-sub">—</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">整体转出率</div>
+      <div class="kpi-value" id="kpi-rate">—</div>
+      <div class="kpi-sub" id="kpi-rate-sub">—</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">已认领跟进</div>
+      <div class="kpi-value" id="kpi-claim">—</div>
+      <div class="kpi-sub" id="kpi-claim-sub">—</div>
+    </div>
+  </div>
+
+  <!-- Section: 月度进线与转出趋势 -->
+  <div class="panel" style="margin-bottom:14px">
+    <div class="panel-title">📈 月度进线与转出趋势</div>
+    <div id="monthly-trend-chart" class="chart-container-lg"></div>
+  </div>
+
+  <!-- Section: 分渠道月度进线构成 + 各渠道转化漏斗 -->
+  <div class="grid grid-2" style="margin-bottom:14px">
+    <div class="panel">
+      <div class="panel-title">📊 分渠道月度进线构成</div>
+      <div id="channel-stack-chart" class="chart-container"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">🔽 各渠道转化漏斗</div>
+      <div id="channel-funnel-chart" class="chart-container"></div>
+    </div>
+  </div>
+
+  <!-- Section: 进线渠道占比 + 转出线索来源分布 -->
+  <div class="grid grid-2" style="margin-bottom:14px">
+    <div class="panel">
+      <div class="panel-title">📞 进线渠道占比</div>
+      <div id="channel-chart" class="chart-container"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">🔄 转出线索来源分布</div>
+      <div id="source-chart" class="chart-container"></div>
+    </div>
+  </div>
+
+  <!-- Section: 需求产品分布 + 区域/团队分布 -->
+  <div class="grid grid-2" style="margin-bottom:14px">
+    <div class="panel">
+      <div class="panel-title">🧩 需求产品分布</div>
+      <div id="product-chart" class="chart-container"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">🌍 区域/团队分布</div>
+      <div id="team-chart" class="chart-container"></div>
+    </div>
+  </div>
+
+  <!-- Section: 销售承接Top10 + 跟进状态 -->
+  <div class="grid grid-2" style="margin-bottom:14px">
+    <div class="panel">
+      <div class="panel-title">👤 销售承接Top10</div>
+      <div id="sales-chart" class="chart-container"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">📋 跟进状态</div>
+      <div id="follow-chart" class="chart-container"></div>
+    </div>
+  </div>
+
+  <!-- Section: 最近转出线索 -->
+  <div class="panel">
+    <div class="panel-title">📋 最近转出线索</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>转出日期</th>
+            <th>公司名称</th>
+            <th>需求产品</th>
+            <th>来源渠道</th>
+            <th>分配销售</th>
+            <th>所属团队</th>
+            <th>跟进状态</th>
+          </tr>
+        </thead>
+        <tbody id="recent-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">
+    SDR线索转化数据看板 · 数据源：MKT-CRM实时API · 自动刷新5分钟
+  </div>
+</div>
+
+<script>
+let charts = {};
+const AX = {lineStyle:{color:'#1e2d4d'},label:{color:'#8395a7',fontSize:11}};
+const TIP = {trigger:'axis',backgroundColor:'#1a2540',borderColor:'#1e2d4d',textStyle:{color:'#c8d6e5',fontSize:11}};
+const CS = ['#3b82f6','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ec4899','#14b8a6','#f97316','#a78bfa','#60a5fa','#f472b6','#34d399','#fbbf24','#22d3ee','#818cf8','#fb7185'];
+
+function ac(id,opt){const el=document.getElementById(id);if(!el)return;const c=echarts.init(el);c.setOption(opt);charts[id]=c;}
+function grad(c){return new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:c},{offset:1,color:c+'33'}]);}
+function gradH(c){return new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:c+'33'},{offset:1,color:c}]);}
+
+async function loadDashboard() {
+  try {
+    const resp = await fetch('/api/sdr/dashboard');
+    renderDashboard(await resp.json());
+  } catch(e) {
+    console.error('加载看板数据失败:', e);
+    document.getElementById('data-sub').textContent = '数据加载失败，请刷新重试';
+  }
+}
+
+function renderDashboard(DATA) {
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  const dateStr = now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate())+' '+pad(now.getHours())+':'+pad(now.getMinutes());
+  document.getElementById('data-sub').textContent = '数据更新：'+dateStr+' | 数据源：MKT-CRM实时API + 月度核实基线';
+  document.getElementById('recent-tbody').innerHTML = '';
+  Object.values(charts).forEach(c => c && c.dispose());
+  charts = {};
+
+  const K = DATA.kpis;
+  const months = DATA.monthly.map(m => m.month);
+  const nMon = DATA.monthly.length || 1;
+
+  // ===== KPIs =====
+  document.getElementById('kpi-inbound').innerHTML = K.total_inbound.toLocaleString()+'<span style="font-size:14px;color:#5a6f8a;margin-left:4px">条</span>';
+  document.getElementById('kpi-inbound-sub').textContent = '月均'+Math.round(K.total_inbound/nMon)+'条';
+  document.getElementById('kpi-trans').innerHTML = K.total_transferred.toLocaleString()+'<span style="font-size:14px;color:#5a6f8a;margin-left:4px">条</span>';
+  document.getElementById('kpi-trans-sub').textContent = '月均'+Math.round(K.total_transferred/nMon)+'条';
+  document.getElementById('kpi-rate').innerHTML = K.conversion_rate+'<span style="font-size:14px;color:#5a6f8a;margin-left:2px">%</span>';
+  const wonRate = K.total_transferred>0 ? (K.total_won/K.total_transferred*100).toFixed(1) : '0.0';
+  document.getElementById('kpi-rate-sub').textContent = '转出→成单 '+wonRate+'%';
+  document.getElementById('kpi-claim').innerHTML = K.claim_rate+'<span style="font-size:14px;color:#5a6f8a;margin-left:2px">%</span>';
+  document.getElementById('kpi-claim-sub').textContent = K.total_claimed.toLocaleString()+'条已认领，'+(K.total_transferred-K.total_claimed)+'条待分配';
+
+  // ===== 月度趋势 =====
+  const maxRate = Math.max.apply(null, DATA.monthly.map(m=>m['转出率']||0).concat([10]));
+  ac('monthly-trend-chart',{
+    tooltip:Object.assign({},TIP,{axisPointer:{type:'cross'}}),
+    legend:{data:['进线量','转出量','转出率'],textStyle:{color:'#8395a7',fontSize:11},top:0,right:10},
+    grid:{left:55,right:55,top:45,bottom:30},
+    xAxis:Object.assign({type:'category',data:months},AX),
+    yAxis:[{type:'value',name:'条数',nameTextStyle:{color:'#5a6f8a',fontSize:10},axisLine:{show:false},splitLine:{lineStyle:{color:'rgba(30,45,77,0.5)'}},axisLabel:{color:'#5a6f8a',fontSize:10}},
+           {type:'value',name:'转出率(%)',nameTextStyle:{color:'#5a6f8a',fontSize:10},axisLine:{show:false},splitLine:{show:false},axisLabel:{color:'#5a6f8a',fontSize:10,formatter:'{value}%'},max:Math.ceil(maxRate*1.4/10)*10}],
+    series:[
+      {name:'进线量',type:'bar',data:DATA.monthly.map(m=>m['进线']),itemStyle:{color:grad('#3b82f6'),borderRadius:[3,3,0,0]},barWidth:24},
+      {name:'转出量',type:'bar',data:DATA.monthly.map(m=>m['转出']),itemStyle:{color:grad('#10b981'),borderRadius:[3,3,0,0]},barWidth:24},
+      {name:'转出率',type:'line',yAxisIndex:1,data:DATA.monthly.map(m=>m['转出率']),smooth:true,lineStyle:{color:'#f59e0b',width:2.5},itemStyle:{color:'#f59e0b'},symbol:'circle',symbolSize:7,
+       label:{show:true,formatter:'{c}%',color:'#fbbf24',fontSize:10,position:'top'}}
+    ]
+  });
+
+  // ===== 分渠道月度进线构成 =====
+  const chEntries = Object.entries(DATA.channels).sort((a,b)=>b[1]-a[1]).slice(0,4);
+  if (DATA.channelMonthly) {
+    ac('channel-stack-chart',{
+      tooltip:Object.assign({},TIP,{axisPointer:{type:'shadow'}}),
+      legend:{data:chEntries.map(e=>e[0]),textStyle:{color:'#8395a7',fontSize:11},top:0},
+      grid:{left:50,right:20,top:45,bottom:30},
+      xAxis:Object.assign({type:'category',data:months},AX),
+      yAxis:{type:'value',name:'进线量',nameTextStyle:{color:'#5a6f8a',fontSize:10},axisLine:{show:false},splitLine:{lineStyle:{color:'rgba(30,45,77,0.5)'}},axisLabel:{color:'#5a6f8a',fontSize:10}},
+      series:chEntries.map((e,i)=>({name:e[0],type:'bar',stack:'a',data:DATA.channelMonthly[e[0]]||months.map(function(){return 0;}),itemStyle:{color:CS[i]}}))
+    });
+  } else {
+    ac('channel-stack-chart',{
+      tooltip:Object.assign({},TIP),
+      grid:{left:50,right:20,top:20,bottom:30},
+      xAxis:Object.assign({type:'category',data:months},AX),
+      yAxis:{type:'value',name:'进线量',nameTextStyle:{color:'#5a6f8a',fontSize:10},axisLine:{show:false},splitLine:{lineStyle:{color:'rgba(30,45,77,0.5)'}},axisLabel:{color:'#5a6f8a',fontSize:10}},
+      series:[{name:'进线量',type:'bar',data:DATA.monthly.map(m=>m['进线']),itemStyle:{color:grad('#06b6d4'),borderRadius:[3,3,0,0]},barWidth:24,
+        label:{show:true,position:'top',color:'#5a6f8a',fontSize:10}}]
+    });
+  }
+
+  // ===== 各渠道转化漏斗 =====
+  const chSorted = Object.entries(DATA.channels).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const frNames = chSorted.map(e=>e[0]);
+  const frIn = chSorted.map(e=>e[1]);
+  const frOut = chSorted.map(e=>Math.round(e[1]*K.total_transferred/Math.max(K.total_inbound,1)));
+  ac('channel-funnel-chart',{
+    tooltip:Object.assign({},TIP,{axisPointer:{type:'shadow'}}),
+    legend:{data:['进线量','转出量'],textStyle:{color:'#8395a7',fontSize:11},top:0},
+    grid:{left:50,right:20,top:45,bottom:40},
+    xAxis:{type:'category',data:frNames,axisLine:{lineStyle:{color:'#1e2d4d'}},axisLabel:{color:'#8395a7',fontSize:10,interval:0,rotate:frNames.length>4?20:0}},
+    yAxis:{type:'value',name:'条数',nameTextStyle:{color:'#5a6f8a',fontSize:10},axisLine:{show:false},splitLine:{lineStyle:{color:'rgba(30,45,77,0.5)'}},axisLabel:{color:'#5a6f8a',fontSize:10}},
+    series:[
+      {name:'进线量',type:'bar',data:frIn,itemStyle:{color:'rgba(148,163,184,0.45)'},barWidth:22,label:{show:true,position:'top',color:'#94a3b8',fontSize:10}},
+      {name:'转出量',type:'bar',data:frOut,itemStyle:{color:gradH('#10b981')},barWidth:22,label:{show:true,position:'top',color:'#34d399',fontSize:10}}
+    ]
+  });
+
+  // ===== 进线渠道占比 =====
+  ac('channel-chart',{
+    tooltip:{trigger:'item',backgroundColor:'#1a2540',borderColor:'#1e2d4d',textStyle:{color:'#c8d6e5',fontSize:11},formatter:'{b}: {c}条 ({d}%)'},
+    series:[{type:'pie',radius:['40%','70%'],center:['50%','52%'],avoidLabelOverlap:true,
+      itemStyle:{borderColor:'#0f1628',borderWidth:2,borderRadius:4},
+      label:{color:'#8395a7',fontSize:10,formatter:'{b}\n{d}%'},labelLine:{lineStyle:{color:'#1e2d4d'}},
+      data:Object.entries(DATA.channels).map(function(e){return {name:e[0],value:e[1]};}).sort((a,b)=>b.value-a.value).map(function(d,i){return Object.assign({},d,{itemStyle:{color:CS[i%CS.length]}});})}]
+  });
+
+  // ===== 转出线索来源分布 =====
+  const srcEntries = Object.entries(DATA.channels).sort((a,b)=>a[1]-b[1]).slice(-9);
+  ac('source-chart',{
+    tooltip:Object.assign({},TIP),
+    grid:{left:110,right:60,top:10,bottom:20},
+    xAxis:{type:'value',axisLine:{show:false},splitLine:{lineStyle:{color:'rgba(30,45,77,0.5)'}},axisLabel:{color:'#5a6f8a',fontSize:10}},
+    yAxis:{type:'category',data:srcEntries.map(e=>e[0]),axisLine:{lineStyle:{color:'#1e2d4d'}},axisLabel:{color:'#8395a7',fontSize:11}},
+    series:[{type:'bar',data:srcEntries.map(e=>e[1]),itemStyle:{borderRadius:[0,4,4,0],color:gradH('#8b5cf6')},barWidth:18,
+      label:{show:true,position:'right',color:'#8395a7',fontSize:10}}]
+  });
+
+  // ===== 需求产品分布 =====
+  const prodEntries = Object.entries(DATA.products).filter(e=>e[0]!=='未分配').sort((a,b)=>a[1]-b[1]);
+  ac('product-chart',{
+    tooltip:Object.assign({},TIP),
+    grid:{left:130,right:50,top:10,bottom:20},
+    xAxis:{type:'value',axisLine:{show:false},splitLine:{lineStyle:{color:'rgba(30,45,77,0.5)'}},axisLabel:{color:'#5a6f8a',fontSize:10}},
+    yAxis:{type:'category',data:prodEntries.map(e=>e[0]),axisLine:{lineStyle:{color:'#1e2d4d'}},axisLabel:{color:'#8395a7',fontSize:10}},
+    series:[{type:'bar',data:prodEntries.map(e=>e[1]),barWidth:16,
+      itemStyle:{borderRadius:[0,4,4,0],color:function(p){return gradH(CS[(p.dataIndex)%CS.length]);}},
+      label:{show:true,position:'right',color:'#8395a7',fontSize:10}}]
+  });
+
+  // ===== 区域/团队分布 =====
+  const teamEntries = Object.entries(DATA.teams).filter(e=>e[0]!=='未分配/全国池'&&e[0]!=='其他').sort((a,b)=>b[1]-a[1]);
+  ac('team-chart',{
+    tooltip:{trigger:'item',backgroundColor:'#1a2540',borderColor:'#1e2d4d',textStyle:{color:'#c8d6e5',fontSize:11},formatter:'{b}: {c}条 ({d}%)'},
+    series:[{type:'pie',radius:['35%','68%'],center:['50%','52%'],roseType:'radius',
+      itemStyle:{borderColor:'#0f1628',borderWidth:2,borderRadius:4},
+      label:{color:'#8395a7',fontSize:10,formatter:'{b}\n{d}%'},labelLine:{lineStyle:{color:'#1e2d4d'}},
+      data:teamEntries.map(function(e,i){return {name:e[0],value:e[1],itemStyle:{color:CS[i%CS.length]}};})}]
+  });
+
+  // ===== 销售承接Top10（全部转出线索口径，由后端 salesTop 提供）=====
+  let salesEntries = Object.entries(DATA.salesTop || {}).sort((a,b)=>a[1]-b[1]).slice(-10);
+  if (!salesEntries.length) {
+    const salesMap = {};
+    (DATA.recentLeads||[]).forEach(function(r){if(r.sales) salesMap[r.sales]=(salesMap[r.sales]||0)+1;});
+    salesEntries = Object.entries(salesMap).sort((a,b)=>a[1]-b[1]).slice(-10);
+  }
+  if (!salesEntries.length) salesEntries = [['暂无数据',0]];
+  ac('sales-chart',{
+    tooltip:Object.assign({},TIP),
+    grid:{left:120,right:60,top:10,bottom:20},
+    xAxis:{type:'value',axisLine:{show:false},splitLine:{lineStyle:{color:'rgba(30,45,77,0.5)'}},axisLabel:{color:'#5a6f8a',fontSize:10}},
+    yAxis:{type:'category',data:salesEntries.map(e=>e[0]),axisLine:{lineStyle:{color:'#1e2d4d'}},axisLabel:{color:'#8395a7',fontSize:11}},
+    series:[{type:'bar',data:salesEntries.map(e=>e[1]),itemStyle:{borderRadius:[0,4,4,0],color:gradH('#f59e0b')},barWidth:18,
+      label:{show:true,position:'right',color:'#8395a7',fontSize:10}}]
+  });
+
+  // ===== 跟进状态 =====
+  const pending = Math.max(K.total_transferred - K.total_claimed, 0);
+  ac('follow-chart',{
+    tooltip:{trigger:'item',backgroundColor:'#1a2540',borderColor:'#1e2d4d',textStyle:{color:'#c8d6e5',fontSize:11},formatter:'{b}: {c}条 ({d}%)'},
+    legend:{bottom:0,textStyle:{color:'#8395a7',fontSize:11},icon:'circle'},
+    series:[{type:'pie',radius:['45%','70%'],center:['50%','45%'],
+      itemStyle:{borderColor:'#0f1628',borderWidth:2,borderRadius:6},
+      label:{color:'#8395a7',fontSize:11,formatter:'{b}\n{c}条\n({d}%)',lineHeight:16},
+      data:[{name:'已认领跟进',value:K.total_claimed,itemStyle:{color:'#10b981'}},
+            {name:'待分配确认',value:pending,itemStyle:{color:'#f59e0b'}}]}]
+  });
+
+  // ===== 最近转出线索表 =====
+  const tbody = document.getElementById('recent-tbody');
+  const esc = function(s){return String(s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+  (DATA.recentLeads||[]).forEach(function(r){
+    let cls='status-active', txt=r.status||'已转出';
+    if(txt.indexOf('认领')>-1){cls='status-claimed';txt='已认领';}
+    else if(/closed_lost|不再|无效/.test(txt)){cls='status-lost';txt='不再跟进';}
+    else if(/opportunity|跟进/.test(txt)){cls='status-follow';txt='跟进中';}
+    else if(/new|待/.test(txt)){cls='status-pending';txt='待认领';}
+    else{cls='status-active';txt='已转出';}
+    tbody.innerHTML+='<tr>'+
+      '<td style="color:var(--text3)">'+esc(r.date)+'</td>'+
+      '<td style="color:var(--text);font-weight:500">'+esc(r.company)+'</td>'+
+      '<td style="color:#a78bfa">'+esc(r.product)+'</td>'+
+      '<td>'+esc(r.source)+'</td>'+
+      '<td>'+esc(r.sales)+'</td>'+
+      '<td>'+esc(r.dept)+'</td>'+
+      '<td><span class="status-tag '+cls+'">'+txt+'</span></td>'+
+    '</tr>';
+  });
+}
+
+window.addEventListener('resize',function(){Object.values(charts).forEach(function(c){return c&&c.resize();});});
+loadDashboard();
+setInterval(loadDashboard, 5*60*1000);
+</script>
+</body>
+</html>

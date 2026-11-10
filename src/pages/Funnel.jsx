@@ -124,76 +124,164 @@ function LeadModal({ lead, onClose, onSave, onDelete }) {
   );
 }
 
-function LeadsTable({ defaultStatus, page, setPage, onOpenLead, refreshKey }) {
+function LeadsTable({ defaultStatus, onOpenLead, refreshKey }) {
+  const [allRows, setAllRows] = useState(null);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState(defaultStatus || '');
   const [source, setSource] = useState('');
-  const [data, setData] = useState(null);
-  const totalPages = data ? (Math.ceil(data.total / data.limit) || 1) : 1;
+  const [product, setProduct] = useState('');
+  const [team, setTeam] = useState('');
+  const [sortKey, setSortKey] = useState('inbound_date');
+  const [sortDir, setSortDir] = useState('desc');
+  const [colFilters, setColFilters] = useState({});
 
-  const fetchData = useCallback(() => {
-    const params = new URLSearchParams();
-    if (search) params.set('search', search);
-    if (status) params.set('status', status);
-    if (source) params.set('source_channel', source);
-    params.set('page', page);
-    params.set('limit', 20);
-    fetch('/api/leads?' + params).then(r => r.json()).then(d => setData(d)).catch(() => {});
-  }, [search, status, source, page]);
-
-  useEffect(() => { fetchData(); }, [fetchData, refreshKey]);
+  useEffect(() => {
+    // 一次加载全量用于前端筛选排序（数据量可控）
+    fetch('/api/leads?limit=2000&page=1').then(r => r.json()).then(d => {
+      setAllRows(d.data || []);
+    }).catch(() => {});
+  }, [refreshKey]);
 
   useEffect(() => {
     if (defaultStatus !== undefined) setStatus(defaultStatus);
   }, [defaultStatus]);
 
-  return (
-    <div className="card-body" style={{ padding: 0 }}>
-      <div className="funnel-filter-bar">
-        <input type="text" placeholder="搜索公司/联系人/产品..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} style={{ maxWidth: 280 }} />
-        {!defaultStatus && (
-          <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }}>
-            <option value="">全部状态</option>
-            {STATUS_OPTS.map(s => <option key={s} value={s}>{leadStatusName(s)}</option>)}
+  function toggleSort(key) {
+    if (sortKey === key) setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    else { setSortKey(key); setSortDir('asc'); }
+  }
+
+  function setColFilter(key, val) {
+    setColFilters(prev => ({ ...prev, [key]: val }));
+  }
+
+  function clearAll() {
+    setSearch(''); setSource(''); setProduct(''); setTeam('');
+    if (!defaultStatus) setStatus('');
+    setColFilters({});
+  }
+
+  // 前端筛选
+  let rows = allRows || [];
+  if (defaultStatus) rows = rows.filter(l => l.status === defaultStatus);
+  if (status && !defaultStatus) rows = rows.filter(l => l.status === status);
+  if (search) {
+    const s = search.toLowerCase();
+    rows = rows.filter(l => (l.company_name||'').toLowerCase().includes(s) || (l.contact_name||'').toLowerCase().includes(s) || (l.product||'').toLowerCase().includes(s) || (l.assigned_to||'').toLowerCase().includes(s));
+  }
+  if (source) rows = rows.filter(l => (l.source_channel||'').includes(source));
+  if (product) rows = rows.filter(l => (l.product||'').toLowerCase().includes(product.toLowerCase()));
+  if (team) rows = rows.filter(l => (l.team||'').includes(team));
+  for (const [key, val] of Object.entries(colFilters)) {
+    if (!val) continue;
+    const v = val.toLowerCase();
+    rows = rows.filter(l => String(l[key]||'').toLowerCase().includes(v));
+  }
+
+  // 排序
+  rows = [...rows].sort((a, b) => {
+    let va = a[sortKey], vb = b[sortKey];
+    if (va == null) va = ''; if (vb == null) vb = '';
+    if (sortKey === 'deal_amount') { va = +va||0; vb = +vb||0; }
+    if (typeof va === 'number' && typeof vb === 'number') return sortDir === 'asc' ? va - vb : vb - va;
+    const cmp = String(va).localeCompare(String(vb), 'zh');
+    return sortDir === 'asc' ? cmp : -cmp;
+  });
+
+  const activeFilters = (search?1:0) + (!defaultStatus&&status?1:0) + (source?1:0) + (product?1:0) + (team?1:0) + Object.values(colFilters).filter(Boolean).length;
+
+  // 来源/产品/团队去重选项
+  const srcOpts = [...new Set((allRows||[]).map(l=>l.source_channel).filter(Boolean))].sort();
+  const teamOpts = [...new Set((allRows||[]).map(l=>l.team).filter(Boolean))].sort();
+
+  const LEAD_COLS = [
+    { key:'company_name', label:'公司名称', w:160, sortable:true, filterable:true },
+    { key:'company_short_name', label:'简称', w:80, sortable:true, filterable:true },
+    { key:'contact_name', label:'联系人', w:90, sortable:true, filterable:true },
+    { key:'contact_title', label:'职位', w:100, sortable:true, filterable:true },
+    { key:'source_channel', label:'来源', w:120, sortable:true, filterable:true, type:'select', opts:srcOpts },
+    { key:'product', label:'产品', w:100, sortable:true, filterable:true },
+    { key:'industry', label:'行业', w:100, sortable:true, filterable:true },
+    { key:'team', label:'团队', w:100, sortable:true, filterable:true, type:'select', opts:teamOpts },
+    { key:'assigned_to', label:'分配给', w:90, sortable:true, filterable:true },
+    { key:'status', label:'状态', w:90, sortable:true, filterable:false },
+    { key:'inbound_date', label:'进线日期', w:100, sortable:true, filterable:false },
+    { key:'transfer_date', label:'转出日期', w:100, sortable:true, filterable:false },
+  ];
+
+  const SortIc = ({k}) => sortKey!==k ? <span style={{color:'var(--text-muted)',opacity:.3,marginLeft:3}}>↕</span> : <span style={{color:'var(--accent-light)',marginLeft:3}}>{sortDir==='asc'?'↑':'↓'}</span>;
+
+  const renderTh = (col) => {
+    if (!col.filterable) {
+      return <th key={col.key} style={{width:col.w,minWidth:col.w}} onClick={()=>col.sortable&&toggleSort(col.key)}>{col.label}{col.sortable&&<SortIc k={col.key}/>}</th>;
+    }
+    if (col.type === 'select') {
+      return <th key={col.key} style={{width:col.w,minWidth:col.w}}>
+        <div className="th-col">
+          <span className="th-label" onClick={()=>col.sortable&&toggleSort(col.key)}>{col.label}<SortIc k={col.key}/></span>
+          <select className="th-filter" value={colFilters[col.key]||''} onChange={e=>setColFilter(col.key,e.target.value)}>
+            <option value="">全部</option>
+            {col.opts.map(o=><option key={o} value={o}>{o}</option>)}
           </select>
-        )}
-        <select value={source} onChange={e => { setSource(e.target.value); setPage(1); }}>
-          <option value="">全部来源</option>
-          {(data?.sourceOptions || []).map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <button className="btn btn-sm btn-primary" onClick={() => onOpenLead(null)} style={{ marginLeft: 8 }}>+ 新建线索</button>
-        {data && <span style={{ marginLeft: 'auto', fontSize: 12, color: '#64748b' }}>共 {data.total} 条 · {page}/{totalPages} 页</span>}
+        </div>
+      </th>;
+    }
+    return <th key={col.key} style={{width:col.w,minWidth:col.w}}>
+      <div className="th-col">
+        <span className="th-label" onClick={()=>col.sortable&&toggleSort(col.key)}>{col.label}<SortIc k={col.key}/></span>
+        <input className="th-filter-input" placeholder="筛选..." value={colFilters[col.key]||''} onChange={e=>setColFilter(col.key,e.target.value)}/>
       </div>
-      <div style={{ padding: '0 16px 16px', overflowX: 'auto' }}>
-        <table className="leads-table">
-          <thead><tr><th>公司名称</th><th>简称</th><th>联系人</th><th>来源</th><th>产品</th><th>行业</th><th>团队</th><th>分配给</th><th>状态</th><th>进线日期</th><th>转出日期</th></tr></thead>
+    </th>;
+  };
+
+  return (
+    <div className="card-body" style={{padding:0}}>
+      <div className="acct-filter-bar" style={{top:'calc(var(--header-h) + 45px)'}}>
+        <div className="search-bar">
+          <input type="text" placeholder="搜索公司/联系人/产品..." value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:260}}/>
+          {!defaultStatus && (
+            <select value={status} onChange={e=>setStatus(e.target.value)}>
+              <option value="">全部状态</option>
+              {STATUS_OPTS.map(s=><option key={s} value={s}>{leadStatusName(s)}</option>)}
+            </select>
+          )}
+          <select value={source} onChange={e=>setSource(e.target.value)}>
+            <option value="">全部来源</option>
+            {srcOpts.map(s=><option key={s} value={s}>{s}</option>)}
+          </select>
+          <select value={team} onChange={e=>setTeam(e.target.value)}>
+            <option value="">全部团队</option>
+            {teamOpts.map(t=><option key={t} value={t}>{t}</option>)}
+          </select>
+          <button className="btn btn-sm btn-primary" onClick={()=>onOpenLead(null)} style={{marginLeft:8}}>+ 新建线索</button>
+          {activeFilters>0 && <button className="btn btn-sm btn-secondary" onClick={clearAll}>清除({activeFilters})</button>}
+          <span style={{marginLeft:'auto',fontSize:12,color:'var(--text-muted)'}}>共 {rows.length} 条</span>
+        </div>
+      </div>
+      <div className="leads-table-wrap">
+        <table className="leads-table acct-table">
+          <thead><tr className="acct-thead">{LEAD_COLS.map(renderTh)}</tr></thead>
           <tbody>
-            {!data ? <tr><td colSpan={11} style={{ textAlign:'center',padding:20,color:'#64748b' }}>加载中...</td></tr>
-              : data.data && data.data.length ? data.data.map(l => (
-                <tr key={l.id} className="clickable-row" onClick={() => onOpenLead(l)}>
-                  <td><strong>{l.company_name || '—'}</strong></td>
-                  <td style={{ color:'#94a3b8', fontSize:12 }}>{l.company_short_name || '—'}</td>
-                  <td>{l.contact_name || '—'}</td>
-                  <td><SourceTag s={l.source_channel} /></td>
-                  <td>{l.product || '—'}</td>
-                  <td style={{ color:'#94a3b8', fontSize:12 }}>{l.industry || '—'}</td>
-                  <td>{l.team || '—'}</td>
-                  <td>{l.assigned_to || <span style={{color:'#64748b'}}>未分配</span>}</td>
-                  <td><LeadStatusTag s={l.status} /></td>
-                  <td style={{ fontSize:12, color:'#94a3b8' }}>{l.inbound_date || '—'}</td>
-                  <td style={{ fontSize:12, color:'#94a3b8' }}>{l.transfer_date || '—'}</td>
+            {allRows===null?<tr><td colSpan={LEAD_COLS.length} style={{textAlign:'center',padding:24,color:'var(--text-muted)'}}>⏳ 加载中...</td></tr>
+              :rows.length?rows.map(l=>(
+                <tr key={l.id} className="clickable-row" onClick={()=>onOpenLead(l)}>
+                  <td><strong>{l.company_name||'—'}</strong></td>
+                  <td style={{color:'var(--text-muted)',fontSize:12}}>{l.company_short_name||'—'}</td>
+                  <td>{l.contact_name||'—'}</td>
+                  <td style={{fontSize:12,color:'var(--text-muted)'}}>{l.contact_title||'—'}</td>
+                  <td><SourceTag s={l.source_channel}/></td>
+                  <td style={{fontSize:12}}>{l.product||'—'}</td>
+                  <td style={{fontSize:12,color:'var(--text-muted)'}}>{l.industry||'—'}</td>
+                  <td>{l.team||'—'}</td>
+                  <td style={{fontSize:12}}>{l.assigned_to||<span style={{color:'var(--text-muted)'}}>未分配</span>}</td>
+                  <td><LeadStatusTag s={l.status}/></td>
+                  <td style={{fontSize:12,color:'var(--text-muted)'}}>{l.inbound_date||'—'}</td>
+                  <td style={{fontSize:12,color:'var(--text-muted)'}}>{l.transfer_date||'—'}</td>
                 </tr>
-              )) : <tr><td colSpan={11} style={{ textAlign:'center',padding:24,color:'#64748b' }}>暂无匹配数据</td></tr>}
+              )):<tr><td colSpan={LEAD_COLS.length}><div className="empty-state"><p>暂无匹配数据</p></div></td></tr>}
           </tbody>
         </table>
       </div>
-      {data && totalPages > 1 && (
-        <div style={{ display:'flex',justifyContent:'center',gap:6,marginTop:14,padding:'0 0 16px',flexWrap:'wrap' }}>
-          <button className="btn btn-sm btn-secondary" disabled={+page<=1} style={{opacity:+page<=1?0.4:1}} onClick={()=>setPage(p=>p-1)}>← 上页</button>
-          <PageNums cur={page} total={totalPages} onPage={setPage} />
-          <button className="btn btn-sm btn-secondary" disabled={+page>=totalPages} style={{opacity:+page>=totalPages?0.4:1}} onClick={()=>setPage(p=>p+1)}>下页 →</button>
-        </div>
-      )}
     </div>
   );
 }
@@ -203,8 +291,6 @@ export default function Funnel() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [tab, setTab] = useState('dashboard');
-  const [poolPage, setPoolPage] = useState(1);
-  const [qualifiedPage, setQualifiedPage] = useState(1);
   const [editingLead, setEditingLead] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -215,7 +301,7 @@ export default function Funnel() {
     api('/api/leads/funnel').then(d => setData(d)).catch(e => setError(e));
   }, [refreshKey]);
 
-  useEffect(() => { setPoolPage(1); setQualifiedPage(1); }, [tab]);
+  useEffect(() => { setRefreshKey(k => k + 1); }, [tab]);
 
   const handleSave = async (form) => {
     try {
@@ -268,10 +354,29 @@ export default function Funnel() {
   ];
 
   const tabs = [
-    { key: 'dashboard', label: '📊 数据分析看板' },
+    { key: 'dashboard', label: '📊 数据看板' },
     { key: 'pool', label: '📋 线索池' },
     { key: 'qualified', label: '✅ 转出线索' },
   ];
+
+  if (tab === 'dashboard') {
+    return (
+      <div>
+        <div className="funnel-tabs">
+          {tabs.map(t => (
+            <div key={t.key} className={'tab' + (tab === t.key ? ' active' : '')} onClick={() => setTab(t.key)}>{t.label}</div>
+          ))}
+        </div>
+        <div style={{ height: 'calc(100vh - 200px)', width: '100%', marginTop: 8, borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(99,132,255,0.12)' }}>
+          <iframe
+            src="/funnel-view"
+            style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+            title="SDR数据看板"
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -360,13 +465,13 @@ export default function Funnel() {
 
       {tab === 'pool' && (
         <div className="card">
-          <LeadsTable page={poolPage} setPage={setPoolPage} onOpenLead={handleOpenLead} refreshKey={refreshKey} />
+          <LeadsTable onOpenLead={handleOpenLead} refreshKey={refreshKey} />
         </div>
       )}
 
       {tab === 'qualified' && (
         <div className="card">
-          <LeadsTable page={qualifiedPage} setPage={setQualifiedPage} defaultStatus="qualified" onOpenLead={handleOpenLead} refreshKey={refreshKey} />
+          <LeadsTable defaultStatus="qualified" onOpenLead={handleOpenLead} refreshKey={refreshKey} />
         </div>
       )}
 

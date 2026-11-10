@@ -1,0 +1,437 @@
+[
+ {
+  "code": "ZoeSu",
+  "label": "华南-苏瑜",
+  "cat": "华南"
+ },
+ {
+  "code": "QJYi",
+  "label": "华南-邱静怡",
+  "cat": "华南"
+ },
+ {
+  "code": "YYXiang",
+  "label": "华南-于耀翔",
+  "cat": "华南"
+ },
+ {
+  "code": "liuying",
+  "label": "华南-刘颖",
+  "cat": "华南"
+ },
+ {
+  "code": "junxian",
+  "label": "华南-李君贤",
+  "cat": "华南"
+ },
+ {
+  "code": "Willa",
+  "label": "华南-郭志伟",
+  "cat": "华南"
+ },
+ {
+  "code": "Beal",
+  "label": "华南-梁彪",
+  "cat": "华南"
+ },
+ {
+  "code": "zhuchen",
+  "label": "宝洁-朱晨",
+  "cat": "宝洁"
+ },
+ {
+  "code": "lujiaxin",
+  "label": "宝洁-卢嘉欣",
+  "cat": "宝洁"
+ },
+ {
+  "code": "ZXXin",
+  "label": "宝洁-张欣欣",
+  "cat": "宝洁"
+ },
+ {
+  "code": "Lukas",
+  "label": "宝洁-徐智钊",
+  "cat": "宝洁"
+ },
+ {
+  "code": "ZYMeng",
+  "label": "宝洁-张宇萌",
+  "cat": "宝洁"
+ },
+ {
+  "code": "liliyan",
+  "label": "港澳-李立岩",
+  "cat": "港澳"
+ },
+ {
+  "code": "ZQPeng",
+  "label": "港澳-张启朋",
+  "cat": "港澳"
+ },
+ {
+  "code": "AmyZhang",
+  "label": "港澳-张晓",
+  "cat": "港澳"
+ },
+ {
+  "code": "Jimmy",
+  "label": "港澳-阮靖宇",
+  "cat": "港澳"
+ },
+ {
+  "code": "lisisi",
+  "label": "港澳-李思思",
+  "cat": "港澳"
+ },
+ {
+  "code": "xusilei",
+  "label": "港澳-徐丝蕾",
+  "cat": "港澳"
+ },
+ {
+  "code": "Peter",
+  "label": "港澳-陈仕祺",
+  "cat": "港澳"
+ },
+ {
+  "code": "zhangli",
+  "label": "营销生态-张丽",
+  "cat": "营销生态"
+ },
+ {
+  "code": "lichao",
+  "label": "营销生态-李超",
+  "cat": "营销生态"
+ },
+ {
+  "code": "ZXMeng",
+  "label": "营销生态-朱翾蒙",
+  "cat": "营销生态"
+ },
+ {
+  "code": "WYJie",
+  "label": "营销生态-王玉洁",
+  "cat": "营销生态"
+ },
+ {
+  "code": "lileshan",
+  "label": "营销生态-李乐珊",
+  "cat": "营销生态"
+ },
+ {
+  "code": "ruanlin",
+  "label": "营销生态-阮琳",
+  "cat": "营销生态"
+ },
+ {
+  "code": "shaohuan",
+  "label": "营销生态-邵欢",
+  "cat": "营销生态"
+ },
+ {
+  "code": "XZYang",
+  "label": "营销生态-相子阳",
+  "cat": "营销生态"
+ },
+ {
+  "code": "YXYa",
+  "label": "营销生态-苑晓雅",
+  "cat": "营销生态"
+ },
+ {
+  "code": "zhaoying",
+  "label": "营销生态-赵莹",
+  "cat": "营销生态"
+ },
+ {
+  "code": "Charlie",
+  "label": "营销生态-李永贵",
+  "cat": "营销生态"
+ },
+ {
+  "code": "Maggie",
+  "label": "华北-马文杰",
+  "cat": "华北"
+ },
+ {
+  "code": "Cathie",
+  "label": "华北-杨煦",
+  "cat": "华北"
+ },
+ {
+  "code": "CQing",
+  "label": "华北-常青",
+  "cat": "华北"
+ },
+ {
+  "code": "haoqiang",
+  "label": "华北-郝强",
+  "cat": "华北"
+ },
+ {
+  "code": "LTTing",
+  "label": "华北-吕婷婷",
+  "cat": "华北"
+ },
+ {
+  "code": "maoxinyu",
+  "label": "华北-毛新宇",
+  "cat": "华北"
+ },
+ {
+  "code": "BXMing",
+  "label": "华北-白新明",
+  "cat": "华北"
+ },
+ {
+  "code": "pangke",
+  "label": "华北-庞可",
+  "cat": "华北"
+ },
+ {
+  "code": "RSheng",
+  "label": "华北-荣生",
+  "cat": "华北"
+ },
+ {
+  "code": "wangyao",
+  "label": "华北-王遥",
+  "cat": "华北"
+ },
+ {
+  "code": "Dennis",
+  "label": "华北-顾敏俊",
+  "cat": "华北"
+ },
+ {
+  "code": "QDBo",
+  "label": "华北-齐冬博",
+  "cat": "华北"
+ },
+ {
+  "code": "JoeWang",
+  "label": "华东1-王佼佼",
+  "cat": "华东1（01）"
+ },
+ {
+  "code": "WXDong",
+  "label": "华东1-王旭东",
+  "cat": "华东1（01）"
+ },
+ {
+  "code": "lixinlun",
+  "label": "华东1-李新伦",
+  "cat": "华东1（01）"
+ },
+ {
+  "code": "liyang",
+  "label": "华东1-李阳",
+  "cat": "华东1（01）"
+ },
+ {
+  "code": "ZFLong",
+  "label": "华东1-周飞龙",
+  "cat": "华东1（01）"
+ },
+ {
+  "code": "VanGao",
+  "label": "华东1-高鑫凯",
+  "cat": "华东1（01）"
+ },
+ {
+  "code": "feifei",
+  "label": "华东1-费飞",
+  "cat": "华东1（01）"
+ },
+ {
+  "code": "YSLing",
+  "label": "华东1-岳胜玲",
+  "cat": "华东1（01）"
+ },
+ {
+  "code": "Molly",
+  "label": "华东1-秦玉立",
+  "cat": "华东1（01）"
+ },
+ {
+  "code": "SGMin",
+  "label": "华东1-单高敏",
+  "cat": "华东1（02）"
+ },
+ {
+  "code": "XXMin",
+  "label": "华东1-胥孝敏",
+  "cat": "华东1（02）"
+ },
+ {
+  "code": "zhangjie",
+  "label": "华东1-张杰",
+  "cat": "华东1（02）"
+ },
+ {
+  "code": "Echo",
+  "label": "华东1-张珂",
+  "cat": "华东1（售前）"
+ },
+ {
+  "code": "ZXian",
+  "label": "华东1-张弦",
+  "cat": "华东1（售前）"
+ },
+ {
+  "code": "Connie",
+  "label": "华东2-黄婷",
+  "cat": "华东2"
+ },
+ {
+  "code": "Stanley",
+  "label": "华东2-谈仁君",
+  "cat": "华东2"
+ },
+ {
+  "code": "Domo",
+  "label": "华东2-王冬昊",
+  "cat": "华东2"
+ },
+ {
+  "code": "Adam",
+  "label": "华东2-杨帆",
+  "cat": "华东2"
+ },
+ {
+  "code": "CYZu",
+  "label": "华东2-陈彦竹",
+  "cat": "华东2"
+ },
+ {
+  "code": "sunsija",
+  "label": "华东2-孙思佳",
+  "cat": "华东2"
+ },
+ {
+  "code": "Lucia",
+  "label": "华东2-卢悦",
+  "cat": "华东2"
+ },
+ {
+  "code": "Ryan",
+  "label": "华东2-丁家琪",
+  "cat": "华东2"
+ },
+ {
+  "code": "lehao",
+  "label": "华东2-乐浩",
+  "cat": "华东2"
+ },
+ {
+  "code": "Samuel",
+  "label": "渠道-王智聪",
+  "cat": "渠道"
+ },
+ {
+  "code": "Leon",
+  "label": "渠道-李俊杰",
+  "cat": "渠道"
+ },
+ {
+  "code": "JoyLi",
+  "label": "渠道-李佳然",
+  "cat": "渠道"
+ },
+ {
+  "code": "Alexia",
+  "label": "渠道-夏凤含",
+  "cat": "渠道"
+ },
+ {
+  "code": "Monica",
+  "label": "渠道-姚雨婷",
+  "cat": "渠道"
+ },
+ {
+  "code": "Katherin",
+  "label": "欧莱雅-Katherine",
+  "cat": "欧莱雅"
+ },
+ {
+  "code": "明略",
+  "label": "明略官微文章",
+  "cat": "市场部"
+ },
+ {
+  "code": "agenda",
+  "label": "agenda长图",
+  "cat": "市场部"
+ },
+ {
+  "code": "明略",
+  "label": "明略公众号关键词回复",
+  "cat": "市场部"
+ },
+ {
+  "code": "yxkxy",
+  "label": "营销科学院官微",
+  "cat": "市场部"
+ },
+ {
+  "code": "rednote",
+  "label": "秒针小红书",
+  "cat": "市场部"
+ },
+ {
+  "code": "mzedm",
+  "label": "秒针edm",
+  "cat": "市场部"
+ },
+ {
+  "code": "mzpage",
+  "label": "秒针官网",
+  "cat": "市场部"
+ },
+ {
+  "code": "banner",
+  "label": "秒针公众号顶部Banner",
+  "cat": "市场部"
+ },
+ {
+  "code": "sunfangc",
+  "label": "孙方超",
+  "cat": "管理中心"
+ },
+ {
+  "code": "zhaojie",
+  "label": "赵老师",
+  "cat": "管理中心"
+ },
+ {
+  "code": "gouzhu",
+  "label": "沟主",
+  "cat": "管理中心"
+ },
+ {
+  "code": "yeying",
+  "label": "夜莺科技",
+  "cat": "夜莺科技"
+ },
+ {
+  "code": "0123",
+  "label": "零壹贰叁",
+  "cat": "零壹贰叁"
+ },
+ {
+  "code": "poquan",
+  "label": "破圈",
+  "cat": "破圈"
+ },
+ {
+  "code": "jcma",
+  "label": "极创美奥",
+  "cat": "极创美奥"
+ },
+ {
+  "code": "jinshuju",
+  "label": "金数据",
+  "cat": "金数据"
+ }
+]

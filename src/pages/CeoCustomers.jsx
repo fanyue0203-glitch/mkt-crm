@@ -207,52 +207,46 @@ function NewCustomerModal({ events, onSaved }) {
 export default function CeoCustomers() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [data, setData] = useState(null);
+  const [allData, setAllData] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [eventFilter, setEventFilter] = useState(searchParams.get('event') || '');
-  const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [sortKey, setSortKey] = useState('add_time');
+  const [sortDir, setSortDir] = useState('desc');
+  const [colFilters, setColFilters] = useState({});
 
   const refresh = () => { setLoading(true); loadData(); };
   const loadData = useCallback(() => {
-    const params = new URLSearchParams();
-    if (eventFilter) params.set('event_id', eventFilter);
-    if (search) params.set('search', search);
-    params.set('page', page); params.set('limit', 50);
-    api('/api/ceo/customers?' + params).then(d => { setData(d); setLoading(false); })
+    // 一次加载全量
+    api('/api/ceo/customers?limit=2000&page=1').then(d => { setAllData(d); setLoading(false); })
       .catch(e => { setError(e); setLoading(false); });
-  }, [eventFilter, search, page]);
+  }, []);
 
   useEffect(() => {
     setHeader('👥 CEO获客·客户明细', <>
       <button className="btn btn-secondary" onClick={() => navigate('/ceo-events')}>← 返回看板</button>
     </>);
-  }, []);
+    loadData();
+  }, [loadData]);
 
-  useEffect(() => { loadData(); if (eventFilter) setSearchParams({ event: eventFilter }); else setSearchParams({}); }, [eventFilter, search, page, loadData, setSearchParams]);
+  useEffect(() => {
+    if (eventFilter) setSearchParams({ event: eventFilter });
+    else setSearchParams({});
+  }, [eventFilter, setSearchParams]);
 
   if (error) return <Err error={error} />;
 
-  const byEvent = data?.byEvent || [];
-  const items = data?.data || [];
-  const total = data?.total || 0;
-  const totalPages = Math.ceil(total / 50) || 1;
+  const byEvent = allData?.byEvent || [];
+  const allItems = allData?.data || [];
 
-  // 汇总漏斗数据（从byEvent取，确保和看板一致）
-  const summary = byEvent.reduce((s, ev) => ({
-    wechat: s.wechat + (ev.wechat_followers || 0),
-    reg: s.reg + (ev.registrations || 0),
-    act: s.act + (ev.activations || 0),
-    sql: s.sql + (ev.sql_count || 0),
-  }), { wechat: 0, reg: 0, act: 0, sql: 0 });
-
-  const shortName = (n) => (n || '')
-    .replace('《', '').replace('》', '').replace('-octo体验', '')
-    .replace('20260808', '').replace('0825', '')
-    .replace('国有企业领导人员经营管理培训班', 'EMP')
-    .replace('全球AI生态与创新峰会', 'AI生态峰会')
-    .replace('Octo产品发布（明略公众号）', '产品发布');
+  function toggleSort(key) {
+    if (sortKey === key) setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    else { setSortKey(key); setSortDir('asc'); }
+  }
+  function setCol(k,v){ setColFilters(p=>({...p,[k]:v})); }
+  function clearAll(){ setSearch(''); setEventFilter(''); setStatusFilter(''); setColFilters({}); }
 
   function getStatus(r) {
     if (r.communication) return r.communication.startsWith('已转出') ? '已转出'
@@ -262,83 +256,119 @@ export default function CeoCustomers() {
     return r.status || '待跟进';
   }
 
+  // 前端筛选+排序
+  let items = allItems.map(r => ({ ...r, _status: getStatus(r) }));
+  if (eventFilter) items = items.filter(r => String(r.event_id) === String(eventFilter));
+  if (statusFilter) items = items.filter(r => r._status === statusFilter);
+  if (search) {
+    const s = search.toLowerCase();
+    items = items.filter(r => (r.wechat_nickname||'').toLowerCase().includes(s) || (r.contact_name||'').toLowerCase().includes(s) || (r.company_name||'').toLowerCase().includes(s) || (r.phone||'').includes(s) || (r.product||'').toLowerCase().includes(s) || (r.tags||'').toLowerCase().includes(s));
+  }
+  for (const [k,v] of Object.entries(colFilters)) {
+    if (!v) continue;
+    const lv = v.toLowerCase();
+    items = items.filter(r => String(r[k]||'').toLowerCase().includes(lv));
+  }
+  items = [...items].sort((a,b)=>{
+    let va=a[sortKey],vb=b[sortKey];
+    if(va==null)va='';if(vb==null)vb='';
+    const cmp=String(va).localeCompare(String(vb),'zh');
+    return sortDir==='asc'?cmp:-cmp;
+  });
+
+  const total = items.length;
+  const activeFilters = (search?1:0)+(eventFilter?1:0)+(statusFilter?1:0)+Object.values(colFilters).filter(Boolean).length;
+
+  const statusOpts = ['待跟进','已联系','已沟通','已转出','无效'];
+
   async function viewCustomer(r) {
     if (typeof r.id === 'number') {
       try { r = await api('/api/ceo/weiban/' + r.id); } catch (e) { toast(e.message, 'error'); return; }
     }
     openModal(<CustomerDetailModal customer={r} events={byEvent} onSaved={refresh} onDeleted={refresh} />);
   }
-
   function addNew() { openModal(<NewCustomerModal events={byEvent} onSaved={refresh} />); }
+
+  const COLS = [
+    {key:'wechat_nickname',label:'微信昵称',w:140,sortable:true,filterable:true},
+    {key:'contact_name',label:'姓名',w:90,sortable:true,filterable:true},
+    {key:'company_name',label:'公司',w:160,sortable:true,filterable:true},
+    {key:'contact_title',label:'职位',w:100,sortable:true,filterable:true},
+    {key:'phone',label:'电话',w:110,sortable:true,filterable:true},
+    {key:'event_name',label:'所属活动',w:160,sortable:true,filterable:true},
+    {key:'product',label:'产品',w:100,sortable:true,filterable:true},
+    {key:'add_time',label:'添加时间',w:100,sortable:true,filterable:false},
+    {key:'_status',label:'状态',w:80,sortable:true,filterable:false},
+    {key:'customer_service',label:'分配',w:90,sortable:true,filterable:true},
+  ];
+
+  const SortIc = ({k}) => sortKey!==k ? <span style={{color:'var(--text-muted)',opacity:.3,marginLeft:3}}>↕</span> : <span style={{color:'var(--accent-light)',marginLeft:3}}>{sortDir==='asc'?'↑':'↓'}</span>;
+  const renderTh = col => {
+    if(!col.filterable) return <th key={col.key} style={{width:col.w,minWidth:col.w}} onClick={()=>col.sortable&&toggleSort(col.key)}>{col.label}{col.sortable&&<SortIc k={col.key}/>}</th>;
+    return <th key={col.key} style={{width:col.w,minWidth:col.w}}>
+      <div className="th-col"><span className="th-label" onClick={()=>col.sortable&&toggleSort(col.key)}>{col.label}<SortIc k={col.key}/></span>
+      <input className="th-filter-input" placeholder="筛选..." value={colFilters[col.key]||''} onChange={e=>setCol(col.key,e.target.value)}/></div>
+    </th>;
+  };
+
+  const shortName = (n) => (n||'').replace('《','').replace('》','').replace('-octo体验','').replace('20260808','').replace('0825','').replace('国有企业领导人员经营管理培训班','EMP').replace('全球AI生态与创新峰会','AI生态峰会').replace('Octo产品发布（明略公众号）','产品发布');
 
   return (
     <>
-      <div style={{ position: 'sticky', top: 56, zIndex: 40, background: 'var(--bg)', paddingTop: 4 }}>
-        <div className="tabs" style={{ marginBottom: 12 }}>
-          <div className="tab" onClick={() => navigate('/ceo-events')} style={{ cursor: 'pointer' }}>📊 数据分析看板</div>
-          <div className="tab active">👥 客户明细</div>
-        </div>
-
-        <div className="card" style={{ marginBottom: 12 }}>
-          <div className="card-body" style={{ padding: '12px 16px' }}>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-              <input type="text" placeholder="🔍 搜索公司/昵称/姓名/电话/产品/标签..." value={search}
-                onChange={e => { setSearch(e.target.value); setPage(1); }}
-                style={{ flex: 1, minWidth: 200, maxWidth: 400 }} />
-              <select value={eventFilter} onChange={e => { setEventFilter(e.target.value); setPage(1); }} style={{ minWidth: 180 }}>
-                <option value="">全部活动（{total}条）</option>
-                {byEvent.map(ev => <option key={ev.id} value={ev.id}>{shortName(ev.name)}（{ev.cnt || 0}）</option>)}
-              </select>
-              <button className="btn btn-primary btn-sm" onClick={addNew}>+ 新增客户</button>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 'auto' }}>共{total}条·{page}/{totalPages}页</span>
-            </div>
-          </div>
+      <div className="ceo-cust-tabs">
+        <div className="tab" onClick={() => navigate('/ceo-events')} style={{ cursor: 'pointer' }}>📊 数据分析看板</div>
+        <div className="tab active">👥 客户明细</div>
+      </div>
+      <div className="acct-filter-bar" style={{top:'calc(var(--header-h) + 38px)'}}>
+        <div className="search-bar">
+          <input type="text" placeholder="🔍 搜索公司/昵称/姓名/电话/产品..." value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:320}}/>
+          <select value={eventFilter} onChange={e=>setEventFilter(e.target.value)} style={{minWidth:160}}>
+            <option value="">全部活动</option>
+            {byEvent.map(ev=><option key={ev.id} value={ev.id}>{shortName(ev.name)}({ev.cnt||0})</option>)}
+          </select>
+          <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
+            <option value="">全部状态</option>
+            {statusOpts.map(s=><option key={s} value={s}>{s}</option>)}
+          </select>
+          <button className="btn btn-sm btn-primary" onClick={addNew}>+ 新增客户</button>
+          {activeFilters>0 && <button className="btn btn-sm btn-secondary" onClick={clearAll}>清除({activeFilters})</button>}
+          <span style={{marginLeft:'auto',fontSize:12,color:'var(--text-muted)'}}>共 {total} 条</span>
         </div>
       </div>
 
-      {loading ? <Loading /> : (
-        <div className="card">
-          <div className="card-body" style={{ padding: 0, overflowX: 'auto' }}>
-            {items.length ? (
-              <table>
-                <tr><th>#</th><th>微信昵称</th><th>姓名</th><th>公司</th><th>职位</th><th>电话</th><th>所属活动</th><th>产品</th><th>添加时间</th><th>状态</th><th>分配</th><th>操作</th></tr>
-                {items.map((r, i) => {
-                  const st = getStatus(r);
-                  const phone = r.phone || (r._lead?.phone || '');
-                  const title = r.contact_title || (r._lead?.contact_title || '');
-                  const product = r.product || (r._lead?.product || '');
-                  const assigned = r.customer_service || r.assigned_to || r.owner || '';
+      {loading?<Loading/>:(
+        <div className="card"><div className="leads-table-wrap">
+          {items.length?(
+            <table className="acct-table">
+              <thead><tr className="acct-thead">{COLS.map(renderTh)}<th style={{width:60,minWidth:60}}>操作</th></tr></thead>
+              <tbody>
+                {items.map((r,i)=>{
+                  const phone=r.phone||(r._lead?.phone||'');
+                  const title=r.contact_title||(r._lead?.contact_title||'');
+                  const product=r.product||(r._lead?.product||'');
+                  const assigned=r.customer_service||r.assigned_to||r.owner||'';
                   return (
-                    <tr key={r.id} className="clickable-row" onClick={() => viewCustomer(r)}>
-                      <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{(page - 1) * 50 + i + 1}</td>
-                      <td>{r.wechat_nickname ? <strong>👤 {r.wechat_nickname}</strong> : <span style={{ color: 'var(--text-muted)' }}>—</span>}</td>
-                      <td>{r.contact_name || <span style={{ color: 'var(--text-muted)' }}>—</span>}</td>
-                      <td><strong>{r.company_name || <span style={{ color: 'var(--text-muted)' }}>—</span>}</strong></td>
-                      <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{title || '—'}</td>
-                      <td style={{ fontSize: 12 }}>{phone || '—'}</td>
-                      <td><span className="tag tag-blue" style={{ fontSize: 11 }}>{shortName(r.event_name)}</span></td>
-                      <td style={{ fontSize: 12 }}>{product || '—'}</td>
-                      <td style={{ fontSize: 12 }}>{r.add_time ? String(r.add_time).substring(0, 10) : '—'}</td>
-                      <td><StatusTag s={st} /></td>
-                      <td style={{ fontSize: 12 }}>{assigned || <span style={{ color: 'var(--text-muted)' }}>—</span>}</td>
-                      <td style={{ whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
-                        <button className="btn-link" onClick={() => viewCustomer(r)}>详情</button>
+                    <tr key={r.id} className="clickable-row" onClick={()=>viewCustomer(r)}>
+                      <td>{r.wechat_nickname?<strong>👤 {r.wechat_nickname}</strong>:<span style={{color:'var(--text-muted)'}}>—</span>}</td>
+                      <td>{r.contact_name||<span style={{color:'var(--text-muted)'}}>—</span>}</td>
+                      <td><strong>{r.company_name||<span style={{color:'var(--text-muted)'}}>—</span>}</strong></td>
+                      <td style={{fontSize:12,color:'var(--text-secondary)'}}>{title||'—'}</td>
+                      <td style={{fontSize:12}}>{phone||'—'}</td>
+                      <td><span className="tag tag-blue" style={{fontSize:11}}>{shortName(r.event_name)}</span></td>
+                      <td style={{fontSize:12}}>{product||'—'}</td>
+                      <td style={{fontSize:12}}>{r.add_time?String(r.add_time).substring(0,10):'—'}</td>
+                      <td><StatusTag s={r._status}/></td>
+                      <td style={{fontSize:12}}>{assigned||<span style={{color:'var(--text-muted)'}}>—</span>}</td>
+                      <td style={{whiteSpace:'nowrap'}} onClick={e=>e.stopPropagation()}>
+                        <button className="btn-link" onClick={()=>viewCustomer(r)}>详情</button>
                       </td>
                     </tr>
                   );
                 })}
-              </table>
-            ) : <div className="empty-state" style={{ padding: 32 }}><p>暂无客户数据</p></div>}
-          </div>
-        </div>
-      )}
-
-      {totalPages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 16 }}>
-          <button className="btn btn-sm btn-secondary" disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={{ opacity: page <= 1 ? 0.4 : 1 }}>← 上页</button>
-          <span style={{ fontSize: 13, color: 'var(--text-secondary)', padding: '4px 8px' }}>{page}/{totalPages}</span>
-          <button className="btn btn-sm btn-secondary" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} style={{ opacity: page >= totalPages ? 0.4 : 1 }}>下页 →</button>
-        </div>
+              </tbody>
+            </table>
+          ):<div className="empty-state" style={{padding:32}}><p>暂无匹配客户</p></div>}
+        </div></div>
       )}
     </>
   );

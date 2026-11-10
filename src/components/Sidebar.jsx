@@ -23,7 +23,7 @@ export default function Sidebar() {
         <div className="nav-section">
           <div className="nav-section-title">业务板块</div>
           <NavLink to="/ceo-events" className={navItemClass} data-page="ceo-events" end>
-            <span className="icon">🎤</span>CEO获客<span className="badge">{badges.speeches}</span>
+            <span className="icon">🎤</span>辉哥演讲<span className="badge">{badges.speeches}</span>
           </NavLink>
           <NavLink to="/octo" className={navItemClass} data-page="octo-summary">
             <span className="icon">🐙</span>Octo大客户
@@ -31,6 +31,12 @@ export default function Sidebar() {
           </NavLink>
           <NavLink to="/funnel" className={navItemClass} data-page="funnel">
             <span className="icon">🔄</span>线索转化漏斗<span className="badge">{badges.leads}</span>
+          </NavLink>
+          <NavLink to="/marketing-campaign" className={navItemClass} data-page="marketing-campaign">
+            <span className="icon">📣</span>市场营销活动获客
+          </NavLink>
+          <NavLink to="/marketing-campaign/registration" className={navItemClass} data-page="marketing-registration">
+            <span className="icon">🎯</span>营销大会报名看板
           </NavLink>
         </div>
         <div className="nav-section">

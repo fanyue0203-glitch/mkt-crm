@@ -299,14 +299,44 @@ export default function AccountReport() {
     </>
   );
 
+  // ===== 联系人分组：语义匹配角色层级 =====
+  const classifyContact = (c) => {
+    const rl = (c.role_level || '') + (c.department || '') + (c.title || '');
+    // 我方团队
+    if (/明略|我方|BD负责|大客户负责|CEO$|HR线负责|技术对接|财务方案/.test(rl)) return 'our';
+    // 客户方决策层
+    if (/董事长|总裁|副总裁|最高决策|二号人物|新生代高管/.test(rl)) return 'decision';
+    // 客户方管理层/牵头人
+    if (/总监|部长|负责人|牵头|推手|引荐|管理层/.test(rl)) return 'management';
+    // 客户方执行/技术层
+    if (/经理|工程师|架构师|产品经理|执行层|技术线|积极分子|超级玩家/.test(rl)) return 'execution';
+    // 生态/其他
+    if (/树根|生态/.test(rl)) return 'eco';
+    return 'other';
+  };
+
   // ===== 联系人 tab =====
   const renderContacts = () => {
     const groups = [
-      { key: '决策层', icon: '👑', cls: 'cg-decision' },
-      { key: '管理层', icon: '💼', cls: 'cg-management' },
-      { key: '执行层', icon: '⚙️', cls: 'cg-execution' },
+      { key: 'decision', label: '👑 客户决策层', cls: 'cg-decision' },
+      { key: 'management', label: '💼 客户管理层/牵头人', cls: 'cg-management' },
+      { key: 'execution', label: '⚙️ 客户执行/技术层', cls: 'cg-execution' },
+      { key: 'eco', label: '🔗 生态/关联方', cls: '' },
+      { key: 'our', label: '🏢 我方团队', cls: '' },
+      { key: 'other', label: '📋 其他', cls: '' },
     ];
-    const ungrouped = contacts.filter(c => !c.role_level);
+    const classified = {};
+    contacts.forEach(c => {
+      const cat = classifyContact(c);
+      if (!classified[cat]) classified[cat] = [];
+      classified[cat].push(c);
+    });
+    const groupStyle = (key) => {
+      if (key === 'our') return { background: 'rgba(59,130,246,.08)', borderLeft: '3px solid #3b82f6', color: '#3b82f6' };
+      if (key === 'eco') return { background: 'rgba(139,92,246,.08)', borderLeft: '3px solid #8b5cf6', color: '#8b5cf6' };
+      if (key === 'other') return { background: 'rgba(100,116,139,.1)', borderLeft: '3px solid var(--text-muted)', color: 'var(--text-muted)' };
+      return null;
+    };
     return (
       <>
         <div style={{ marginBottom: 16 }}><button className="btn btn-primary" onClick={() => openContactForm(null)}>+ 新增联系人</button></div>
@@ -315,25 +345,18 @@ export default function AccountReport() {
         ) : (
           <>
             {groups.map(g => {
-              const list = contacts.filter(c => c.role_level === g.key);
+              const list = classified[g.key] || [];
               if (!list.length) return null;
+              const style = groupStyle(g.key);
               return (
                 <div className="contact-group" key={g.key}>
-                  <div className={`contact-group-header ${g.cls}`}>{g.icon} {g.key} ({list.length}人)</div>
+                  <div className={`contact-group-header ${g.cls}`} style={style}>{g.label} ({list.length}人)</div>
                   <div className="contact-group-body">
                     {list.map(c => <ContactPersonCard key={c.id} c={c} onEdit={openContactForm} onDelete={deleteContact} />)}
                   </div>
                 </div>
               );
             })}
-            {ungrouped.length ? (
-              <div className="contact-group">
-                <div className="contact-group-header" style={{ background: 'rgba(100,116,139,.1)', borderLeft: '3px solid var(--text-muted)', color: 'var(--text-muted)' }}>📋 未分级 ({ungrouped.length}人)</div>
-                <div className="contact-group-body">
-                  {ungrouped.map(c => <ContactPersonCard key={c.id} c={c} onEdit={openContactForm} onDelete={deleteContact} />)}
-                </div>
-              </div>
-            ) : null}
           </>
         )}
       </>

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MKT-CRM 登录</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+.card{width:360px;padding:36px 32px;background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.35)}
+h1{margin:0 0 6px;font-size:20px;color:#0f172a;letter-spacing:.5px}
+p.sub{margin:0 0 26px;font-size:13px;color:#64748b}
+label{display:block;font-size:13px;color:#334155;margin-bottom:8px;font-weight:500}
+input{width:100%;padding:11px 13px;border:1px solid #cbd5e1;border-radius:9px;font-size:14px;outline:none;transition:.15s}
+input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.14)}
+button{width:100%;margin-top:20px;padding:12px;border:none;border-radius:9px;background:#2563eb;color:#fff;font-size:15px;font-weight:600;cursor:pointer;transition:.15s}
+button:hover{background:#1d4ed8}
+button:disabled{background:#94a3b8;cursor:not-allowed}
+.msg{margin-top:14px;font-size:13px;min-height:18px;text-align:center}
+.msg.err{color:#dc2626}.msg.ok{color:#16a34a}
+</style></head>
+<body>
+<form class="card" id="f">
+  <h1>MKT-CRM</h1>
+  <p class="sub">市场部 AI-Native 工作台</p>
+  <label for="pw">访问口令</label>
+  <input id="pw" type="password" autocomplete="current-password" placeholder="请输入口令" required autofocus>
+  <button id="btn" type="submit">登 录</button>
+  <div class="msg" id="m"></div>
+</form>
+<script>
+const f=document.getElementById('f'),pw=document.getElementById('pw'),btn=document.getElementById('btn'),m=document.getElementById('m');
+f.addEventListener('submit',async e=>{
+  e.preventDefault(); m.className='msg'; m.textContent=''; btn.disabled=true; btn.textContent='验证中…';
+  try{
+    const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw.value})});
+    const d=await r.json().catch(()=>({}));
+    if(r.ok){ m.className='msg ok'; m.textContent='登录成功，正在进入…'; location.replace('/'); return; }
+    m.className='msg err';
+    m.textContent = r.status===429 ? '尝试过于频繁，请一分钟后再试' : (d.error||'口令错误');
+    pw.value=''; pw.focus();
+  }catch(err){ m.className='msg err'; m.textContent='网络异常，请重试'; }
+  btn.disabled=false; btn.textContent='登 录';
+});
+</script>
+</body></html>

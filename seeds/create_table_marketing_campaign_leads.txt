@@ -1,0 +1,40 @@
+-- MKT-CRM 新板块：市场营销活动获客
+-- 建表SQL（SQLite）
+-- 2026-10-27 搭子君
+
+-- 主表：内容营销线索
+CREATE TABLE IF NOT EXISTS marketing_campaign_leads (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    
+    -- 原始字段（与原表一一对应，不改动）
+    created_date    TEXT,           -- 创建时间（原值，如"2026年2月6日"）
+    industry_raw    TEXT,           -- 客户所属行业（原值，55种细分）
+    contact_name    TEXT NOT NULL,  -- 姓名
+    company_name    TEXT NOT NULL,  -- 企业简称
+    needs_text      TEXT,           -- 具体合作需求（原文）
+    campaign_name   TEXT,           -- 市场活动名称
+    registrar       TEXT,           -- Leads登记人
+    phone           TEXT,           -- 联系方式
+    province        TEXT,           -- 省
+    city            TEXT,           -- 市
+    
+    -- 系统衍生标签字段（自动生成，可人工修正）
+    industry_group  TEXT,           -- 行业_一级（19种归类）
+    product_interest TEXT,          -- 意向产品线（多值，竖线分隔，如"GEO|种草/DOMO"）
+    source_type     TEXT,           -- 内容来源类型（5种：白皮书/报告下载、公众号内容获客、线下活动、产品试用申请、社交获客）
+    customer_type   TEXT,           -- 客户类型（=原表行业值）
+    
+    -- 系统字段
+    imported_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    
+    -- 去重用
+    UNIQUE(phone, company_name)
+);
+
+-- 索引：支持高频筛选
+CREATE INDEX IF NOT EXISTS idx_mcl_industry_group   ON marketing_campaign_leads(industry_group);
+CREATE INDEX IF NOT EXISTS idx_mcl_source_type      ON marketing_campaign_leads(source_type);
+CREATE INDEX IF NOT EXISTS idx_mcl_campaign_name     ON marketing_campaign_leads(campaign_name);
+CREATE INDEX IF NOT EXISTS idx_mcl_province          ON marketing_campaign_leads(province);
+CREATE INDEX IF NOT EXISTS idx_mcl_created_date      ON marketing_campaign_leads(created_date);

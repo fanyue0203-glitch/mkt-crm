@@ -13,9 +13,18 @@ const PIPELINE_COLS = [
 ];
 
 const progressMap = { 'B类重点推进': 20, '重点推进': 20, 'C类跟进': 15, '跟进中': 15, 'D类观察': 10, '观察': 10, 'POC中': 35, '投标中': 55, '交付中': 75, '已签约': 100, '战败': 0, '放弃': 0 };
+function getProgress(stage) {
+  if (!stage) return 20;
+  if (progressMap[stage] !== undefined) return progressMap[stage];
+  // prefix match for stages like "B类重点推进-高层互动完成"
+  for (const [k, v] of Object.entries(progressMap)) {
+    if (stage.startsWith(k)) return v;
+  }
+  return (40 + ((stage.length * 17 + 7) % 51));
+}
 
 function PipelineCard({ a, colColor, onClick }) {
-  const progress = progressMap[a.customer_stage] !== undefined ? progressMap[a.customer_stage] : (40 + ((a.id * 17 + 7) % 51));
+  const progress = getProgress(a.customer_stage);
   const desc = a.product_solutions_detail || a.needs_summary || a.next_step || '';
   const shortDesc = desc.length > 40 ? desc.slice(0, 40) + '...' : desc;
   return (
@@ -67,8 +76,8 @@ export default function OctoPipeline() {
   if (!data) return <Loading />;
 
   const allAccounts = data.data || [];
-  const activeAccounts = allAccounts.filter(a => a.customer_stage && !['战败', '放弃'].includes(a.customer_stage));
-  const signedCount = allAccounts.filter(a => a.customer_stage === '已签约').length;
+  const activeAccounts = allAccounts.filter(a => a.customer_stage && !['战败', '放弃'].some(s => a.customer_stage.startsWith(s)));
+  const signedCount = allAccounts.filter(a => a.customer_stage && a.customer_stage.startsWith('已签约')).length;
   const pipelineAmount = activeAccounts.reduce((s, a) => s + (a.deal_amount || 0), 0);
 
   return (
@@ -80,7 +89,7 @@ export default function OctoPipeline() {
       </div>
       <div className="kanban-board" ref={boardRef}>
         {PIPELINE_COLS.map(col => {
-          const items = allAccounts.filter(a => col.stages.includes(a.customer_stage));
+          const items = allAccounts.filter(a => col.stages.some(s => a.customer_stage && a.customer_stage.startsWith(s)));
           const isHighlighted = highlightStage && col.stages.includes(highlightStage);
           return (
             <div className={'kanban-column' + (isHighlighted ? ' col-highlighted' : '')} key={col.title} id={'kanban-col-' + col.title}>

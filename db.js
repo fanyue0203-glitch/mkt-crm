@@ -156,6 +156,41 @@ db.exec(`
     company_short_name TEXT DEFAULT ''
   );
 
+  -- 市场营销活动获客：内容/活动侧线索标签底表
+  CREATE TABLE IF NOT EXISTS marketing_campaign_leads (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    -- 原始字段（与原表一一对应，不改动）
+    created_date TEXT DEFAULT '',
+    industry_raw TEXT DEFAULT '',
+    contact_name TEXT NOT NULL DEFAULT '',
+    company_name TEXT NOT NULL DEFAULT '',
+    needs_text TEXT DEFAULT '',
+    campaign_name TEXT DEFAULT '',
+    registrar TEXT DEFAULT '',
+    phone TEXT DEFAULT '',
+    province TEXT DEFAULT '',
+    city TEXT DEFAULT '',
+
+    -- 系统衍生标签字段（自动生成，可人工修正）
+    industry_group TEXT DEFAULT '',
+    product_interest TEXT DEFAULT '',
+    source_type TEXT DEFAULT '',
+    customer_type TEXT DEFAULT '',
+
+    -- 系统字段
+    imported_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE(phone, company_name)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_mcl_industry_group ON marketing_campaign_leads(industry_group);
+  CREATE INDEX IF NOT EXISTS idx_mcl_source_type ON marketing_campaign_leads(source_type);
+  CREATE INDEX IF NOT EXISTS idx_mcl_campaign_name ON marketing_campaign_leads(campaign_name);
+  CREATE INDEX IF NOT EXISTS idx_mcl_province ON marketing_campaign_leads(province);
+  CREATE INDEX IF NOT EXISTS idx_mcl_created_date ON marketing_campaign_leads(created_date);
+
   CREATE TABLE IF NOT EXISTS edit_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     table_name TEXT NOT NULL,
@@ -204,8 +239,29 @@ db.exec(`
     role_level TEXT DEFAULT '',
     phone TEXT DEFAULT '',
     email TEXT DEFAULT '',
+    wechat TEXT DEFAULT '',
     is_champion INTEGER DEFAULT 0,
+    is_key_contact INTEGER DEFAULT 0,
+    decision_level TEXT DEFAULT '',
+    relationship_status TEXT DEFAULT '',
     notes TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now','localtime')),
+    updated_at TEXT DEFAULT (datetime('now','localtime'))
+  );
+
+  -- 客户推进时间线（独立于key_events，支持更丰富的跟进记录）
+  CREATE TABLE IF NOT EXISTS account_timeline (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    event_date TEXT DEFAULT '',
+    event_type TEXT DEFAULT '跟进' CHECK(event_type IN ('会议','电话','微信','邮件','投标','签约','部署','培训','里程碑','卡点','跟进','其他')),
+    title TEXT DEFAULT '',
+    content TEXT DEFAULT '',
+    participants TEXT DEFAULT '',
+    next_action TEXT DEFAULT '',
+    next_action_date TEXT DEFAULT '',
+    source TEXT DEFAULT '',
+    created_by TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now','localtime'))
   );
 `);
@@ -227,6 +283,57 @@ for (const [col, def] of Object.entries(needCols)) {
 // leads表补列：企业简称
 const leadCols = db.prepare("PRAGMA table_info(leads)").all().map(c=>c.name);
 if (!leadCols.includes('company_short_name')) db.exec("ALTER TABLE leads ADD COLUMN company_short_name TEXT DEFAULT ''");
+if (!leadCols.includes('is_valid')) db.exec("ALTER TABLE leads ADD COLUMN is_valid INTEGER DEFAULT 1");
+if (!leadCols.includes('is_claimed')) db.exec("ALTER TABLE leads ADD COLUMN is_claimed INTEGER DEFAULT 0");
+
+// account_contacts表补列
+const contactCols = db.prepare("PRAGMA table_info(account_contacts)").all().map(c=>c.name);
+const contactNeedCols = {
+  wechat: "TEXT DEFAULT ''",
+  is_key_contact: "INTEGER DEFAULT 0",
+  decision_level: "TEXT DEFAULT ''",
+  relationship_status: "TEXT DEFAULT ''",
+  updated_at: "TEXT DEFAULT ''"
+};
+for (const [col, def] of Object.entries(contactNeedCols)) {
+  if (!contactCols.includes(col)) db.exec(`ALTER TABLE account_contacts ADD COLUMN ${col} ${def}`);
+}
+db.exec("UPDATE account_contacts SET updated_at = created_at WHERE updated_at = '' OR updated_at IS NULL");
+db.exec("UPDATE account_contacts SET is_key_contact = 1 WHERE is_champion = 1 AND (is_key_contact IS NULL OR is_key_contact = 0)");
+
+// ===== SDR月度统计表（历史基线+实时更新）=====
+db.exec(`
+  CREATE TABLE IF NOT EXISTS sdr_monthly_stats (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    month TEXT NOT NULL UNIQUE,  -- YYYY-MM
+    inbound INTEGER DEFAULT 0,
+    valid INTEGER DEFAULT 0,
+    transferred INTEGER DEFAULT 0,
+    claimed INTEGER DEFAULT 0,
+    deals INTEGER DEFAULT 0,
+    won INTEGER DEFAULT 0,
+    updated_at TEXT DEFAULT (datetime('now','localtime'))
+  );
+`);
+
+// 基线数据：仅在空表时插入1-9月核实数据
+const monthCount = db.prepare('SELECT COUNT(*) as c FROM sdr_monthly_stats').get().c;
+if (monthCount === 0) {
+  const insertMonth = db.prepare(`INSERT INTO sdr_monthly_stats (month, inbound, valid, transferred, claimed, deals, won) VALUES (@month, @inbound, @valid, @transferred, @claimed, @deals, @won)`);
+  const baseline = [
+    {month:'2026-01',inbound:490,valid:216,transferred:75,claimed:75,deals:0,won:0},
+    {month:'2026-02',inbound:195,valid:128,transferred:45,claimed:45,deals:0,won:0},
+    {month:'2026-03',inbound:316,valid:235,transferred:71,claimed:71,deals:2,won:0},
+    {month:'2026-04',inbound:183,valid:99,transferred:70,claimed:70,deals:2,won:0},
+    {month:'2026-05',inbound:366,valid:76,transferred:65,claimed:63,deals:2,won:0},
+    {month:'2026-06',inbound:273,valid:91,transferred:72,claimed:64,deals:3,won:0},
+    {month:'2026-07',inbound:398,valid:62,transferred:60,claimed:60,deals:2,won:0},
+    {month:'2026-08',inbound:454,valid:64,transferred:59,claimed:59,deals:2,won:0},
+    {month:'2026-09',inbound:298,valid:298,transferred:60,claimed:60,deals:2,won:0},
+  ];
+  const insertAll = db.transaction(rows => rows.forEach(r => insertMonth.run(r)));
+  insertAll(baseline);
+}
 
 
 // ===== 种子数据：仅在空库时插入（防止重启重复导入）=====

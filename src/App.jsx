@@ -21,6 +21,8 @@ import Accounts from './pages/Accounts.jsx';
 import Funnel from './pages/Funnel.jsx';
 import CeoCustomers from './pages/CeoCustomers.jsx';
 import ImportPage from './pages/ImportPage.jsx';
+import MarketingCampaign, { MarketingLeads, MarketingLeadDetail, MarketingInsight, MarketingEventLeads } from './pages/MarketingCampaign.jsx';
+import MarketingRegDashboard from './pages/MarketingRegDashboard.jsx';
 
 function Header() {
   const header = useSyncExternalStore(subscribeHeader, getHeader);
@@ -65,6 +67,12 @@ export default function App() {
             <Route path="/octo/account/:id" element={<AccountReport />} />
             <Route path="/accounts" element={<Accounts />} />
             <Route path="/accounts/:id/detail" element={<Accounts mode="detail" />} />
+            <Route path="/marketing-campaign" element={<MarketingCampaign />} />
+            <Route path="/marketing-campaign/events/:campaign" element={<MarketingEventLeads />} />
+            <Route path="/marketing-campaign/leads" element={<MarketingLeads />} />
+            <Route path="/marketing-campaign/leads/:id" element={<MarketingLeadDetail />} />
+            <Route path="/marketing-campaign/insight" element={<MarketingInsight />} />
+            <Route path="/marketing-campaign/registration" element={<MarketingRegDashboard />} />
             <Route path="/funnel" element={<Funnel />} />
             <Route path="/import" element={<ImportPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />

@@ -461,54 +461,172 @@ function OctoDashboard({ d }) {
 }
 
 // ===== 全部客户列表 tab =====
+const TIER_OPTIONS = ['S','A','B','C','D'];
+const STAGE_OPTIONS = ['已签约','交付中','投标中','POC中','B类重点推进','C类跟进','D类观察','战败','放弃'];
+const INDUSTRY_GROUPS = ['制造业','医疗健康','金融投资','科技互联网','教育','央国企','快消','其他'];
+const HEALTH_OPTIONS = ['健康推进','有风险','静默极早期','战败冻结'];
+const COLUMNS = [
+  { key: 'tier', label: '等级', width: 50, sortable: true, filterable: true, filterType: 'select', options: TIER_OPTIONS },
+  { key: 'company_name', label: '客户名', width: 160, sortable: true, filterable: true, filterType: 'text' },
+  { key: 'industry', label: '行业', width: 140, sortable: true, filterable: true, filterType: 'text' },
+  { key: 'industry_group', label: '行业组', width: 100, sortable: true, filterable: true, filterType: 'select', options: INDUSTRY_GROUPS },
+  { key: 'deal_amount', label: '金额(万)', width: 90, sortable: true, filterable: false },
+  { key: 'assigned_to', label: '负责人', width: 120, sortable: true, filterable: true, filterType: 'text' },
+  { key: 'customer_stage', label: '阶段', width: 110, sortable: true, filterable: true, filterType: 'select', options: STAGE_OPTIONS },
+  { key: 'health_tier', label: '健康度', width: 90, sortable: true, filterable: true, filterType: 'select', options: HEALTH_OPTIONS },
+  { key: 'blockers', label: '卡点', width: 50, sortable: false, filterable: true, filterType: 'hasBlocker' },
+  { key: 'action', label: '操作', width: 80, sortable: false, filterable: false },
+];
+
+function SortIcon({ col, sortKey, sortDir }) {
+  if (sortKey !== col) return <span style={{ color: 'var(--text-muted)', opacity: .3, marginLeft: 3 }}>↕</span>;
+  return <span style={{ color: 'var(--accent-light)', marginLeft: 3 }}>{sortDir === 'asc' ? '↑' : '↓'}</span>;
+}
+
 function OctoListTab() {
   const navigate = useNavigate();
-  const [rows, setRows] = useState(null);
+  const [allRows, setAllRows] = useState(null);
   const [search, setSearch] = useState('');
   const [tier, setTier] = useState('');
   const [stage, setStage] = useState('');
+  const [sortKey, setSortKey] = useState('tier');
+  const [sortDir, setSortDir] = useState('asc');
+  const [colFilters, setColFilters] = useState({});
 
   useEffect(() => {
-    const p = new URLSearchParams();
-    if (search) p.set('search', search);
-    if (tier) p.set('tier', tier);
-    if (stage) p.set('customer_stage', stage);
-    api('/api/accounts?' + p).then(d => setRows(d.data)).catch(e => toast(e.message, 'error'));
-  }, [search, tier, stage]);
+    api('/api/accounts?limit=200').then(d => setAllRows(d.data)).catch(e => toast(e.message, 'error'));
+  }, []);
+
+  function toggleSort(key) {
+    if (sortKey === key) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  }
+
+  function setColFilter(key, val) {
+    setColFilters(prev => ({ ...prev, [key]: val }));
+  }
+
+  function clearAllFilters() {
+    setSearch(''); setTier(''); setStage(''); setColFilters({});
+  }
+
+  // 筛选
+  let rows = allRows || [];
+  if (search) {
+    const s = search.toLowerCase();
+    rows = rows.filter(a => (a.company_name || '').toLowerCase().includes(s) || (a.industry || '').toLowerCase().includes(s) || (a.assigned_to || '').toLowerCase().includes(s));
+  }
+  if (tier) rows = rows.filter(a => a.tier === tier);
+  if (stage) rows = rows.filter(a => a.customer_stage === stage);
+  // 列筛选
+  for (const [key, val] of Object.entries(colFilters)) {
+    if (!val) continue;
+    if (key === 'hasBlocker') {
+      if (val === 'yes') rows = rows.filter(a => a.blockers);
+      else if (val === 'no') rows = rows.filter(a => !a.blockers);
+    } else if (key === 'industry' || key === 'company_name' || key === 'assigned_to') {
+      const v = val.toLowerCase();
+      rows = rows.filter(a => String(a[key] || '').toLowerCase().includes(v));
+    } else {
+      rows = rows.filter(a => (a[key] || '') === val);
+    }
+  }
+
+  // 排序
+  const tierOrder = { S: 0, A: 1, B: 2, C: 3, D: 4 };
+  rows = [...rows].sort((a, b) => {
+    let va = a[sortKey], vb = b[sortKey];
+    if (sortKey === 'tier') { va = tierOrder[va] ?? 9; vb = tierOrder[vb] ?? 9; }
+    if (sortKey === 'deal_amount') { va = +va || 0; vb = +vb || 0; }
+    if (va == null) va = ''; if (vb == null) vb = '';
+    if (typeof va === 'number' && typeof vb === 'number') return sortDir === 'asc' ? va - vb : vb - va;
+    const cmp = String(va).localeCompare(String(vb), 'zh');
+    return sortDir === 'asc' ? cmp : -cmp;
+  });
+
+  const activeFilterCount = (search ? 1 : 0) + (tier ? 1 : 0) + (stage ? 1 : 0) + Object.values(colFilters).filter(Boolean).length;
+
+  // 渲染筛选控件
+  function renderFilter(col) {
+    if (!col.filterable) return <th key={col.key} style={{ width: col.width, minWidth: col.width }} onClick={() => col.sortable && toggleSort(col.key)}>{col.label}{col.sortable && <SortIcon col={col.key} sortKey={sortKey} sortDir={sortDir} />}</th>;
+    if (col.filterType === 'select') {
+      return <th key={col.key} style={{ width: col.width, minWidth: col.width }}>
+        <div className="th-col">
+          <span className="th-label" onClick={() => col.sortable && toggleSort(col.key)}>{col.label}{col.sortable && <SortIcon col={col.key} sortKey={sortKey} sortDir={sortDir} />}</span>
+          <select className="th-filter" value={colFilters[col.key] || ''} onChange={e => setColFilter(col.key, e.target.value)}>
+            <option value="">全部</option>
+            {col.options.map(o => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </div>
+      </th>;
+    }
+    if (col.filterType === 'hasBlocker') {
+      return <th key={col.key} style={{ width: col.width, minWidth: col.width }}>
+        <div className="th-col">
+          <span className="th-label" onClick={() => col.sortable && toggleSort(col.key)}>{col.label}{col.sortable && <SortIcon col={col.key} sortKey={sortKey} sortDir={sortDir} />}</span>
+          <select className="th-filter" value={colFilters.hasBlocker || ''} onChange={e => setColFilter('hasBlocker', e.target.value)}>
+            <option value="">全部</option>
+            <option value="yes">有卡点</option>
+            <option value="no">无卡点</option>
+          </select>
+        </div>
+      </th>;
+    }
+    // text filter
+    return <th key={col.key} style={{ width: col.width, minWidth: col.width }}>
+      <div className="th-col">
+        <span className="th-label" onClick={() => col.sortable && toggleSort(col.key)}>{col.label}{col.sortable && <SortIcon col={col.key} sortKey={sortKey} sortDir={sortDir} />}</span>
+        <input className="th-filter-input" placeholder="筛选..." value={colFilters[col.key] || ''} onChange={e => setColFilter(col.key, e.target.value)} />
+      </div>
+    </th>;
+  }
 
   return (
     <>
-      <div className="sticky-bar">
-      <div className="search-bar">
-        <input type="text" placeholder="搜索公司/行业/负责人..." value={search} onChange={e => setSearch(e.target.value)} />
-        <select value={tier} onChange={e => setTier(e.target.value)}>
-          <option value="">全部等级</option>
-          <option value="S">S级</option><option value="A">A级</option><option value="B">B级</option><option value="C">C级</option><option value="D">D级</option>
-        </select>
-        <select value={stage} onChange={e => setStage(e.target.value)}>
-          <option value="">全部阶段</option>
-          <option value="已签约">已签约</option><option value="交付中">交付中</option><option value="投标中">投标中</option>
-          <option value="B类重点推进">B类重点推进</option><option value="C类跟进">C类跟进</option><option value="D类观察">D类观察</option>
-          <option value="战败">战败</option><option value="放弃">放弃</option>
-        </select>
+      {/* 筛选栏吸顶 (在tab下面) */}
+      <div className="acct-filter-bar">
+        <div className="search-bar">
+          <input type="text" placeholder="搜索公司/行业/负责人..." value={search} onChange={e => setSearch(e.target.value)} />
+          <select value={tier} onChange={e => setTier(e.target.value)}>
+            <option value="">全部等级</option>
+            {TIER_OPTIONS.map(t => <option key={t} value={t}>{t}级</option>)}
+          </select>
+          <select value={stage} onChange={e => setStage(e.target.value)}>
+            <option value="">全部阶段</option>
+            {STAGE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          {activeFilterCount > 0 && <button className="btn btn-sm btn-secondary" onClick={clearAllFilters}>清除筛选({activeFilterCount})</button>}
+          <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-muted)' }}>共 {rows.length} 家</span>
+        </div>
       </div>
-      </div>
-      <div className="card"><div className="table-wrap">
-        <table>
-          <tr><th>等级</th><th>客户名</th><th>行业</th><th>金额(万)</th><th>负责人</th><th>阶段</th><th>卡点</th><th>操作</th></tr>
-          {rows === null ? <tr><td colSpan={8} style={{ textAlign: 'center', padding: 24, color: 'var(--text-muted)' }}>⏳ 加载中...</td></tr>
+      <div className="card"><div className="table-wrap acct-table-wrap">
+        <table className="acct-table">
+          <thead>
+            <tr className="acct-thead">
+              {COLUMNS.map(col => col.key === 'action' ? <th key="action" style={{ width: col.width, minWidth: col.width }}>操作</th> : renderFilter(col))}
+            </tr>
+          </thead>
+          <tbody>
+          {allRows === null ? <tr><td colSpan={COLUMNS.length} style={{ textAlign: 'center', padding: 24, color: 'var(--text-muted)' }}>⏳ 加载中...</td></tr>
             : rows.length ? rows.map(a => (
               <tr className="clickable-row" key={a.id} onClick={() => navigate(`/octo/account/${a.id}`)}>
                 <td><TierBadge tier={a.tier} /></td>
                 <td><strong>{a.company_name}</strong></td>
-                <td>{a.industry || '—'}</td>
+                <td style={{ fontSize: 12 }}>{a.industry || '—'}</td>
+                <td style={{ fontSize: 12 }}>{a.industry_group || '—'}</td>
                 <td style={{ fontWeight: 700, color: 'var(--accent-light)' }}>{a.deal_amount ? a.deal_amount + '万' : '—'}</td>
                 <td style={{ fontSize: 12 }}>{a.assigned_to || '—'}</td>
                 <td><CustomerStageTag s={a.customer_stage} /></td>
-                <td>{a.blockers ? <span style={{ color: 'var(--danger)' }}>⚠️</span> : '—'}</td>
-                <td onClick={e => e.stopPropagation()}><button className="btn btn-sm btn-primary" onClick={() => navigate(`/octo/account/${a.id}`)}>全景档案</button></td>
+                <td style={{ fontSize: 11 }}>{a.health_tier ? <span style={{ color: a.health_tier === '健康推进' ? 'var(--success)' : a.health_tier === '有风险' ? 'var(--warning)' : 'var(--danger)' }}>{a.health_tier}</span> : '—'}</td>
+                <td style={{ textAlign: 'center' }}>{a.blockers ? <span style={{ color: 'var(--danger)' }}>⚠️</span> : '—'}</td>
+                <td onClick={e => e.stopPropagation()}><button className="btn btn-sm btn-primary" onClick={() => navigate(`/octo/account/${a.id}`)}>档案</button></td>
               </tr>
-            )) : <tr><td colSpan={8}><div className="empty-state"><p>无匹配结果</p></div></td></tr>}
+            )) : <tr><td colSpan={COLUMNS.length}><div className="empty-state"><p>无匹配结果</p></div></td></tr>}
+          </tbody>
         </table>
       </div></div>
     </>
