@@ -796,20 +796,40 @@ app.get('/api/marketing-campaign/reg-dashboard', (req, res) => {
     const channelCats = [...catMap.values()].map(x => ({ ...x, pct: +(x.count / total * 100).toFixed(1) }))
       .sort((a, b) => b.count - a.count);
 
+    // ---- 区域合并口径（对齐海报：华东1 三分组合并；市场部/管理中心等归「市场部公共码+未匹配」）----
+    const CAT_ALIAS = { '华东1（01）': '华东1', '华东1（02）': '华东1', '华东1（售前）': '华东1' };
+    const normCat = (c) => CAT_ALIAS[c] || c || '未匹配';
+    const ZONE_CATS = ['华东1', '华南', '港澳', '华东2', '营销生态', '渠道', '华北', '宝洁', '欧莱雅'];
+    const zoneMap = new Map(ZONE_CATS.map(k => [k, 0]));
+    let publicCode = 0;
+    for (const r of rows) {
+      const ck = String(r.channel_code || '').trim().toLowerCase();
+      const ch = ck ? codeMap.get(ck) : null;
+      if (!ch) { publicCode++; continue; }
+      const z = normCat(ch.cat);
+      if (zoneMap.has(z)) zoneMap.set(z, zoneMap.get(z) + 1);
+      else publicCode++;
+    }
+    const zones = [...zoneMap.entries()].map(([value, count]) => ({
+      value, count, pct: +(count / total * 100).toFixed(1)
+    })).sort((a, b) => b.count - a.count);
+    zones.push({ value: '市场部公共码+未匹配', count: publicCode, pct: +(publicCode / total * 100).toFixed(1), isPublic: true });
+
     // ---- 销售个人榜（仅渠道码名单内的人，排除市场部/管理中心/合作方）----
     const NON_SALES_CATS = new Set(['市场部', '管理中心', '宽洁', '欧莱雅', '夜莺科技', '零壹贰叁', '破圈', '极创美奥', '金数据', '内部']);
     const staff = allChannels
       .filter(c => c.cat && !NON_SALES_CATS.has(c.cat) && c.cat !== '未归属' && c.cat !== '未登记')
       .sort((a, b) => b.count - a.count || b.valid - a.valid)
       .slice(0, 15)
-      .map(c => ({ value: c.label, count: c.count, valid: c.valid, cat: c.cat }));
+      .map(c => ({ value: c.label, count: c.count, valid: c.valid, cat: normCat(c.cat) }));
 
     // ---- 队伍榜（按渠道分类聚合的销售人均）----
     const teamMap = new Map();
     for (const c of allChannels) {
       if (!c.cat || NON_SALES_CATS.has(c.cat)) continue;
-      if (!teamMap.has(c.cat)) teamMap.set(c.cat, { value: c.cat, count: 0, people: 0 });
-      const e = teamMap.get(c.cat); e.count += c.count; e.people++;
+      const k = normCat(c.cat);
+      if (!teamMap.has(k)) teamMap.set(k, { value: k, count: 0, people: 0 });
+      const e = teamMap.get(k); e.count += c.count; e.people++;
     }
     const teams = [...teamMap.values()].map(x => ({ ...x, pct: +(x.count / total * 100).toFixed(1) }))
       .sort((a, b) => b.count - a.count);
@@ -885,6 +905,7 @@ app.get('/api/marketing-campaign/reg-dashboard', (req, res) => {
       teams,
       staff,
       regions,
+      zones,
       industries,
       pace: { avg7, projected, recentAvgDays: recent.length },
       meta: {

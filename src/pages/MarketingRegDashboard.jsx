@@ -336,7 +336,7 @@ export default function MarketingRegDashboard() {
           </div>
 
           <div className="reg-grid2">
-            <RankBars title="区域分布" sub="按公司名归属，未标注占比较高" items={data.regions} color="#8b5cf6" />
+            <RankBars title="区域分布（对齐海报口径）" sub="华东1 三分组合并 · 市场部公共码/未匹配单列" items={data.zones} color="#8b5cf6" />
             <RankBars title="行业 TOP10" sub="报名人填写的所在行业" items={data.industries} color="#f59e0b" />
           </div>
 

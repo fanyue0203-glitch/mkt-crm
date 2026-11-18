@@ -5,3 +5,8 @@ mkt-crm.db-wal
 uploads/*
 !uploads/.gitkeep
 data/
+
+# DB / backups / build artifacts
+mkt-crm.db
+backups/
+*.bak-*

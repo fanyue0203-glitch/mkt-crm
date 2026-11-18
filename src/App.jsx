@@ -1,4 +1,4 @@
-import React, { useEffect, useSyncExternalStore } from 'react';
+import React, { useEffect, useSyncExternalStore, useState } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { getHeader, subscribeHeader, setHeader } from './api.js';
 import Sidebar from './components/Sidebar.jsx';
@@ -24,6 +24,30 @@ import ImportPage from './pages/ImportPage.jsx';
 import MarketingCampaign, { MarketingLeads, MarketingLeadDetail, MarketingInsight, MarketingEventLeads } from './pages/MarketingCampaign.jsx';
 import MarketingRegDashboard from './pages/MarketingRegDashboard.jsx';
 
+
+// ===== 登录守卫（2026-11-17）：未登录一律跳到 /login =====
+function AuthGate({ children }) {
+  const [state, setState] = useState('checking'); // checking | ok | denied
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/session', { credentials: 'same-origin' })
+      .then(r => r.json())
+      .then(d => { if (alive) setState(d && d.authenticated ? 'ok' : 'denied'); })
+      .catch(() => { if (alive) setState('denied'); });
+    return () => { alive = false; };
+  }, []);
+  useEffect(() => {
+    if (state === 'denied') window.location.replace('/login');
+  }, [state]);
+  if (state === 'ok') return children;
+  return (
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',
+      fontFamily:'-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif',color:'#64748b',fontSize:14}}>
+      {state === 'denied' ? '未登录，正在跳转登录页…' : '正在验证登录状态…'}
+    </div>
+  );
+}
+
 function Header() {
   const header = useSyncExternalStore(subscribeHeader, getHeader);
   return (
@@ -43,6 +67,7 @@ export default function App() {
   }, [location.pathname, location.search]);
 
   return (
+    <AuthGate>
     <div className="layout">
       <Sidebar />
       <div className="main">
@@ -82,5 +107,6 @@ export default function App() {
       <Modal />
       <Toast />
     </div>
+    </AuthGate>
   );
 }
