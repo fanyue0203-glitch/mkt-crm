@@ -170,6 +170,11 @@ function isAuthExempt(path) {
   return path === '/api/login' || path === '/api/logout' || path === '/api/health' || path === '/healthz';
 }
 
+// ===== 健康检查（CI deploy 脚本 curl --fail 探测，必须存在且不查库）=====
+const HEALTH_PAYLOAD = { ok: true, service: 'mkt-crm' };
+app.get('/api/health', (req, res) => res.json(HEALTH_PAYLOAD));
+app.get('/healthz', (req, res) => res.json(HEALTH_PAYLOAD));
+
 // ===== API 守卫：会话 或 X-API-Key，二者皆无 -> 401（全方法覆盖） =====
 function authMiddleware(req, res, next) {
   const p = req.path;

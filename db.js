@@ -330,6 +330,19 @@ if (!leadCols.includes('company_short_name')) db.exec("ALTER TABLE leads ADD COL
 if (!leadCols.includes('is_valid')) db.exec("ALTER TABLE leads ADD COLUMN is_valid INTEGER DEFAULT 1");
 if (!leadCols.includes('is_claimed')) db.exec("ALTER TABLE leads ADD COLUMN is_claimed INTEGER DEFAULT 0");
 
+// campaign_registrations表补列（1119 归因清洗版新增字段；老库必须自动补齐，否则启动/查询即崩）
+const cregCols = db.prepare("PRAGMA table_info(campaign_registrations)").all().map(c=>c.name);
+const cregNeedCols = {
+  reg_no: "TEXT DEFAULT ''",
+  attr_inviter: "TEXT DEFAULT ''",
+  attr_team: "TEXT DEFAULT ''",
+  attr_method: "TEXT DEFAULT ''",
+  ticket_type: "TEXT DEFAULT ''"
+};
+for (const [col, def] of Object.entries(cregNeedCols)) {
+  if (!cregCols.includes(col)) db.exec(`ALTER TABLE campaign_registrations ADD COLUMN ${col} ${def}`);
+}
+
 // account_contacts表补列
 const contactCols = db.prepare("PRAGMA table_info(account_contacts)").all().map(c=>c.name);
 const contactNeedCols = {
