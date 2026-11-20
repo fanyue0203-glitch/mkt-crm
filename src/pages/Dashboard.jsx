@@ -9,10 +9,13 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [octo, setOcto] = useState(null);
+  const [trendMonths, setTrendMonths] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     setHeader('Dashboard');
+    // 月度趋势单独取：1-9月基线 + 10月起实时
+    api('/api/leads/funnel').then(d => setTrendMonths(d.monthlyTrend || [])).catch(() => setTrendMonths([]));
     Promise.all([
       api('/api/stats'),
       api('/api/octo/summary').catch(() => null)
@@ -151,15 +154,11 @@ export default function Dashboard() {
           </div>
           <div className="card-body">
             {(() => {
-              // 2026年1-9月经SDR底表核实的正确数据
-              const correctMonths = [
-                {month:'2026-01',total:490,transferred:75},{month:'2026-02',total:195,transferred:45},
-                {month:'2026-03',total:316,transferred:71},{month:'2026-04',total:183,transferred:70},
-                {month:'2026-05',total:366,transferred:65},{month:'2026-06',total:273,transferred:72},
-                {month:'2026-07',total:398,transferred:60},{month:'2026-08',total:454,transferred:59},
-                {month:'2026-09',total:320,transferred:83}
-              ];
-              const months = correctMonths;
+              // 月度趋势改为实时取数：1-9月走核实基线，10月起走 leads 实时聚合
+              const months = (trendMonths && trendMonths.length)
+                ? trendMonths.map(m => ({ month: m.month, total: m.total, transferred: m.transferred }))
+                : [];
+              if (!months.length) return <div className="empty-state" style={{padding:20}}><p>趋势数据加载中...</p></div>;
               const maxV = Math.max(...months.map(m => Math.max(m.total, m.transferred)), 1);
               const n = months.length;
               return (
@@ -168,13 +167,13 @@ export default function Dashboard() {
                     {[0,1,2,3].map(i => <line key={i} x1="30" y1={20+i*40} x2={n*60} y2={20+i*40} stroke="rgba(51,65,85,.3)" strokeWidth="1" />)}
                     {months.map((m,i) => { const h=(m.total/maxV)*140; return <rect key={'b'+i} x={i*60+8} y={160-h} width="18" height={h} fill="rgba(59,130,246,.7)" rx="2" />; })}
                     {months.map((m,i) => { const h=(m.transferred/maxV)*140; return <rect key={'t'+i} x={i*60+30} y={160-h} width="18" height={h} fill="rgba(139,92,246,.7)" rx="2" />; })}
-                    {months.map((m,i) => <text key={'l'+i} x={i*60+28} y="185" textAnchor="middle" fill="#64748b" fontSize="10">{m.month.slice(5)}月{i===8?'*':''}</text>)}
+                    {months.map((m,i) => <text key={'l'+i} x={i*60+28} y="185" textAnchor="middle" fill="#64748b" fontSize="10">{m.month.slice(5)}月</text>)}
                   </svg>
                   <div style={{ display:'flex',gap:14,justifyContent:'center',fontSize:11,marginTop:4,color:'#94a3b8' }}>
                     <span><span style={{display:'inline-block',width:10,height:10,background:'rgba(59,130,246,.7)',borderRadius:2,marginRight:4,verticalAlign:'middle'}}></span>进线量</span>
                     <span><span style={{display:'inline-block',width:10,height:10,background:'rgba(139,92,246,.7)',borderRadius:2,marginRight:4,verticalAlign:'middle'}}></span>转出量</span>
                   </div>
-                  <div style={{textAlign:'center',fontSize:10,color:'#64748b',marginTop:2}}>9月*截止9/24 · 数据来源：SDR全量底表</div>
+                  <div style={{textAlign:'center',fontSize:10,color:'#64748b',marginTop:2}}>数据来源：SDR月度核实基线 + CRM实时数据</div>
                 </div>
               );
             })()}

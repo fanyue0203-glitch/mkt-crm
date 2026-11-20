@@ -264,6 +264,50 @@ db.exec(`
     created_by TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now','localtime'))
   );
+
+  -- 营销大会报名明细（源：活动行导出，脚本 scripts/import_campaign_regs.mjs 写入）
+  CREATE TABLE IF NOT EXISTS campaign_registrations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tid TEXT NOT NULL UNIQUE,
+    order_no TEXT DEFAULT '',
+    contact_name TEXT DEFAULT '',
+    company TEXT DEFAULT '',
+    department TEXT DEFAULT '',
+    title TEXT DEFAULT '',
+    industry TEXT DEFAULT '',
+    phone TEXT DEFAULT '',
+    email TEXT DEFAULT '',
+    signup_time TEXT DEFAULT '',
+    signup_date TEXT DEFAULT '',
+    status TEXT DEFAULT '',
+    signup_method TEXT DEFAULT '',
+    inviter_raw TEXT DEFAULT '',
+    inviter_bucket TEXT DEFAULT '',
+    inviter_name TEXT DEFAULT '',
+    channel_code TEXT DEFAULT '',
+    region TEXT DEFAULT '',
+    need_text TEXT DEFAULT '',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE INDEX IF NOT EXISTS idx_creg_status ON campaign_registrations(status);
+  CREATE INDEX IF NOT EXISTS idx_creg_channel ON campaign_registrations(channel_code);
+  CREATE INDEX IF NOT EXISTS idx_creg_signup_date ON campaign_registrations(signup_date);
+
+  -- 营销大会报名每日快照
+  CREATE TABLE IF NOT EXISTS campaign_reg_snapshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    campaign TEXT NOT NULL DEFAULT '2026 AI营销大会',
+    stat_date TEXT NOT NULL,
+    stat_time TEXT DEFAULT '',
+    total INTEGER DEFAULT 0,
+    valid INTEGER DEFAULT 0,
+    pending INTEGER DEFAULT 0,
+    target INTEGER DEFAULT 900,
+    source TEXT DEFAULT '',
+    note TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now','localtime')),
+    UNIQUE(campaign, stat_date)
+  );
 `);
 
 // ===== 安全迁移：为已存在的库补列 =====

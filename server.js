@@ -1156,8 +1156,10 @@ app.get('/api/leads', (req, res) => {
 app.get('/api/leads/funnel', (req, res) => {
   const statuses = ['new', 'contacted', 'qualified', 'opportunity', 'closed_won', 'closed_lost'];
   const statusNames = { new: '新进线', contacted: '已联系', qualified: '已转出', opportunity: '商机', closed_won: '成单', closed_lost: '无效/丢单' };
+  // 转出统一口径：status='transferred'（历史数据里 qualified/已转出 已归一）
   const funnel = statuses.map(s => {
-    const c = db.prepare('SELECT COUNT(*) as c FROM leads WHERE status = ?').get(s).c;
+    const realStatus = s === 'qualified' ? 'transferred' : s;
+    const c = db.prepare('SELECT COUNT(*) as c FROM leads WHERE status = ?').get(realStatus).c;
     return { status: s, name: statusNames[s], count: c };
   });
   const total = db.prepare('SELECT COUNT(*) as c FROM leads').get().c;
@@ -1169,14 +1171,33 @@ app.get('/api/leads/funnel', (req, res) => {
   const bySource = db.prepare(`SELECT source_channel as name, COUNT(*) as count FROM leads WHERE source_channel != '' GROUP BY source_channel ORDER BY count DESC`).all();
   const byProduct = db.prepare(`SELECT product as name, COUNT(*) as count FROM leads WHERE product != '' GROUP BY product ORDER BY count DESC LIMIT 10`).all();
   const byTeam = db.prepare(`SELECT team as name, COUNT(*) as count FROM leads WHERE team != '' GROUP BY team ORDER BY count DESC`).all();
-  const monthlyTrend = db.prepare(`
+  // 月度趋势：1-9月用 sdr_monthly_stats 核实基线，10月起用 leads 实时算
+  // 进线按 inbound_date，转出按 transfer_date（兼容 qualified/transferred/已转出 多套状态）
+  const baselineMonths = db.prepare(`SELECT month, inbound, valid, transferred, claimed FROM sdr_monthly_stats WHERE month < '2026-10' ORDER BY month`).all();
+  const liveInbound = db.prepare(`
     SELECT strftime('%Y-%m', inbound_date) as month,
            COUNT(*) as total,
-           SUM(CASE WHEN status IN ('qualified','opportunity','closed_won') THEN 1 ELSE 0 END) as transferred
+           SUM(CASE WHEN is_valid = 1 THEN 1 ELSE 0 END) as valid
     FROM leads WHERE inbound_date != '' AND inbound_date IS NOT NULL
+      AND inbound_date >= '2026-10-01'
     GROUP BY month ORDER BY month
   `).all();
-  const recentLeads = db.prepare(`SELECT id, company_name, company_short_name, contact_name, source_channel, product, assigned_to, status, inbound_date
+  const liveTransfer = db.prepare(`
+    SELECT substr(transfer_date,1,7) as month, COUNT(*) as cnt
+    FROM leads WHERE transfer_date != '' AND transfer_date IS NOT NULL
+      AND transfer_date >= '2026-10-01'
+    GROUP BY month ORDER BY month
+  `).all();
+  const liveTransferMap = {};
+  liveTransfer.forEach(t => { liveTransferMap[t.month] = t.cnt; });
+  const liveMonthSet = new Set(liveInbound.map(m => m.month));
+  liveTransfer.forEach(t => { if (!liveMonthSet.has(t.month)) { liveInbound.push({ month: t.month, total: 0, valid: 0 }); liveMonthSet.add(t.month); } });
+  liveInbound.sort((a, b) => a.month.localeCompare(b.month));
+  const monthlyTrend = [
+    ...baselineMonths.map(m => ({ month: m.month, total: m.inbound, valid: m.valid, transferred: m.transferred, claimed: m.claimed })),
+    ...liveInbound.map(m => ({ month: m.month, total: m.total, valid: m.valid || 0, transferred: liveTransferMap[m.month] || 0, claimed: liveTransferMap[m.month] || 0 }))
+  ];
+  const recentLeads = db.prepare(`SELECT id, company_name, company_short_name, contact_name, source_channel, product, assigned_to, status, inbound_date, transfer_date
     FROM leads ORDER BY created_at DESC LIMIT 20`).all();
   res.json({
     funnel,
@@ -1397,16 +1418,34 @@ app.get('/api/sdr/dashboard', (req, res) => {
   // 1. 月度趋势：优先用sdr_monthly_stats基线表，leads表数据补充增量
   const monthlyBase = db.prepare('SELECT * FROM sdr_monthly_stats ORDER BY month').all();
   
-  // 从leads表按进线日期聚合增量
+  // 从leads表聚合增量（2026-10 起）：进线按 inbound_date，转出按 transfer_date
+  // 转出口径统一：status 含 qualified/transferred/已转出 或 有 transfer_date
   const leadsMonthly = db.prepare(`
     SELECT strftime('%Y-%m', inbound_date) as month,
            COUNT(*) as leads_inbound,
-           SUM(CASE WHEN status IN ('qualified','opportunity','closed_won') THEN 1 ELSE 0 END) as leads_transferred,
            SUM(CASE WHEN is_claimed = 1 THEN 1 ELSE 0 END) as leads_claimed
     FROM leads WHERE inbound_date != '' AND inbound_date IS NOT NULL
       AND inbound_date >= '2026-10-01'
     GROUP BY month ORDER BY month
   `).all();
+
+  // 转出：按 transfer_date 归属月份（含跨月延迟转出）
+  const transferMonthly = db.prepare(`
+    SELECT substr(transfer_date,1,7) as month, COUNT(*) as cnt
+    FROM leads WHERE transfer_date != '' AND transfer_date IS NOT NULL
+      AND transfer_date >= '2026-10-01'
+    GROUP BY month ORDER BY month
+  `).all();
+  const transferMap = {};
+  transferMonthly.forEach(t => { transferMap[t.month] = t.cnt; });
+  leadsMonthly.forEach(m => { m.leads_transferred = transferMap[m.month] || 0; });
+  // transfer 有但 inbound 月份没有的，也要补一个月份条目
+  transferMonthly.forEach(t => {
+    if (!leadsMonthly.find(m => m.month === t.month)) {
+      leadsMonthly.push({ month: t.month, leads_inbound: 0, leads_transferred: t.cnt, leads_claimed: 0 });
+    }
+  });
+  leadsMonthly.sort((a, b) => a.month.localeCompare(b.month));
   
   // 合并：基线表已有月份用基线，10月及以后从leads实时算
   const leadsMonthMap = {};
@@ -1579,7 +1618,7 @@ app.get('/api/sdr/dashboard', (req, res) => {
   // 7. 销售承接Top10（全部转出线索口径，非仅最近20条）
   const salesRows = db.prepare(`
     SELECT assigned_to as name, COUNT(*) as count FROM leads
-    WHERE status IN ('qualified','opportunity','closed_won','transferred')
+    WHERE status IN ('qualified','opportunity','closed_won','transferred','已转出')
       AND assigned_to IS NOT NULL AND assigned_to != ''
     GROUP BY assigned_to ORDER BY count DESC LIMIT 10`).all();
   const salesTop = {};

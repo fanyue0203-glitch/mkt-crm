@@ -137,7 +137,7 @@ function LeadsTable({ defaultStatus, onOpenLead, refreshKey }) {
 
   useEffect(() => {
     // 一次加载全量用于前端筛选排序（数据量可控）
-    fetch('/api/leads?limit=2000&page=1').then(r => r.json()).then(d => {
+    fetch('/api/leads?limit=50000&page=1').then(r => r.json()).then(d => {
       setAllRows(d.data || []);
     }).catch(() => {});
   }, [refreshKey]);
@@ -471,7 +471,7 @@ export default function Funnel() {
 
       {tab === 'qualified' && (
         <div className="card">
-          <LeadsTable defaultStatus="qualified" onOpenLead={handleOpenLead} refreshKey={refreshKey} />
+          <LeadsTable defaultStatus="transferred" onOpenLead={handleOpenLead} refreshKey={refreshKey} />
         </div>
       )}
 
